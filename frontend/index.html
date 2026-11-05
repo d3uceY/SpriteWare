@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+    <link rel="stylesheet" href="/style.css"/>
+    <title>SpriteWare</title>
+</head>
+<body>
+<!-- Elm renders into #app. Nothing else here is hand-written HTML. -->
+<div id="app"></div>
+
+<!-- elm make output: a classic script that assigns window.Elm. It must load
+     BEFORE the module below, and as a plain <script> - importing it as a module
+     leaves `this` undefined and the app never mounts. -->
+<script src="/elm.js"></script>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "spriteware-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "elm:build": "elm make elm/src/Main.elm --output=public/elm.js --optimize",
+    "elm:build:dev": "elm make elm/src/Main.elm --output=public/elm.js",
+    "dev": "npm run elm:build:dev && vite",
+    "build": "npm run elm:build && vite build --mode production",
+    "build:dev": "npm run elm:build:dev && vite build --minify false --mode development",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@wailsio/runtime": "3.0.0"
+  },
+  "devDependencies": {
+    "vite": "^8.2.4"
+  }
+}
