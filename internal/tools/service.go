@@ -70,7 +70,9 @@ func Register(srv *server.MCPServer, svc *Service) {
 	svc.registerCel(srv)
 	svc.registerFrame(srv)
 	svc.registerTag(srv)
+	svc.registerSlice(srv)
 	svc.registerDraw(srv)
+	svc.registerSelect(srv)
 	svc.registerTransform(srv)
 	svc.registerLook(srv)
 	svc.registerValidate(srv)
@@ -89,16 +91,18 @@ type ToolInfo struct {
 var Catalog = []ToolInfo{
 	{"doctor", "Reports the connection and says what to fix."},
 	{"sprite", "Open, create, save and inspect documents."},
-	{"layer", "Create, rename, reorder, show and hide layers."},
+	{"layer", "Create, rename, reorder, group and merge layers."},
 	{"cel", "The pixels one layer holds on one frame."},
 	{"frame", "Add, duplicate, retime and reset animation frames."},
 	{"tag", "Name the frame ranges a game engine can address."},
+	{"slice", "Named rectangles: 9-patch regions and bounding boxes."},
 	{"draw", "Pixels, shapes and readable character grids."},
+	{"select", "Clip the next edits to one rectangle."},
 	{"transform", "Flip, rotate, scale, translate and crop whole cels."},
 	{"look", "See the work: preview, grid, filmstrip, diff, onion, compare."},
 	{"validate", "Lint for palette drift, stray pixels and broken rigs."},
-	{"palette", "Ramps, analysis and adopting the art's own colours."},
-	{"export", "PNG, frame sequences, SVG, GIF and packed sheets."},
+	{"palette", "Ramps, analysis, snapping to the palette, adopting the art's colours."},
+	{"export", "PNG, frame sequences, SVG, GIF, packed sheets and tilesets."},
 }
 
 // ToolNames is the same list, name only.

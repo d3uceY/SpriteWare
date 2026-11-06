@@ -24,9 +24,10 @@ flowchart TB
 **The UI** is Elm. It talks to Go through Wails: each Go method on `MCPService`
 becomes a JavaScript function. The UI never touches Aseprite.
 
-**The MCP server** is what an agent connects to. It carries twelve tools:
-`doctor`, `sprite`, `layer`, `cel`, `frame`, `tag`, `draw`, `transform`, `look`,
-`validate`, `palette`, `export`. It also serves the skill text as resources.
+**The MCP server** is what an agent connects to. It carries fourteen tools:
+`doctor`, `sprite`, `layer`, `cel`, `frame`, `tag`, `slice`, `draw`, `select`,
+`transform`, `look`, `validate`, `palette`, `export`. It also serves the skill
+text as resources.
 
 **The bridge** is a plain TCP socket. Two kinds of connection arrive on it:
 

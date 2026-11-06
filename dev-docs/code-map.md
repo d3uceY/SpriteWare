@@ -11,12 +11,12 @@ backend/                    the Go side the UI talks to
   project.go                the project folder and its picker
   setup.go                  finding Aseprite, remembering the answer
 internal/
-  tools/                    the twelve tools and their JSON schemas
+  tools/                    the fourteen tools and their JSON schemas
   link/                     talking to Aseprite, live or headless
   luaext/                   the Lua that runs inside Aseprite
   protocol/                 the line format both sides speak
   analyze/                  validate: the rules engine
-  export/                   PNG, frames, SVG, GIF, spritesheet
+  export/                   PNG, frames, SVG, GIF, sheets, tilesets
   render/                   previews: ascii, filmstrip, onion, diff
   doc/                      the in-memory copy of a sprite
   craft/                    colour maths and palette presets
@@ -33,11 +33,13 @@ cmd/                        small dev tools, not part of the app
 
 | You want to | Edit |
 |---|---|
-| add a tool | a new file in `internal/tools`, register it in `tools.Register` |
+| add a tool | a new file in `internal/tools`, register it in `tools.Register`, and add a line to `tools.Catalog` |
 | add a draw behaviour | a `kind` in `internal/tools/drawing.go` (schema) and `luaext/extension/spriteware.lua` |
 | change what a tool returns | the tool's `AddTool` handler |
 | change a validate rule | `internal/analyze/analyze.go` |
 | add an export format | `internal/export/`, then the `export` tool |
+| change the generated palette resource | `internal/mcpserver/knowledge.go` |
+| teach an agent a new trick | the matching file under `internal/skill/` |
 | change the agent's instructions | `internal/skill/SKILL.md` |
 | fix an agent config path | `backend/install.go`, function `entryFor` |
 | change a skill install path | `internal/skill/skill.go`, function `DirFor` |

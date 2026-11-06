@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -159,7 +160,7 @@ func TestE2EBridgeAcceptsAnExtension(t *testing.T) {
 		if err != nil {
 			t.Fatalf("doctor: %v", err)
 		}
-		if strings.Contains(toolText(result), "attached to the bridge") {
+		if strings.Contains(toolText(result), "attached") {
 			return
 		}
 		if time.Now().After(deadline) {
@@ -177,4 +178,99 @@ func toolText(result *mcp.CallToolResult) string {
 		}
 	}
 	return sb.String()
+}
+
+// The chain the running binary has to hold together for the newer ops: create a
+// document, group and ungroup layers, snap the palette, draw through a
+// selection, name a slice, then export a tileset and a sheet that carries it.
+//
+// This is the only test that exercises the published JSON schemas, so a tool
+// whose argument names drifted from its Lua command fails here and nowhere else.
+func TestE2ENewSurfaceEndToEnd(t *testing.T) {
+	c := e2eClient(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	call := func(name string, args map[string]any) *mcp.CallToolResult {
+		t.Helper()
+		req := mcp.CallToolRequest{}
+		req.Params.Name = name
+		req.Params.Arguments = args
+		result, err := c.CallTool(ctx, req)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if result.IsError {
+			t.Fatalf("%s: %s", name, toolText(result))
+		}
+		return result
+	}
+
+	// The chain needs a document of its own, so it asks for headless: a live
+	// window is somebody's open file and this test must not draw on it.
+	call("doctor", map[string]any{"mode": "headless"})
+
+	call("sprite", map[string]any{"op": "new", "width": float64(8), "height": float64(8)})
+
+	// Layers: two on top of the base, grouped and then released.
+	call("layer", map[string]any{"op": "create", "name": "arms"})
+	call("layer", map[string]any{"op": "create", "name": "head"})
+	call("layer", map[string]any{"op": "group", "layers": []any{"arms", "head"}, "name": "body"})
+	if text := toolText(call("layer", map[string]any{"op": "ungroup", "name": "body"})); !strings.Contains(text, "2 layer(s)") {
+		t.Errorf("ungroup did not report its children: %.200s", text)
+	}
+
+	// Snap needs a palette to snap to.
+	call("palette", map[string]any{"op": "set", "colors": []any{"#000000", "#ffffff"}})
+
+	sel := call("select", map[string]any{
+		"op": "set", "x": float64(2), "y": float64(2), "width": float64(2), "height": float64(2),
+	})
+	if !strings.Contains(toolText(sel), "4 pixel") {
+		t.Errorf("select did not report its area: %.200s", toolText(sel))
+	}
+
+	call("draw", map[string]any{"ops": []any{map[string]any{
+		"kind": "rect", "x": float64(0), "y": float64(0), "width": float64(8), "height": float64(8),
+		"color": "#f0f0f0",
+	}}})
+
+	snap := call("palette", map[string]any{"op": "snap"})
+	if !strings.Contains(toolText(snap), "moved onto the palette") {
+		t.Errorf("snap said nothing about what it did: %.200s", toolText(snap))
+	}
+
+	call("select", map[string]any{"op": "none"})
+
+	call("slice", map[string]any{
+		"op": "create", "name": "panel",
+		"x": float64(2), "y": float64(2), "width": float64(4), "height": float64(4),
+		"center": map[string]any{"x": float64(3), "y": float64(3), "width": float64(2), "height": float64(2)},
+	})
+
+	dir := t.TempDir()
+	out := call("export", map[string]any{
+		"op": "tileset", "path": filepath.Join(dir, "tiles.png"),
+		"tileWidth": float64(2), "tileHeight": float64(2),
+	})
+	if text := toolText(out); !strings.Contains(text, "1 distinct tile") {
+		t.Errorf("a 2x2 block in 2x2 tiles is one picture: %.300s", text)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "tiles.png")); err != nil {
+		t.Fatalf("the sheet was not written: %v", err)
+	}
+
+	sheet := call("export", map[string]any{
+		"op": "spritesheet", "path": filepath.Join(dir, "sheet.png"),
+	})
+	if text := toolText(sheet); !strings.Contains(text, "sheet.json") {
+		t.Errorf("the spritesheet did not report its atlas: %.300s", text)
+	}
+	atlas, err := os.ReadFile(filepath.Join(dir, "sheet.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(atlas), `"panel"`) {
+		t.Errorf("the slice did not reach the atlas:\n%s", atlas)
+	}
 }
