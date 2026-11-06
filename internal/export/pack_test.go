@@ -102,8 +102,10 @@ func TestSheetWritesFramesSideBySideWithAnAtlas(t *testing.T) {
 	tags := []doc.Tag{{Name: "walk", From: 1, To: 2, Direction: "forward"}}
 	path := filepath.Join(t.TempDir(), "hero.png")
 
-	pngPath, jsonPath, atlas, err := Sheet(
-		[]*image.NRGBA{first, second}, []int{100, 200}, tags, path, 1, 1)
+	pngPath, jsonPath, atlas, err := Sheet(SheetOptions{
+		Frames: []*image.NRGBA{first, second}, Durations: []int{100, 200}, Tags: tags,
+		Path: path, Scale: 1, Padding: 1,
+	})
 	if err != nil {
 		t.Fatalf("sheet: %v", err)
 	}
@@ -154,18 +156,20 @@ func TestSheetWritesFramesSideBySideWithAnAtlas(t *testing.T) {
 }
 
 func TestSheetRefusesMixedFrameSizes(t *testing.T) {
-	_, _, _, err := Sheet(
-		[]*image.NRGBA{sprite(4, 4, color.NRGBA{A: 255}), sprite(4, 5, color.NRGBA{A: 255})},
-		nil, nil, filepath.Join(t.TempDir(), "x.png"), 1, 0)
+	_, _, _, err := Sheet(SheetOptions{
+		Frames: []*image.NRGBA{sprite(4, 4, color.NRGBA{A: 255}), sprite(4, 5, color.NRGBA{A: 255})},
+		Path:   filepath.Join(t.TempDir(), "x.png"),
+	})
 	if err == nil {
 		t.Fatal("frames of different sizes cannot share one sheet")
 	}
 }
 
 func TestSheetScalesFramesAndRecordsIt(t *testing.T) {
-	_, _, atlas, err := Sheet(
-		[]*image.NRGBA{sprite(4, 4, color.NRGBA{A: 255})},
-		nil, nil, filepath.Join(t.TempDir(), "x.png"), 3, 0)
+	_, _, atlas, err := Sheet(SheetOptions{
+		Frames: []*image.NRGBA{sprite(4, 4, color.NRGBA{A: 255})},
+		Path:   filepath.Join(t.TempDir(), "x.png"), Scale: 3,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

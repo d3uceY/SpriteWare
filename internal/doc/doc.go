@@ -72,12 +72,33 @@ type Tag struct {
 	Direction string `json:"direction"`
 }
 
+// Box is a rectangle in sprite pixels.
+type Box struct {
+	X      int `json:"x"`
+	Y      int `json:"y"`
+	Width  int `json:"width"`
+	Height int `json:"height"`
+}
+
+// Slice is a named rectangle: a 9-patch region of a UI panel, or a character's
+// bounding box. Center is the stretchable middle, present only when the art
+// declares one.
+type Slice struct {
+	Name   string `json:"name"`
+	X      int    `json:"x"`
+	Y      int    `json:"y"`
+	Width  int    `json:"width"`
+	Height int    `json:"height"`
+	Center *Box   `json:"center,omitempty"`
+}
+
 // Dump is a complete, read-only copy of a sprite.
 type Dump struct {
 	Sprite      Sprite   `json:"sprite"`
 	Layers      []Layer  `json:"layers"`
 	Frames      []Frame  `json:"frames"`
 	Tags        []Tag    `json:"tags"`
+	Slices      []Slice  `json:"slices"`
 	Palette     []string `json:"palette"`
 	ActiveFrame int      `json:"activeFrame"`
 	ActiveLayer int      `json:"activeLayer"`

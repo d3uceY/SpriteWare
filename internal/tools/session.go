@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -13,6 +14,12 @@ import (
 	"github.com/d3uceY/spriteware/internal/link"
 	"github.com/d3uceY/spriteware/internal/protocol"
 )
+
+// doctorProbeTimeout is how long doctor waits for its ping.
+//
+// An attached but unresponsive extension used to stall the report for the full
+// call timeout, which made "why is this broken" another thing to wait on.
+const doctorProbeTimeout = 3 * time.Second
 
 // DoctorReport answers "why is this not working" without leaving the tools.
 type DoctorReport struct {
@@ -91,7 +98,9 @@ func (s *Service) registerDoctor(srv *server.MCPServer) {
 			var pong struct {
 				Pong bool `json:"pong"`
 			}
-			err := l.Call(ctx, "ping", nil, &pong)
+			probeCtx, cancel := context.WithTimeout(ctx, doctorProbeTimeout)
+			err := l.Call(probeCtx, "ping", nil, &pong)
+			cancel()
 			report.Connected = err == nil && pong.Pong
 			if hello := l.Hello(); hello != nil {
 				report.ExtensionVersion = hello.ExtensionVersion
@@ -118,6 +127,9 @@ func doctorDirective(r DoctorReport) string {
 	// A live window is worth naming even when the mode's link is down: it is
 	// usually what the user meant.
 	if r.BridgeListening && r.Bridge.Connected {
+		if r.Mode == string(config.ModeLive) {
+			return "A window is attached to the bridge but did not answer. Aseprite may be busy; try again."
+		}
 		return "An Aseprite window is attached to the bridge; switch to live mode to use it."
 	}
 	if r.Remediation != "" {
@@ -308,6 +320,7 @@ func structuredDump(d *doc.Dump, summary string) map[string]any {
 		"layers":      d.Layers,
 		"frames":      d.Frames,
 		"tags":        d.Tags,
+		"slices":      d.Slices,
 		"palette":     d.Palette,
 		"activeFrame": d.ActiveFrame,
 		"activeLayer": d.ActiveLayer,

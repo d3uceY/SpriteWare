@@ -131,17 +131,18 @@ func gifPalette(frames []*image.NRGBA) (color.Palette, map[color.NRGBA]uint8, er
 // Atlas is the metadata beside a sheet: rectangles, not layout rules, so an
 // importer needs no knowledge of how the pack was made.
 type Atlas struct {
-	Image    string      `json:"image"`
-	Width    int         `json:"width"`
-	Height   int         `json:"height"`
-	FrameW   int         `json:"frameWidth"`
-	FrameH   int         `json:"frameHeight"`
-	Columns  int         `json:"columns"`
-	Padding  int         `json:"padding"`
-	Frames   []AtlasCell `json:"frames"`
-	Tags     []AtlasTag  `json:"tags,omitempty"`
-	Scale    int         `json:"scale"`
-	Comments string      `json:"comments,omitempty"`
+	Image    string       `json:"image"`
+	Width    int          `json:"width"`
+	Height   int          `json:"height"`
+	FrameW   int          `json:"frameWidth"`
+	FrameH   int          `json:"frameHeight"`
+	Columns  int          `json:"columns"`
+	Padding  int          `json:"padding"`
+	Frames   []AtlasCell  `json:"frames"`
+	Tags     []AtlasTag   `json:"tags,omitempty"`
+	Slices   []AtlasSlice `json:"slices,omitempty"`
+	Scale    int          `json:"scale"`
+	Comments string       `json:"comments,omitempty"`
 }
 
 // AtlasCell is one frame's place in the sheet. Index is 1-based, like every
@@ -163,13 +164,47 @@ type AtlasTag struct {
 	Direction string `json:"direction,omitempty"`
 }
 
+// AtlasSlice is a named rectangle carried through from the document, with the
+// 9-patch centre when the art declares one.
+type AtlasSlice struct {
+	Name   string    `json:"name"`
+	X      int       `json:"x"`
+	Y      int       `json:"y"`
+	Width  int       `json:"width"`
+	Height int       `json:"height"`
+	Center *AtlasBox `json:"center,omitempty"`
+}
+
+// AtlasBox is a rectangle in sheet pixels.
+type AtlasBox struct {
+	X      int `json:"x"`
+	Y      int `json:"y"`
+	Width  int `json:"width"`
+	Height int `json:"height"`
+}
+
+// SheetOptions describes one sheet export. A struct rather than six positional
+// arguments, so adding one more thing to carry through does not touch every
+// call site.
+type SheetOptions struct {
+	Frames    []*image.NRGBA
+	Durations []int
+	Tags      []doc.Tag
+	Slices    []doc.Slice
+	Path      string
+	Scale     int
+	Padding   int
+}
+
 // Sheet writes the frames into one packed PNG plus a JSON atlas, and returns
 // both paths with the atlas.
 //
 // One row with `padding` transparent pixels between frames. Not decoration: at
 // non-integer zoom a GPU samples past a frame's edge into its neighbour, which
 // shows as a one-pixel line along the sprite.
-func Sheet(frames []*image.NRGBA, durations []int, tags []doc.Tag, path string, scale, padding int) (string, string, Atlas, error) {
+func Sheet(opts SheetOptions) (string, string, Atlas, error) {
+	frames, durations, tags, path := opts.Frames, opts.Durations, opts.Tags, opts.Path
+	scale, padding := opts.Scale, opts.Padding
 	if len(frames) == 0 {
 		return "", "", Atlas{}, fmt.Errorf("nothing to export: the document has no frames")
 	}
@@ -222,6 +257,13 @@ func Sheet(frames []*image.NRGBA, durations []int, tags []doc.Tag, path string, 
 	for _, t := range tags {
 		atlas.Tags = append(atlas.Tags, AtlasTag{Name: t.Name, From: t.From, To: t.To, Direction: t.Direction})
 	}
+	for _, s := range opts.Slices {
+		atlas.Slices = append(atlas.Slices, AtlasSlice{
+			Name: s.Name, X: s.X * scale, Y: s.Y * scale,
+			Width: s.Width * scale, Height: s.Height * scale,
+			Center: scaleBox(s.Center, scale),
+		})
+	}
 
 	pngPath, err := PNG(sheet, path, 1)
 	if err != nil {
@@ -237,6 +279,14 @@ func Sheet(frames []*image.NRGBA, durations []int, tags []doc.Tag, path string, 
 		return "", "", Atlas{}, fmt.Errorf("write %s: %w", jsonPath, err)
 	}
 	return pngPath, jsonPath, atlas, nil
+}
+
+// scaleBox keeps a slice's 9-patch centre in the same space as the sheet.
+func scaleBox(b *doc.Box, scale int) *AtlasBox {
+	if b == nil {
+		return nil
+	}
+	return &AtlasBox{X: b.X * scale, Y: b.Y * scale, Width: b.Width * scale, Height: b.Height * scale}
 }
 
 func jsonPathFor(pngPath string) string {
