@@ -32,18 +32,20 @@ function send(port, value) {
 }
 
 async function refreshAll() {
-  const [status, setup, tools, clients, skillText] = await Promise.all([
+  const [status, setup, tools, clients, skillText, project] = await Promise.all([
     MCPService.GetMCPStatus(),
     MCPService.GetSetupState(),
     MCPService.ListTools(),
     MCPService.ListClients(),
     MCPService.SkillText(),
+    MCPService.ProjectFolder(),
   ]);
   send("statusFromJs", toStatus(status));
   send("setupFromJs", toSetup(setup));
   send("toolsFromJs", (tools ?? []).map(toTool));
   send("clientsFromJs", (clients ?? []).map(toClient));
   send("skillTextFromJs", String(skillText ?? ""));
+  send("projectFromJs", toProject(project));
 }
 
 async function refreshServer() {
@@ -54,6 +56,17 @@ async function refreshServer() {
   ]);
   send("statusFromJs", toStatus(status));
   send("setupFromJs", toSetup(setup));
+  send("clientsFromJs", (clients ?? []).map(toClient));
+}
+
+// The folder picker changes the skill paths on every card, so a refresh that
+// skips the client list would leave the old paths on screen.
+async function refreshAfterProjectChange() {
+  const [project, clients] = await Promise.all([
+    MCPService.ProjectFolder(),
+    MCPService.ListClients(),
+  ]);
+  send("projectFromJs", toProject(project));
   send("clientsFromJs", (clients ?? []).map(toClient));
 }
 
@@ -97,6 +110,19 @@ const actions = {
       ok: Boolean(result?.ok),
       message: String(result?.message ?? ""),
     });
+  },
+
+  // "This project" has to be a folder the user picked: launched from a shortcut,
+  // the working directory is the install folder, and a skill written there is one
+  // no agent reads.
+  "choose-project": async () => {
+    await MCPService.ChooseProjectFolder();
+    await refreshAfterProjectChange();
+  },
+
+  "clear-project": async () => {
+    await MCPService.ClearProjectFolder();
+    await refreshAfterProjectChange();
   },
 
   // A skill is a folder with a SKILL.md, so this copies into the skills
@@ -197,6 +223,13 @@ function toSetup(raw) {
 
 function toTool(raw) {
   return { name: String(raw?.name ?? ""), blurb: String(raw?.blurb ?? "") };
+}
+
+// ProjectFolder resolves to a [path, chosen] pair; the pair is meaningless to
+// Elm, so it becomes a record here.
+function toProject(raw) {
+  const [path, chosen] = Array.isArray(raw) ? raw : [];
+  return { path: String(path ?? ""), chosen: Boolean(chosen) };
 }
 
 function toClient(raw) {

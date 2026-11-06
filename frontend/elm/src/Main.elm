@@ -42,6 +42,9 @@ port skillFromJs : (Decode.Value -> msg) -> Sub msg
 port skillTextFromJs : (String -> msg) -> Sub msg
 
 
+port projectFromJs : (Decode.Value -> msg) -> Sub msg
+
+
 port errorFromJs : (String -> msg) -> Sub msg
 
 
@@ -78,6 +81,8 @@ init _ =
       , skillNote = ""
       , skillOK = False
       , skillText = ""
+      , project = ""
+      , projectChosen = False
       , ready = False
       , error = Nothing
       }
@@ -145,6 +150,15 @@ update msg model =
         GotSkillText text ->
             ( { model | skillText = text }, Cmd.none )
 
+        GotProject path chosen ->
+            ( { model | project = path, projectChosen = chosen }, Cmd.none )
+
+        ChooseProjectFolder ->
+            ( model, request { action = "choose-project", target = "" } )
+
+        ClearProjectFolder ->
+            ( model, request { action = "clear-project", target = "" } )
+
         GotError message ->
             ( { model | error = Just message }, Cmd.none )
 
@@ -207,6 +221,7 @@ subscriptions _ =
         , installFromJs (decodeOr ( False, "" ) installDecoder >> \( ok, message ) -> GotInstall ok message)
         , skillFromJs (decodeOr ( False, "" ) installDecoder >> \( ok, message ) -> GotSkill ok message)
         , skillTextFromJs GotSkillText
+        , projectFromJs (decodeOr ( "", False ) projectDecoder >> \( path, chosen ) -> GotProject path chosen)
         , errorFromJs GotError
         ]
 
@@ -294,3 +309,10 @@ installDecoder =
     Decode.map2 Tuple.pair
         (Decode.oneOf [ Decode.field "ok" Decode.bool, Decode.succeed False ])
         (Decode.oneOf [ Decode.field "message" Decode.string, Decode.succeed "" ])
+
+
+projectDecoder : Decoder ( String, Bool )
+projectDecoder =
+    Decode.map2 Tuple.pair
+        (Decode.oneOf [ Decode.field "path" Decode.string, Decode.succeed "" ])
+        (Decode.oneOf [ Decode.field "chosen" Decode.bool, Decode.succeed False ])

@@ -154,6 +154,8 @@ type alias Model =
     , skillNote : String
     , skillOK : Bool
     , skillText : String
+    , project : String
+    , projectChosen : Bool
     , ready : Bool
     , error : Maybe String
     }
@@ -182,3 +184,6 @@ type Msg
     | CopySkill
     | GotSkill Bool String
     | GotSkillText String
+    | ChooseProjectFolder
+    | ClearProjectFolder
+    | GotProject String Bool

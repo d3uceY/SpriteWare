@@ -2,10 +2,30 @@ package backend
 
 import (
 	"errors"
+	"os"
 	"strings"
 
 	"github.com/d3uceY/spriteware/internal/config"
 )
+
+// ProjectFolder returns the folder "This project" means: the one the user
+// chose, else the working directory. The bool says which.
+func (s *MCPService) ProjectFolder() (string, bool) {
+	if chosen := strings.TrimSpace(s.cfg.Get().ProjectPath); chosen != "" {
+		return chosen, true
+	}
+	dir, err := os.Getwd()
+	if err != nil {
+		return ".", false
+	}
+	return dir, false
+}
+
+// projectDir is ProjectFolder without the flag, for building paths.
+func (s *MCPService) projectDir() string {
+	dir, _ := s.ProjectFolder()
+	return dir
+}
 
 // ChooseProjectFolder asks for the folder "This project" means, and remembers it.
 //

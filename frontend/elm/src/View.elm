@@ -424,7 +424,7 @@ skillCard model =
             [ Html.h2 [ Attr.class "card__title" ]
                 [ Html.text ("Teach " ++ client.label ++ " the tools") ]
             , Html.p [ Attr.class "card__lead" ]
-                [ Html.text "Ten workflows and the rules they share." ]
+                [ Html.text "A SKILL.md with the coordinate and frame rules." ]
             ]
         , if not client.skill.available then
             Html.div [ Attr.class "row row--between" ]
@@ -447,7 +447,8 @@ skillCard model =
 
           else
             Html.div [ Attr.class "skill" ]
-                [ Html.div [ Attr.class "seg" ]
+                [ projectRow model
+                , Html.div [ Attr.class "seg" ]
                     [ scopeButton model "project" "This project"
                     , scopeButton model "global" "Every project"
                     ]
@@ -476,6 +477,48 @@ skillCard model =
                     ]
                 , skillLine model client
                 ]
+        ]
+
+
+{-| Which folder "This project" means. Left to itself it is the folder
+SpriteWare was started from, which from a shortcut is the install directory, so
+the chosen folder is shown and can be changed.
+-}
+projectRow : Model -> Html Msg
+projectRow model =
+    Html.div [ Attr.class "row row--between" ]
+        [ Html.span [ Attr.class "target" ]
+            [ Html.text
+                (if model.projectChosen then
+                    model.project
+
+                 else
+                    "Project folder: not chosen"
+                )
+            ]
+        , Html.div [ Attr.class "row" ]
+            [ Html.button
+                [ Attr.class "btn btn--link"
+                , Events.onClick ChooseProjectFolder
+                ]
+                [ Html.text
+                    (if model.projectChosen then
+                        "Change folder"
+
+                     else
+                        "Choose folder"
+                    )
+                ]
+            , if model.projectChosen then
+                Html.button
+                    [ Attr.class "btn btn--link"
+                    , Events.onClick ClearProjectFolder
+                    ]
+                    [ Html.text "Use launch folder" ]
+
+              else
+                Html.text ""
+            ]
         ]
 
 
