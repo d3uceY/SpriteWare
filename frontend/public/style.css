@@ -55,13 +55,10 @@
   --accent: #15703e;
   --accent-deep: #0b4a27;
   --accent-ink: #ffffff;
-  --accent-hover: #1b8a4c;
 
   --amber: #a15a05;
   --danger: #b8352a;
   --danger-soft: #fbeae7;
-
-  --radius-control: 7px;
 
   --font-sans: "Albert Sans Variable", "Albert Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -112,7 +109,6 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--line-strong);
   border: 3px solid transparent;
-  border-radius: 99px;
   background-clip: content-box;
 }
 
@@ -268,7 +264,6 @@ pre {
   height: 27px;
   padding: 0 11px 0 10px;
   border: 1px solid var(--line);
-  border-radius: 99px;
   background: var(--surface);
 }
 
@@ -487,7 +482,6 @@ pre {
 .note--bad {
   padding: 9px 11px;
   background: var(--danger-soft);
-  border-radius: var(--radius-control);
   color: var(--danger);
   font-size: 12.5px;
 }
@@ -496,7 +490,6 @@ pre {
   padding: 10px 12px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-control);
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--ink-soft);
@@ -509,7 +502,6 @@ pre {
   padding: 0 11px;
   background: var(--paper);
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius-control);
   color: var(--ink);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -547,16 +539,22 @@ pre {
 
 /* Buttons ----------------------------------------------------------------
    Three levels and no more: one filled action per screen, ghost for the second
-   thing you might press, and a link for the copy affordances. The lip is the
-   same material as the cards', so pressing a button pushes two pixels into the
-   surface instead of fading a shadow. */
+   thing you might press, and a link for the copy affordances. The frame is a
+   12x12 PNG sliced 3px, so a button's corners are stepped rather than rounded -
+   RetroUI's cut, at a third of its weight. The fill lives in the art because a
+   CSS background would paint over the notch and square it off again, which is
+   also why hover lightens instead of swapping colour.
+
+   The lip is a `drop-shadow` rather than a `box-shadow`: a box shadow is a
+   rectangle, so its corners would show as small square tabs poking out of the
+   notched ones. A drop shadow follows the painted silhouette instead. */
 
 .btn {
   height: 34px;
-  padding: 0 16px;
-  border: 1px solid var(--accent-deep);
-  border-radius: var(--radius-control);
-  background: var(--accent);
+  padding: 0 14px;
+  border: 3px solid transparent;
+  border-image: url("/sprites/btn.png") 3 fill stretch;
+  background: transparent;
   color: var(--accent-ink);
   font: inherit;
   font-size: 13px;
@@ -564,18 +562,17 @@ pre {
   letter-spacing: -0.005em;
   white-space: nowrap;
   cursor: pointer;
-  box-shadow: 0 2px 0 var(--accent-deep);
-  transition: background var(--quick) var(--ease), transform 90ms var(--ease),
-    box-shadow 90ms var(--ease);
+  filter: drop-shadow(0 2px 0 var(--accent-deep));
+  transition: filter var(--quick) var(--ease), transform 90ms var(--ease);
 }
 
 .btn:hover:not(:disabled) {
-  background: var(--accent-hover);
+  filter: brightness(1.12) drop-shadow(0 2px 0 var(--accent-deep));
 }
 
 .btn:active:not(:disabled) {
   transform: translateY(2px);
-  box-shadow: 0 0 0 var(--accent-deep);
+  filter: brightness(1.12) drop-shadow(0 0 0 var(--accent-deep));
 }
 
 .btn:focus-visible {
@@ -588,32 +585,33 @@ pre {
   opacity: 0.45;
 }
 
+/* The same frame with the paper fill, so a second action reads as the same
+   object in a quieter material. */
 .btn--ghost {
-  background: var(--paper);
-  border-color: var(--line-strong);
+  border-image-source: url("/sprites/btn-ghost.png");
   color: var(--ink);
-  box-shadow: 0 2px 0 var(--line-strong);
+  filter: drop-shadow(0 2px 0 var(--line-strong));
 }
 
 .btn--ghost:hover:not(:disabled) {
-  background: var(--surface);
-  border-color: var(--faint);
+  filter: brightness(0.975) drop-shadow(0 2px 0 var(--line-strong));
 }
 
 .btn--ghost:active:not(:disabled) {
-  box-shadow: 0 0 0 var(--line-strong);
+  filter: brightness(0.975) drop-shadow(0 0 0 var(--line-strong));
 }
 
-/* The copy affordance: reads as a link, so it never competes with a button. */
+/* The copy affordance: reads as a link, so it never competes with a button and
+   sheds the frame entirely. */
 .btn--link {
   height: 32px;
   padding: 0 6px;
   border: 0;
-  border-radius: var(--radius-control);
+  border-image: none;
   background: transparent;
   color: var(--leaf-deep);
   font-size: 12px;
-  box-shadow: none;
+  filter: none;
 }
 
 .btn--link:hover:not(:disabled) {
@@ -630,14 +628,13 @@ pre {
   gap: 2px;
   padding: 2px;
   background: var(--surface-2);
-  border-radius: 9px;
+  border: 1px solid var(--line-strong);
 }
 
 .seg__btn {
   height: 28px;
   padding: 0 11px;
   border: 0;
-  border-radius: 7px;
   background: transparent;
   color: var(--muted);
   font: inherit;
@@ -720,7 +717,6 @@ pre {
   padding: 4px 6px 4px 12px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-control);
   transition: background var(--quick) var(--ease), border-color var(--quick) var(--ease);
 }
 
@@ -757,7 +753,6 @@ pre {
   padding: 0 9px;
   background: var(--paper);
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius-control);
   color: var(--ink);
   font: inherit;
   font-size: 13px;
@@ -784,7 +779,6 @@ pre {
   overflow: auto;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-control);
   font-family: var(--font-mono);
   font-size: 11.5px;
   line-height: 1.65;
