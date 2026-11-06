@@ -284,8 +284,7 @@ export class InstallResult {
 }
 
 /**
- * MCPStatus is what the settings panel shows and what is pushed on the
- * mcp:status event, so the UI never has to poll.
+ * MCPStatus is pushed on the mcp:status event, so the UI never polls.
  */
 export class MCPStatus {
     /**
@@ -374,9 +373,8 @@ export class MCPStatus {
 /**
  * SetupState is everything the first-run screen needs in one call.
  * 
- * A detected path is a *suggestion*: the user has not agreed to it yet, so it
- * is not written to the config until they say yes. That is the difference
- * between "the app thinks it found Aseprite" and "the app will run this file".
+ * A detected path is a *suggestion*: nothing is written until the user agrees.
+ * That separates "found Aseprite" from "will run this file".
  */
 export class SetupState {
     /**

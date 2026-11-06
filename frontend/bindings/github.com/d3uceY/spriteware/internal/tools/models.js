@@ -7,8 +7,8 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
- * ToolInfo is one entry of the published surface: the name the model calls and
- * a short human line for the app's Tools screen.
+ * ToolInfo is one entry of the published surface: the name the model calls and a
+ * short line for the Tools screen.
  */
 export class ToolInfo {
     /**

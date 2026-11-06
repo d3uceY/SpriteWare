@@ -7,9 +7,8 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
- * Config is the whole on-disk configuration. Keep this list short: every field
- * is a decision the user can get wrong, so only add one when there is no
- * defensible default.
+ * Config is the whole on-disk configuration. Keep it short: each field is a
+ * decision the user can get wrong.
  */
 export class Config {
     /**
@@ -27,9 +26,8 @@ export class Config {
         }
         if (/** @type {any} */(false)) {
             /**
-             * AsepritePathConfirmed records that the user has seen this path and said
-             * yes. A detected path is only a suggestion until then, so the app can ask
-             * once and never guess again.
+             * AsepritePathConfirmed records that the user approved the detected path.
+             * Until then it is only a suggestion.
              * @member
              * @type {boolean | undefined}
              */
@@ -69,10 +67,9 @@ export class Config {
         }
         if (/** @type {any} */(false)) {
             /**
-             * ProjectPath is the folder "This project" means. Empty means the folder the
-             * app was started from, which is a guess: launched from a menu shortcut that
-             * is the install directory or System32, and a skill installed there is never
-             * seen by anything.
+             * ProjectPath is the folder "This project" means. Empty means the launch
+             * folder, which is a guess: from a shortcut that is the install directory
+             * or System32, where a skill is never read.
              * @member
              * @type {string | undefined}
              */
