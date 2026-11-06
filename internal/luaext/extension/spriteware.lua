@@ -699,6 +699,18 @@ function frame_entries(spr)
   return out
 end
 
+-- AniDir is an enum whose tostring is a number, so a caller reading the dump
+-- would have to know the enum to tell forward from reverse. Everything else in
+-- the model speaks names, so this does too.
+local ANI_DIR_NAMES = { [0] = "forward", [1] = "reverse", [2] = "pingpong", [3] = "pingpong_reverse" }
+
+function ani_dir_name(value)
+  if value == nil then return "forward" end
+  local n = tonumber(value)
+  if n ~= nil then return ANI_DIR_NAMES[n] or "forward" end
+  return tostring(value):gsub("^AniDir%.", ""):lower()
+end
+
 function tag_entries(spr)
   local out = arr()
   for _, tag in ipairs(spr.tags) do
@@ -706,7 +718,7 @@ function tag_entries(spr)
       name = tag.name,
       from = tag.fromFrame.frameNumber,
       to = tag.toFrame.frameNumber,
-      direction = tostring(tag.aniDir or ""):gsub("^AniDir%.", ""):lower(),
+      direction = ani_dir_name(tag.aniDir),
     }
   end
   return out
@@ -1551,7 +1563,7 @@ H["tag.update"] = function(args)
   end
 
   return { name = tag.name, from = fromN, to = toN,
-    direction = tostring(tag.aniDir):gsub("^AniDir%.", ""):lower() }
+    direction = ani_dir_name(tag.aniDir) }
 end
 
 H["tag.delete"] = function(args)
