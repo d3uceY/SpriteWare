@@ -6,7 +6,7 @@
   "scripts": {
     "elm:build": "elm make elm/src/Main.elm --output=public/elm.js --optimize",
     "elm:build:dev": "elm make elm/src/Main.elm --output=public/elm.js",
-    "dev": "npm run elm:build:dev && vite",
+    "dev": "node scripts/dev.mjs",
     "build": "npm run elm:build && vite build --mode production",
     "build:dev": "npm run elm:build:dev && vite build --minify false --mode development",
     "preview": "vite preview"
