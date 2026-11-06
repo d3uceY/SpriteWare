@@ -3,26 +3,26 @@
 #
 # The lines below are called `modelines`. See `:help modeline`
 
-name: "spriteware.exe"
+name: "spriteware"
 arch: ${GOARCH}
 platform: "linux"
 version: "0.1.0"
 section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
-description: "A spriteware application"
-vendor: "My Company"
+description: "Pixel-art tooling an AI agent can actually use"
+vendor: "d3uceY"
 homepage: "https://wails.io"
 license: "MIT"
 release: "1"
 
 contents:
-  - src: "./bin/spriteware.exe"
-    dst: "/usr/local/bin/spriteware.exe"
+  - src: "./bin/spriteware"
+    dst: "/usr/local/bin/spriteware"
   - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/spriteware.exe.png"
-  - src: "./build/linux/spriteware.exe.desktop"
-    dst: "/usr/share/applications/spriteware.exe.desktop"
+    dst: "/usr/share/icons/hicolor/128x128/apps/spriteware.png"
+  - src: "./build/linux/spriteware.desktop"
+    dst: "/usr/share/applications/spriteware.desktop"
 
 # Default dependencies for the GTK4 + WebKitGTK 6.0 stack (Ubuntu 24.04+ / Debian 13+)
 depends:

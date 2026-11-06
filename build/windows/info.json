@@ -5,11 +5,11 @@
 	"info": {
 		"0409": {
 			"ProductVersion": "0.1.0",
-			"CompanyName": "My Company",
-			"FileDescription": "A spriteware application",
-			"LegalCopyright": "© 2026, My Company",
-			"ProductName": "My Product",
-			"Comments": "This is a comment"
+			"CompanyName": "d3uceY",
+			"FileDescription": "Pixel-art tooling an AI agent can actually use",
+			"LegalCopyright": "(c) 2026, d3uceY",
+			"ProductName": "SpriteWare",
+			"Comments": "Go for the machine, Wails for the window, Elm for the DOM"
 		}
 	}
 }

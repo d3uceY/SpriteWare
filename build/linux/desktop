@@ -1,13 +1,13 @@
 [Desktop Entry]
 Version=1.0
-Name=My Product
-Comment=A spriteware application
+Name=SpriteWare
+Comment=Pixel-art tooling an AI agent can actually use
 # The Exec line includes %u to pass the URL to the application
-Exec=/usr/local/bin/spriteware.exe %u
+Exec=/usr/local/bin/spriteware %u
 Terminal=false
 Type=Application
-Icon=spriteware.exe
+Icon=spriteware
 Categories=Utility;
-StartupWMClass=spriteware.exe
+StartupWMClass=spriteware
 
  

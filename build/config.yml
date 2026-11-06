@@ -8,7 +8,7 @@ info:
   companyName: "d3uceY" # The name of the company
   productName: "SpriteWare" # The name of the application
   productIdentifier: "com.d3ucey.spriteware" # The unique product identifier
-  description: "Wails v3 + Elm starter template" # The application description
+  description: "Pixel-art tooling an AI agent can actually use" # The application description
   copyright: "(c) 2026, d3uceY" # Copyright text
   comments: "Go for the machine, Wails for the window, Elm for the DOM" # Comments
   version: "0.1.0" # The application version
@@ -70,4 +70,3 @@ fileAssociations:
 
 # Other data
 other:
-  - name: My Other Data
