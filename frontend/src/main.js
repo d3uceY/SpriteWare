@@ -9,6 +9,13 @@
 import { Events } from "@wailsio/runtime";
 import gsap from "gsap";
 
+// style.css lives in public/, which Vite copies verbatim - a bare @import there
+// is a URL the browser cannot resolve, so the fonts are imported here instead
+// and bundled with the app.
+import "@fontsource-variable/albert-sans";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+
 import { MCPService } from "../bindings/github.com/d3uceY/spriteware/backend/index.js";
 import { startSprites } from "./sprite.js";
 
@@ -272,39 +279,84 @@ function describe(err) {
 // and none of it runs under reduced motion.
 // ---------------------------------------------------------------------------
 
-const EASE = "power2.out";
+// Expo out: the movement is over almost before it is noticed, which is what
+// stops a short UI animation reading as a slow one.
+const EASE = "expo.out";
+
+// The page title is drawn pixel art, so it arrives the way the sprite was made:
+// seven rows of art pixels, snapped rather than eased. This is the one moment in
+// the app that shows its own material, and it is 440ms long.
+function drawTitle() {
+  const word = document.querySelector(".page__title .sprite");
+  if (!word) return;
+
+  gsap.fromTo(
+    word,
+    { clipPath: "inset(0% 0% 100% 0%)" },
+    {
+      clipPath: "inset(0% 0% 0% 0%)",
+      duration: 0.44,
+      ease: "steps(7)",
+      clearProps: "clipPath",
+    },
+  );
+}
 
 function enterPage() {
-  const items = document.querySelectorAll(".page > *");
-  if (items.length === 0) return;
+  const blocks = document.querySelectorAll(".page > *");
+  if (blocks.length === 0) return;
 
-  gsap.from(items, {
-    y: 8,
+  gsap.from(blocks, {
+    y: 12,
     opacity: 0,
-    duration: 0.3,
-    stagger: 0.04,
+    duration: 0.44,
+    stagger: 0.055,
+    ease: EASE,
+    clearProps: "transform,opacity",
+  });
+
+  drawTitle();
+}
+
+// First paint: the chrome settles before the page does, so the window arrives as
+// two layers rather than as one image switching on.
+function enterChrome() {
+  gsap.from([".topbar", ".tabs"], {
+    y: -8,
+    opacity: 0,
+    duration: 0.5,
+    stagger: 0.07,
     ease: EASE,
     clearProps: "transform,opacity",
   });
 }
 
-// Elm re-renders the whole tree, so this runs only when the view changes.
+// Elm re-renders the whole tree, so this runs only when the view changes. It
+// reports whether it did, because a screen change is not a patch.
 let currentView = null;
 
 function syncView() {
   const root = document.querySelector("[data-view]");
   const view = root?.dataset.view ?? null;
-  if (view === currentView) return;
+  if (view === currentView) return false;
 
   const first = currentView === null;
   currentView = view;
 
-  if (first || reducedMotion) return;
-  enterPage();
+  if (!reducedMotion) {
+    if (first) {
+      enterChrome();
+    } else {
+      enterPage();
+    }
+  }
+
+  return true;
 }
 
 // A page taller than the window loses its scroll position when the stage's
-// children are replaced, so remember it and put it back after the patch.
+// children are replaced, so remember it and put it back after the patch. A new
+// screen is not a patch: that one starts at the top, the way a document does.
 let stageScroll = 0;
 
 document.addEventListener(
@@ -318,30 +370,35 @@ document.addEventListener(
   true,
 );
 
-function restoreScroll() {
+function restoreScroll(freshScreen) {
   const stage = document.querySelector(".stage");
-  if (stage && Math.abs(stage.scrollTop - stageScroll) > 1) {
+  if (!stage) return;
+
+  if (freshScreen) {
+    stageScroll = 0;
+    stage.scrollTop = 0;
+    return;
+  }
+
+  if (Math.abs(stage.scrollTop - stageScroll) > 1) {
     stage.scrollTop = stageScroll;
   }
 }
 
 function boot() {
-  const root = document.getElementById("app");
-  if (!root) return;
-
-  // Elm rebuilds the tree on every update, so a sprite appearing after first
-  // paint would keep its raw size. startSprites skips elements it already sized.
+  // Elm swaps its whole rendered tree on every update, including the node that
+  // was handed to `init`, so the thing to watch is the body: every patch shows
+  // up there, and nowhere else is guaranteed to survive one.
   const observer = new MutationObserver(() =>
     requestAnimationFrame(() => {
       startSprites();
-      syncView();
-      restoreScroll();
+      restoreScroll(syncView());
     }),
   );
-  observer.observe(root, { childList: true, subtree: true });
+  observer.observe(document.body, { childList: true, subtree: true });
 
   startSprites();
-  syncView();
+  restoreScroll(syncView());
 }
 
 boot();
