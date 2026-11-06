@@ -31,7 +31,6 @@ look     op=preview             # look at it before judging it
 validate                        # palette drift, strays, broken rigs
 export   op=png path=hero.png
 ```
-
 Run `doctor` first when anything fails: it reports the connection, the mode and
 the one thing to fix. Every tool connects on its own, so there is no separate
 "connect" step to forget.
@@ -72,8 +71,13 @@ in front of you rather than all of them.
 ## The tools, in one line each
 
 `doctor` · `sprite` · `draw` · `look` · `layer` · `cel` · `frame` · `tag` ·
-`palette` · `validate` · `export`. Anything with an `op` argument takes `ops`
-as an array to batch several in one undo step.
+`slice` · `select` · `transform` · `palette` · `validate` · `export`. Anything
+with an `op` argument takes `ops` as an array to batch several in one undo step.
+
+A `slice` names a rectangle: the 9-patch region of a panel, or a character's
+box. Slices travel into the spritesheet atlas with their `center`, so an
+importer reads the border instead of hard-coding it. `select` scopes drawing;
+see [Scoping a local edit](#scoping-a-local-edit).
 
 ## `draw` is the tool you will use most
 
@@ -133,14 +137,27 @@ two-frame loop.
 `export op=png` writes one frame; `op=frames` writes a sequence with `{frame}`
 (0-based) or `{n}` (1-based) in the filename; `op=svg` writes a vector version
 one rect per horizontal run; `op=gif` animates using the frame durations;
-`op=spritesheet` writes one packed PNG plus a JSON atlas with per-frame rects
-and the tags. The reply lists the exact paths written — use those paths, do not
-reconstruct them.
+`op=spritesheet` writes one packed PNG plus a JSON atlas with per-frame rects,
+the tags and the document's slices; `op=tileset` keeps one copy of each distinct
+tile and writes a tile grid per frame, with `format=tiled` or `format=godot`
+adding that tool's import file. The reply lists the exact paths written — use
+those paths, do not reconstruct them.
+
+## Scoping a local edit
+
+`select op=set x= y= width= height=` clips every later `draw` to that rectangle,
+the way Aseprite's own tools behave. `select op=none` clears it. A selection is
+state, not a one-shot: a leftover selection silently clips the next unrelated
+draw, so clear it when the edit is done. `select op=info` reports what is
+selected. Pass `ignoreSelection:true` on a draw call to edit the whole cel
+anyway.
 
 ## Palette work
 
 `palette op=ramp` generates a shade ramp with cool shadows and warm highlights
 and verifies it (monotone lightness, minimum separation). `op=analyze` reports
 what the art actually uses. `op=adopt_from_art` snaps a foreign palette back to
-the art's own colours. Prefer adopting an existing palette over inventing a new
-one per sprite — that is how a set stays coherent.
+the art's own colours. `op=snap` is the reverse: it moves every pixel onto its
+nearest palette entry, which fixes art that drifted after a resize without
+letting the palette grow to fit the drift. Prefer adopting an existing palette
+over inventing a new one per sprite — that is how a set stays coherent.
