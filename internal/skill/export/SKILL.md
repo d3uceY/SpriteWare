@@ -79,11 +79,24 @@ export op=spritesheet path="/abs/path/knight.png" padding=1
 
 One row of frames plus `knight.json` beside it: `frameWidth`, `frameHeight`,
 `columns`, and a `frames` array with each 1-based index, its `x`/`y`/`w`/`h`
-and its `durationMs`, plus the tags. `padding` defaults to 1 and is not
-optional decoration: at non-integer zoom a GPU samples past a frame's edge and
-picks up its neighbour, which shows as a one pixel line along every sprite.
+and its `durationMs`, plus the tags and the document's slices (with each
+9-patch `center`). `padding` defaults to 1 and is not optional decoration: at
+non-integer zoom a GPU samples past a frame's edge and picks up its neighbour,
+which shows as a one pixel line along every sprite.
 
 Mixed frame sizes are refused — a sheet has one frame size, so resize first.
+
+Level art goes out as tiles instead:
+
+```
+export op=tileset path="/abs/path/arena.png" tileWidth=16 tileHeight=16 format=tiled
+```
+
+The canvas is sliced into tiles, duplicates are kept once, and the reply
+carries a grid of tile numbers per frame with `0` for empty. `format=tiled`
+adds a `.tsx` plus one `.tmx` per frame; `format=godot` adds a Godot 4 `.tres`
+`TileSet`. A canvas that is not a whole number of tiles is refused, because a
+half tile is a silent seam.
 
 **The reply lists the exact paths written.** Use those paths in your report;
 do not reconstruct them from the pattern.

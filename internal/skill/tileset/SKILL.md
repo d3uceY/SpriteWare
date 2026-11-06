@@ -86,6 +86,19 @@ export op=frames path="/abs/path/tiles/{n}.png"
 `{n}` numbers from 1, `{frame}` from 0 — pick one and stay consistent with the
 engine's convention. The reply lists every path written.
 
+A whole map goes out as a tileset instead, once the tiles live on one canvas in
+a grid:
+
+```
+export op=tileset path="/abs/path/arena.png" tileWidth=16 tileHeight=16 format=tiled
+```
+
+Duplicates are stored once, and the reply carries one grid of tile numbers per
+frame with `0` for empty, so the map is data rather than a picture. `format=tiled`
+writes a `.tsx` and a `.tmx` per frame; `format=godot` writes a Godot 4 `.tres`.
+The canvas has to be a whole number of tiles: a half tile is a seam nobody
+notices until it ships.
+
 ## Checks
 
 - Rows equal the tile width, count equals the tile height.

@@ -343,21 +343,28 @@ func isEmptyExpect(e analyze.Expect) bool {
 func (s *Service) registerExport(srv *server.MCPServer) {
 	tool := mcp.NewTool("export",
 		mcp.WithDescription(
-			"Write files. Ops: png, frames, svg, gif, spritesheet.\n"+
+			"Write files. Ops: png, frames, svg, gif, spritesheet, tileset.\n"+
 				"Every op returns the concrete paths it wrote, never the pattern you passed. `frames` numbers "+
 				"files from 0 (`{frame}`) or 1 (`{n}`), and says which.\n"+
 				"SVG emits one rect per run of identical pixels, grouped per frame.\n"+
 				"`gif` uses the frame durations you set. `spritesheet` writes one packed PNG in a row plus a "+
-				"JSON atlas beside it with per-frame rectangles and the tags; `padding` defaults to 1 so a GPU "+
-				"sampling at non-integer zoom cannot pick up the neighbouring frame.\n"+
+				"JSON atlas beside it with per-frame rectangles, the tags, and the document's slices with their "+
+				"9-patch centres; `padding` defaults to 1 so a GPU sampling at non-integer zoom cannot pick up "+
+				"the neighbouring frame.\n"+
+				"`tileset` slices every frame into `tileWidth` x `tileHeight` tiles and keeps one copy of each "+
+				"distinct tile, plus a grid of tile numbers per frame (0 is empty). `format=tiled` adds a .tsx "+
+				"and one .tmx per frame; `format=godot` adds a Godot 4 .tres TileSet.\n"+
 				"`tags` keeps only the frames those tags cover and `layers` exports only those layers, so one "+
 				"command exports one animation. An unknown tag or layer name is refused rather than quietly "+
 				"exporting everything."),
-		mcp.WithString("op", mcp.Required(), mcp.Enum("png", "frames", "svg", "gif", "spritesheet")),
+		mcp.WithString("op", mcp.Required(), mcp.Enum("png", "frames", "svg", "gif", "spritesheet", "tileset")),
 		mcp.WithString("path", mcp.Description("Destination file, or destination directory for op=frames.")),
 		mcp.WithNumber("frame", mcp.Description("For png: 1-based frame.")),
 		mcp.WithNumber("scale", mcp.Description("Whole-number upscale, default 1.")),
 		mcp.WithNumber("padding", mcp.Description("For spritesheet: transparent pixels between frames, default 1.")),
+		mcp.WithNumber("tileWidth", mcp.Description("For tileset: tile width in pixels before `scale`.")),
+		mcp.WithNumber("tileHeight", mcp.Description("For tileset: tile height in pixels before `scale`.")),
+		mcp.WithString("format", mcp.Description("For tileset: json (default), tiled or godot. Adds that tool's import file beside the sheet.")),
 		mcp.WithArray("tags", mcp.Description("Keep only the frames these tags cover."), stringItems()),
 		mcp.WithArray("layers", mcp.Description("Export only these layers."), stringItems()),
 		mcp.WithString("sprite", mcp.Description("Target sprite by absolute path.")),
@@ -458,7 +465,15 @@ func (s *Service) registerExport(srv *server.MCPServer) {
 				return fail(err), nil
 			}
 			padding := req.GetInt("padding", 1)
-			pngPath, jsonPath, atlas, err := export.Sheet(frames, durationsOf(), d.Tags, path, scale, padding)
+			pngPath, jsonPath, atlas, err := export.Sheet(export.SheetOptions{
+				Frames:    frames,
+				Durations: durationsOf(),
+				Tags:      d.Tags,
+				Slices:    d.Slices,
+				Path:      path,
+				Scale:     scale,
+				Padding:   padding,
+			})
 			if err != nil {
 				return fail(protocol.New(protocol.CodeOpenFailed, "%v", err)), nil
 			}
@@ -470,8 +485,39 @@ func (s *Service) registerExport(srv *server.MCPServer) {
 				"frames":  frameList,
 				"summary": summary,
 			}, summary), nil
+
+		case "tileset":
+			frames, err := all()
+			if err != nil {
+				return fail(err), nil
+			}
+			tileW := req.GetInt("tileWidth", 0)
+			tileH := req.GetInt("tileHeight", 0)
+			if tileW <= 0 || tileH <= 0 {
+				return fail(protocol.New(protocol.CodeInvalidArgs,
+					"export op=tileset needs `tileWidth` and `tileHeight` in pixels, for example 16 and 16")), nil
+			}
+			written, tiles, err := export.PackTileset(export.TilesetOptions{
+				Frames: frames,
+				TileW:  tileW,
+				TileH:  tileH,
+				Path:   path,
+				Scale:  scale,
+				Format: strings.TrimSpace(req.GetString("format", "json")),
+			})
+			if err != nil {
+				return fail(protocol.New(protocol.CodeOpenFailed, "%v", err)), nil
+			}
+			summary := fmt.Sprintf("wrote %d file(s): %d distinct tile(s) in a %d-column strip",
+				len(written), tiles.TileCount, tiles.Columns)
+			return ok(map[string]any{
+				"files":   written,
+				"tileset": tiles,
+				"frames":  frameList,
+				"summary": summary,
+			}, summary), nil
 		}
 
-		return fail(unknownOp("export", opName, "png", "frames", "svg", "gif", "spritesheet")), nil
+		return fail(unknownOp("export", opName, "png", "frames", "svg", "gif", "spritesheet", "tileset")), nil
 	})
 }
