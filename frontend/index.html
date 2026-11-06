@@ -14,6 +14,18 @@
      BEFORE the module below, and as a plain <script> - importing it as a module
      leaves `this` undefined and the app never mounts. -->
 <script src="/elm.js"></script>
+<script>
+  // If the bridge dies before Elm mounts, the window is a blank page with no
+  // clue. Put the reason in the title and on the page instead.
+  window.addEventListener("error", function (e) {
+    document.title = "ERR " + e.message;
+    document.body.style.color = "#000";
+    document.body.textContent = "ERR " + e.message + " @ " + (e.filename || "");
+  });
+  window.addEventListener("unhandledrejection", function (e) {
+    document.title = "REJ " + e.reason;
+  });
+</script>
 <script type="module" src="/src/main.js"></script>
 </body>
 </html>

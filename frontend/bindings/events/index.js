@@ -7,7 +7,7 @@
 import "../github.com/wailsapp/wails/v3/internal/eventcreate.js";
 
 /**
- * Name of the custom event "tick".
+ * Name of the custom event "mcp:status".
  */
-export const Tick = "tick";
+export const McpStatus = "mcp:status";
 

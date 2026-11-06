@@ -5,10 +5,14 @@
 // @ts-ignore: Unused imports
 import type { Events } from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import type * as backend$0 from "../../../../d3uceY/spriteware/backend/models.js";
+
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
-            "tick": string;
+            "mcp:status": backend$0.MCPStatus;
         }
     }
 }

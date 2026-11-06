@@ -7,55 +7,453 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
- * Info describes the runtime the window is running on. It exists so the
- * template can prove that data really comes from Go - replace it with your
- * first real model.
+ * ClientInstall says whether this app can write that config for the user.
  */
-export class Info {
+export class ClientInstall {
     /**
-     * Creates a new Info instance.
-     * @param {Partial<Info>} [$$source = {}] - The source object to create the Info.
+     * Creates a new ClientInstall instance.
+     * @param {Partial<ClientInstall>} [$$source = {}] - The source object to create the ClientInstall.
      */
     constructor($$source = {}) {
-        if (!("version" in $$source)) {
+        if (!("can" in $$source)) {
             /**
              * @member
-             * @type {string}
+             * @type {boolean}
              */
-            this["version"] = "";
+            this["can"] = false;
         }
-        if (!("go" in $$source)) {
+        if (!("why" in $$source)) {
             /**
              * @member
              * @type {string}
              */
-            this["go"] = "";
-        }
-        if (!("wails" in $$source)) {
-            /**
-             * @member
-             * @type {string}
-             */
-            this["wails"] = "";
-        }
-        if (!("platform" in $$source)) {
-            /**
-             * @member
-             * @type {string}
-             */
-            this["platform"] = "";
+            this["why"] = "";
         }
 
         Object.assign(this, $$source);
     }
 
     /**
-     * Creates a new Info instance from a string or object.
+     * Creates a new ClientInstall instance from a string or object.
      * @param {any} [$$source = {}]
-     * @returns {Info}
+     * @returns {ClientInstall}
      */
     static createFrom($$source = {}) {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new Info(/** @type {Partial<Info>} */($$parsedSource));
+        return new ClientInstall(/** @type {Partial<ClientInstall>} */($$parsedSource));
     }
 }
+
+/**
+ * ClientSkill is where this assistant looks for Agent Skills, at both scopes.
+ * An assistant without a skills directory has Available false and keeps only the
+ * MCP entry. The notes are per scope because some caveats only apply to one:
+ * Claude Code's personal skills are skipped by Cowork and cloud sessions.
+ */
+export class ClientSkill {
+    /**
+     * Creates a new ClientSkill instance.
+     * @param {Partial<ClientSkill>} [$$source = {}] - The source object to create the ClientSkill.
+     */
+    constructor($$source = {}) {
+        if (!("available" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["available"] = false;
+        }
+        if (!("project" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["project"] = "";
+        }
+        if (!("global" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["global"] = "";
+        }
+        if (!("note" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["note"] = "";
+        }
+        if (!("globalNote" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["globalNote"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ClientSkill instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {ClientSkill}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ClientSkill(/** @type {Partial<ClientSkill>} */($$parsedSource));
+    }
+}
+
+/**
+ * ClientSpec is one assistant: what it is called, where the config goes, the
+ * exact text to copy, and whether the install button can do it.
+ */
+export class ClientSpec {
+    /**
+     * Creates a new ClientSpec instance.
+     * @param {Partial<ClientSpec>} [$$source = {}] - The source object to create the ClientSpec.
+     */
+    constructor($$source = {}) {
+        if (!("id" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["id"] = "";
+        }
+        if (!("label" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["label"] = "";
+        }
+        if (!("where" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["where"] = "";
+        }
+        if (!("note" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["note"] = "";
+        }
+        if (!("snippet" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["snippet"] = "";
+        }
+        if (!("target" in $$source)) {
+            /**
+             * @member
+             * @type {ClientTarget}
+             */
+            this["target"] = (new ClientTarget());
+        }
+        if (!("install" in $$source)) {
+            /**
+             * @member
+             * @type {ClientInstall}
+             */
+            this["install"] = (new ClientInstall());
+        }
+        if (!("skill" in $$source)) {
+            /**
+             * @member
+             * @type {ClientSkill}
+             */
+            this["skill"] = (new ClientSkill());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ClientSpec instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {ClientSpec}
+     */
+    static createFrom($$source = {}) {
+        const $$createField5_0 = $$createType0;
+        const $$createField6_0 = $$createType1;
+        const $$createField7_0 = $$createType2;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("target" in $$parsedSource) {
+            $$parsedSource["target"] = $$createField5_0($$parsedSource["target"]);
+        }
+        if ("install" in $$parsedSource) {
+            $$parsedSource["install"] = $$createField6_0($$parsedSource["install"]);
+        }
+        if ("skill" in $$parsedSource) {
+            $$parsedSource["skill"] = $$createField7_0($$parsedSource["skill"]);
+        }
+        return new ClientSpec(/** @type {Partial<ClientSpec>} */($$parsedSource));
+    }
+}
+
+/**
+ * ClientTarget says where an agent keeps its config and whether we found it.
+ */
+export class ClientTarget {
+    /**
+     * Creates a new ClientTarget instance.
+     * @param {Partial<ClientTarget>} [$$source = {}] - The source object to create the ClientTarget.
+     */
+    constructor($$source = {}) {
+        if (!("path" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["path"] = "";
+        }
+        if (!("detected" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["detected"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ClientTarget instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {ClientTarget}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ClientTarget(/** @type {Partial<ClientTarget>} */($$parsedSource));
+    }
+}
+
+/**
+ * InstallResult is the outcome of pressing Install. It is always a message,
+ * never an error: a failed install is something to show, not something to throw.
+ */
+export class InstallResult {
+    /**
+     * Creates a new InstallResult instance.
+     * @param {Partial<InstallResult>} [$$source = {}] - The source object to create the InstallResult.
+     */
+    constructor($$source = {}) {
+        if (!("ok" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["ok"] = false;
+        }
+        if (!("message" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["message"] = "";
+        }
+        if (!("path" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["path"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new InstallResult instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {InstallResult}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new InstallResult(/** @type {Partial<InstallResult>} */($$parsedSource));
+    }
+}
+
+/**
+ * MCPStatus is what the settings panel shows and what is pushed on the
+ * mcp:status event, so the UI never has to poll.
+ */
+export class MCPStatus {
+    /**
+     * Creates a new MCPStatus instance.
+     * @param {Partial<MCPStatus>} [$$source = {}] - The source object to create the MCPStatus.
+     */
+    constructor($$source = {}) {
+        if (!("running" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["running"] = false;
+        }
+        if (!("port" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["port"] = 0;
+        }
+        if (!("url" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["url"] = "";
+        }
+        if (!("transport" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["transport"] = "";
+        }
+        if (!("mode" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["mode"] = "";
+        }
+        if (!("bridgePort" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["bridgePort"] = 0;
+        }
+        if (!("bridgeConnected" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["bridgeConnected"] = false;
+        }
+        if (!("toolCount" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["toolCount"] = 0;
+        }
+        if (/** @type {any} */(false)) {
+            /**
+             * @member
+             * @type {string | undefined}
+             */
+            this["lastError"] = undefined;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MCPStatus instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {MCPStatus}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new MCPStatus(/** @type {Partial<MCPStatus>} */($$parsedSource));
+    }
+}
+
+/**
+ * SetupState is everything the first-run screen needs in one call.
+ * 
+ * A detected path is a *suggestion*: the user has not agreed to it yet, so it
+ * is not written to the config until they say yes. That is the difference
+ * between "the app thinks it found Aseprite" and "the app will run this file".
+ */
+export class SetupState {
+    /**
+     * Creates a new SetupState instance.
+     * @param {Partial<SetupState>} [$$source = {}] - The source object to create the SetupState.
+     */
+    constructor($$source = {}) {
+        if (!("confirmed" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["confirmed"] = false;
+        }
+        if (!("path" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["path"] = "";
+        }
+        if (!("candidate" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["candidate"] = "";
+        }
+        if (!("found" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["found"] = false;
+        }
+        if (!("searching" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["searching"] = false;
+        }
+        if (!("searched" in $$source)) {
+            /**
+             * @member
+             * @type {string[]}
+             */
+            this["searched"] = [];
+        }
+        if (/** @type {any} */(false)) {
+            /**
+             * @member
+             * @type {string | undefined}
+             */
+            this["problem"] = undefined;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SetupState instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {SetupState}
+     */
+    static createFrom($$source = {}) {
+        const $$createField5_0 = $$createType3;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("searched" in $$parsedSource) {
+            $$parsedSource["searched"] = $$createField5_0($$parsedSource["searched"]);
+        }
+        return new SetupState(/** @type {Partial<SetupState>} */($$parsedSource));
+    }
+}
+
+// Private type creation functions
+const $$createType0 = ClientTarget.createFrom;
+const $$createType1 = ClientInstall.createFrom;
+const $$createType2 = ClientSkill.createFrom;
+const $$createType3 = $Create.Array($Create.Any);
