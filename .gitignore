@@ -10,3 +10,7 @@ build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
 reference/
 # working notes, not shipped
 internal documents/
+# local build output
+*.exe
+# per-machine MCP wiring, points at an absolute path
+.vscode/mcp.json
