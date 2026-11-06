@@ -33,10 +33,14 @@ layer, or editing a layer you did not create.
 
 ## 3. Scope the edit as tightly as you can
 
-SpriteWare has no selection tool, so scoping is done with `target`:
+Three ways, cheapest first:
 
-- **A layer** on every op keeps you out of the rest of the drawing.
+- **A layer** on every op (`target.layer`) keeps you out of the rest of the
+  drawing.
 - **A frame** in `target.frame` keeps you out of the timeline.
+- **A selection** (`select op=set`) clips every draw to one rectangle. It is
+  document state, so it stays on until `select op=none` — clear it, or a later
+  draw lands somewhere you did not intend.
 - **A grid at one origin** touches exactly that rectangle, nothing else.
 
 Scoping is cheaper than repairing.
