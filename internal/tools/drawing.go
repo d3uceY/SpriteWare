@@ -22,6 +22,7 @@ const drawSchema = `{
   "properties": {
     "label": {"type": "string", "description": "Shows up in the undo history, e.g. \"shade helmet\"."},
     "sprite": {"type": "string", "description": "Target sprite by absolute path."},
+    "ignoreSelection": {"type": "boolean", "description": "Draw the whole cel even when a selection is set. Default false: a selection clips every draw."},
     "ops": {
       "type": "array",
       "description": "Applied in order as ONE undo step. Coordinate space is 0-based and sprite-absolute.",
@@ -130,6 +131,9 @@ func (s *Service) registerDraw(srv *server.MCPServer) {
 		}
 		if sp := strings.TrimSpace(req.GetString("sprite", "")); sp != "" {
 			args["sprite"] = sp
+		}
+		if req.GetBool("ignoreSelection", false) {
+			args["ignoreSelection"] = true
 		}
 
 		var out map[string]any
@@ -270,19 +274,26 @@ func toInt(v any) int {
 func (s *Service) registerPalette(srv *server.MCPServer) {
 	tool := mcp.NewTool("palette",
 		mcp.WithDescription(
-			"Colour work. Ops: get, set, ramp, analyze, adopt_from_art, extract.\n"+
-				"`ramp` builds a shading ramp from a base colour with a proper hue shift — shadows drift "+
-				"cool, highlights warm — and verifies it before returning: lightness must rise steadily "+
-				"and neighbouring steps must be far enough apart to read as different colours.\n"+
+			"Colour work. Ops: get, set, ramp, analyze, adopt_from_art, extract, snap.\n"+
+				"`ramp` builds a shading ramp from a base colour with a proper hue shift: shadows drift "+
+				"cool, highlights warm. It verifies the result before returning: lightness must rise "+
+				"steadily and neighbouring steps must be far enough apart to read as different colours.\n"+
 				"`analyze` reports the colours actually in the art against the document palette.\n"+
 				"`adopt_from_art` sets the palette to the colours in use, which is the fix for a document "+
-				"whose palette and art have quietly drifted apart."),
+				"whose palette and art have quietly drifted apart. `snap` is the other direction: it moves "+
+				"every pixel onto its nearest palette entry, so a resized or painted-over sprite goes back "+
+				"to a fixed palette without the palette growing to fit the mistakes.\n"+
+				"`snap` defaults to every layer and frame; `layer` and `frame` narrow it. It reports how "+
+				"many pixels moved and which colours moved where, so a large snap is visible before it is "+
+				"accepted."),
 		mcp.WithString("op", mcp.Required(),
-			mcp.Enum("get", "set", "ramp", "analyze", "adopt_from_art", "extract")),
+			mcp.Enum("get", "set", "ramp", "analyze", "adopt_from_art", "extract", "snap")),
 		mcp.WithString("base", mcp.Description("For ramp: the base colour, #rrggbb.")),
 		mcp.WithString("preset", mcp.Description("For set: a named palette instead of a colour list.")),
 		mcp.WithNumber("steps", mcp.Description("For ramp and extract: how many colours.")),
 		mcp.WithArray("colors", mcp.Description("For set: the palette as hex strings."), stringItems()),
+		mcp.WithString("layer", mcp.Description("For snap: only this layer. Omit for every layer.")),
+		mcp.WithNumber("frame", mcp.Description("For snap: only this frame. Omit for every frame.")),
 		mcp.WithString("sprite", mcp.Description("Target sprite by absolute path.")),
 	)
 
@@ -416,10 +427,25 @@ func (s *Service) registerPalette(srv *server.MCPServer) {
 			return ok(map[string]any{
 				"colors": hexes, "summary": summary, "offPalette": offPalette,
 			}, summary), nil
+
+		case "snap":
+			args["layer"] = strings.TrimSpace(req.GetString("layer", ""))
+			if v, exists := req.GetArguments()["frame"]; exists {
+				args["frame"] = v
+			}
+			var out map[string]any
+			if err := s.call(ctx, "palette.snap", args, &out); err != nil {
+				return fail(err), nil
+			}
+			changedPixels := toInt(out["pixelsChanged"])
+			summary := fmt.Sprintf("%d of %d opaque pixel(s) moved onto the palette, %d colour pair(s)",
+				changedPixels, toInt(out["pixelsVisited"]), toInt(out["snappedColours"]))
+			out["summary"] = summary
+			return ok(out, summary), nil
 		}
 
 		return fail(unknownOp("palette", opName,
-			"get", "set", "ramp", "analyze", "adopt_from_art", "extract")), nil
+			"get", "set", "ramp", "analyze", "adopt_from_art", "extract", "snap")), nil
 	})
 }
 

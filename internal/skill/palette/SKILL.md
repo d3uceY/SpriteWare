@@ -63,6 +63,16 @@ from a quantised set of the sprite's own colours, and `op=adopt_from_art` sets
 the palette to exactly the colours in use. Both are for art that arrived with
 no curated palette — after which `op=analyze` has nothing left to complain about.
 
+**The other direction:** `palette op=snap` moves every pixel onto its nearest
+palette entry and reports how many moved. That is the fix for art that drifted
+after a resize, a hue shift or a paint-over: the palette stays the palette, and
+the art comes back to it. Snap before analysing a document you did not make, or
+the report is really a complaint about the drift.
+
+```
+palette op=snap layer="base" frame=1
+```
+
 ## Contrast
 
 Readability is carried by value, not hue. Check by imagining the sprite in
