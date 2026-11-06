@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 8 8" shape-rendering="crispEdges">
+  <g id="frame-1">
+    <rect x="7" y="0" width="1" height="1" fill="#1f1f1f"/>
+    <rect x="7" y="1" width="1" height="1" fill="#1f1f1f"/>
+    <rect x="6" y="2" width="1" height="1" fill="#1f1f1f"/>
+    <rect x="5" y="3" width="1" height="1" fill="#1f1f1f"/>
+    <rect x="4" y="4" width="1" height="1" fill="#1f1f1f"/>
+    <rect x="3" y="5" width="1" height="1" fill="#1f1f1f"/>
+    <rect x="2" y="6" width="1" height="1" fill="#1f1f1f"/>
+    <rect x="0" y="7" width="3" height="1" fill="#1f1f1f"/>
+    <rect x="7" y="2" width="1" height="1" fill="#7d929e"/>
+    <rect x="7" y="3" width="1" height="1" fill="#7d929e"/>
+    <rect x="7" y="4" width="1" height="1" fill="#7d929e"/>
+    <rect x="7" y="5" width="1" height="1" fill="#7d929e"/>
+    <rect x="7" y="6" width="1" height="1" fill="#7d929e"/>
+    <rect x="3" y="7" width="5" height="1" fill="#7d929e"/>
+  </g>
+</svg>
