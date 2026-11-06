@@ -1,0 +1,60 @@
+{
+  "image": "sheet.png",
+  "width": 964,
+  "height": 192,
+  "frameWidth": 192,
+  "frameHeight": 192,
+  "columns": 5,
+  "padding": 1,
+  "frames": [
+    {
+      "index": 1,
+      "x": 0,
+      "y": 0,
+      "w": 192,
+      "h": 192,
+      "durationMs": 110
+    },
+    {
+      "index": 2,
+      "x": 193,
+      "y": 0,
+      "w": 192,
+      "h": 192,
+      "durationMs": 130
+    },
+    {
+      "index": 3,
+      "x": 386,
+      "y": 0,
+      "w": 192,
+      "h": 192,
+      "durationMs": 320
+    },
+    {
+      "index": 4,
+      "x": 579,
+      "y": 0,
+      "w": 192,
+      "h": 192,
+      "durationMs": 170
+    },
+    {
+      "index": 5,
+      "x": 772,
+      "y": 0,
+      "w": 192,
+      "h": 192,
+      "durationMs": 110
+    }
+  ],
+  "tags": [
+    {
+      "name": "idle",
+      "from": 1,
+      "to": 5,
+      "direction": "forward"
+    }
+  ],
+  "scale": 4
+}

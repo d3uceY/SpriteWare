@@ -1,0 +1,23 @@
+run: 2026-11-06-ring-knight-2
+verdict: redraw
+scores:
+    read: 3
+    form: 0
+    motion: 0
+    cohesion: 0
+    appeal: 0
+defects:
+    - banding
+    - detached
+    - flat-detail
+    - mechanical
+top_defect: it just looks horrible
+criteria:
+    - criterion: reads-at-1x
+      step: 0
+      pass: true
+      note: Reads as an armoured knight with a sword at actual size.
+    - criterion: idle-motion
+      step: 0
+      pass: false
+      note: Reads as a still repeated rather than breathing.

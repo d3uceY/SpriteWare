@@ -1,0 +1,110 @@
+title: Ring knight ??? a rigged knight that breathes
+date: "2026-11-06"
+agent: copilot
+model: DeepSeek V4.1 Flash
+benchmark:
+    slug: ring-knight
+    revision: 1
+steps:
+    - title: The knight
+      text: |-
+        The document is already open: 48x48 pixels, RGB, with the PICO-8 palette loaded (16 colours). Use only those 16 colours. This brief is complete: do not ask me to confirm it. Decide anything it leaves open yourself and list those decisions in your final report. Coordinates are 0-based pixels, x to the right, y down. Layer indexes are 0-based from the bottom.
+
+        Draw ONE frame: an armoured knight standing at rest, holding a sword point-down in the right hand (the viewer's right). A later step animates this knight breathing, so build it as parts that can move one pixel: helmet, torso, arm, sword. Do not draw texture noise.
+
+        Composition
+        - Transparent sky. The knight is centred and faces the viewer.
+        - The figure spans roughly x 12-34 and y 6-41. The helmet crown must not go above y 6, and no pixel of any layer may sit above y 4 or below y 43.
+        - Ground shadow: a flattened ellipse on the `shadow` layer, about 18 px wide and 3 px tall, centred under the feet at y 41-43, touching both boots. It is part of the silhouette, so it must touch the feet, not float beside them.
+        - Feet on y 39-41. Legs, a tabard or skirt over them, torso, pauldrons, and a great helm with a single dark visor slit across the eye line.
+        - The sword runs from the right hand at about y 26 down to the ground: blade about 3 px wide, point at y 42, crossguard about 9 px wide at y 26-27. The hand grips it, so the gauntlet and the grip touch.
+
+        Colours (PICO-8 hex values)
+        - Steel: #C2C3C7 lit, #83769C mid, #5F574F shadow, #1D2B53 deepest crevice.
+        - Cloth (tabard): #7E2553 base with #FF004D highlights. Plume: #FF004D.
+        - Leather grip: #AB5236 with #1D2B53 shadow. Crossguard: #FFA300. Blade: #FFF1E8 edge, #C2C3C7 body.
+        - Visor slit: #000000. Ground shadow: #000000.
+        - Do not add any colour that is not on the palette.
+
+        Style
+        - One light from the upper left. Lit edges on the left and top of every form, shadow on the right and underneath. No shading that only changes brightness: shift the colour along the steel ramp.
+        - No anti-aliasing, no half-transparent pixels, no stray pixels. Hard pixel edges against transparency.
+
+        Layers, exactly these names, bottom to top: `shadow`, `body` (legs, tabard, torso, pauldrons), `head` (helmet and plume), `sword` (blade, guard, grip). No other layers, and nothing on the `shadow` layer except the ground shadow.
+
+        Before you finish: look at the picture at 1x and in the ascii grid, run validate, and fix what it reports. In your final report, say where the visor slit sits and what you decided about the pose.
+    - title: The breath
+      text: |-
+        The open document holds the knight from the previous step (canvas 48x48, PICO-8 palette, layers `shadow`, `body`, `head`, `sword`). Keep the palette and the layer names. This brief is complete: do not ask me to confirm it. Decide anything it leaves open yourself and list those decisions in your final report.
+
+        Animate the knight breathing. 4 to 6 frames in total, one tag named `idle`, direction forward, covering every frame.
+
+        Frame 1 IS the still from the previous step, pixel for pixel. Build the other frames as small departures from it: the torso and head rise and fall by one pixel, the shoulders settle, the sword hand moves with the shoulder. The feet and the ground shadow do not move at all, on any frame, on any layer.
+
+        Rules
+        - Keep the `shadow` layer identical on every frame.
+        - Everything that moves stays inside y 4-43, and the outline never breaks: no limb separates, no piece jumps more than one pixel between frames.
+        - Timing (milliseconds per frame): do not use one length for all frames. Hold the top of the breath longest. A loop of 120, 150, 120, 260 is a good shape; anything with at least two distinct lengths is acceptable.
+        - The loop must close: the last frame flows back into the first without a jump.
+
+        Before you finish: look at the filmstrip, check one in-between with onion skin against its neighbours, compare frame 1 with the still, and run validate. Fix what it reports. In your final report, give the frame plan: frame number, what moved, and duration.
+files:
+    - path: source.aseprite
+      role: source
+    - path: cover.png
+      role: cover
+    - path: sheet.png
+      role: sheet
+    - path: sheet.json
+      role: sheet
+    - path: idle.gif
+      role: animation
+criteria:
+    - criterion: canvas-and-layers
+      step: 1
+      pass: true
+      note: 48x48
+    - criterion: layer-names
+      step: 1
+      pass: true
+      note: shadow, body, head, sword
+    - criterion: palette-pure
+      step: 1
+      pass: true
+      note: palette clean
+    - criterion: one-silhouette
+      step: 1
+      pass: true
+      note: every frame is one connected shape
+    - criterion: inside-box
+      step: 1
+      pass: true
+      note: art spans rows 4-43
+    - criterion: reads-at-1x
+      step: 1
+      pass: false
+      human: true
+      note: for a human to judge
+    - criterion: idle-tagged
+      step: 2
+      pass: true
+      note: tag idle covers frames 1-4
+    - criterion: idle-frames
+      step: 2
+      pass: true
+      note: 4 frame(s)
+    - criterion: idle-timing
+      step: 2
+      pass: true
+      note: 4 distinct frame length(s)
+    - criterion: idle-motion
+      step: 2
+      pass: false
+      human: true
+      note: for a human to judge
+validate:
+    - step: 2
+      passed: true
+      score: 100
+      errors: 0
+      warnings: 0

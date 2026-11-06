@@ -1,0 +1,25 @@
+run: 2026-11-06-ring-knight
+verdict: redraw
+scores:
+    read: 3
+    form: 0
+    motion: 0
+    cohesion: 3
+    appeal: 0
+defects:
+    - clipped
+    - detached
+    - banding
+    - flat-detail
+    - layer-order
+top_defect: clipping
+note: 'Ticks for strays and palette drift were withdrawn after checking: the checker reports none of either.'
+criteria:
+    - criterion: reads-at-1x
+      step: 0
+      pass: true
+      note: Reads as an armoured knight with a sword at actual size.
+    - criterion: idle-motion
+      step: 0
+      pass: false
+      note: The loop does not read as breathing; it reads as a still repeated.
