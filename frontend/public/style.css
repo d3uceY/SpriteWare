@@ -197,40 +197,35 @@ pre {
 
 /* Tabs -------------------------------------------------------------------
    Each frame is a 16x16 PNG drawn in Aseprite and sliced 2px, so one asset
-   draws a tab of any width. The closed chip is grey with an ink outline. The
-   open one is left unfilled with its outline on three sides only, so the strip's
-   own texture shows through it and its last pixel row covers the hairline,
-   which is what makes the seam disappear. */
+   draws a tab of any width. The strip is the same warm paper as the bar above
+   it, so the chrome reads as one block instead of two. A closed tab is grey. The
+   open one is its outline only, with the canvas texture painted behind it and no
+   bottom edge, so its last pixel row covers the strip's ink line and it opens
+   into the page below. */
 
 .tabs {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: 3px;
   height: 46px;
   padding: 0 14px;
-  /* The strip carries the canvas texture too. The stage begins 46px below this
-     element's top and 46 is 14 past a whole tile, so shifting the strip's own
-     pattern by 14 lines the two up across the ink row - the texture then runs
-     unbroken from the chrome into the page, and the open tab (drawn with no
-     fill) reads as a hole cut in that surface rather than a lid laid on it. */
-  background-color: var(--slate);
-  background-image: var(--checker);
-  background-size: var(--checker-tile) var(--checker-tile);
-  background-position: 0 14px;
+  background: var(--paper);
   border-bottom: 1px solid var(--ink);
 }
 
 .tab {
-  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   height: 38px;
   /* The bottom pixel row is spent covering the row's hairline. */
   margin-bottom: -1px;
-  padding: 0 16px 0 11px;
-  border: 2px solid transparent;
-  border-image: url("/sprites/tab.png") 2 fill stretch;
+  padding: 0 15px 0 10px;
+  /* Slice 3 = a 3px rounded top corner, drawn stepped in the art. The open
+     frame is the same arc with its outside cells painted paper, because its
+     fill is a CSS background and would otherwise square off the corner. */
+  border: 3px solid transparent;
+  border-image: url("/sprites/tab.png") 3 fill stretch;
   background: transparent;
   color: var(--ink);
   font: inherit;
@@ -250,33 +245,6 @@ pre {
 
 .tab--on {
   border-image-source: url("/sprites/tab-on.png");
-}
-
-/* The two corner pieces are 8x8 SVGs drawn in Aseprite: the ink fillet plus the
-   strip's own colour painted over the line it replaces. They sit half on the
-   tab and half on the strip, which turns the square bottom corner into a pixel
-   radius that flows into the content. */
-.tab--on::before,
-.tab--on::after {
-  content: "";
-  position: absolute;
-  bottom: -2px;
-  width: 8px;
-  height: 8px;
-  background: center / 8px 8px no-repeat;
-  pointer-events: none;
-}
-
-/* -9px puts the piece's last column on the tab's outer border pixel, so the
-   side wall and the fillet share one pixel instead of sitting side by side. */
-.tab--on::before {
-  left: -9px;
-  background-image: url("/sprites/tab-corner-l.svg");
-}
-
-.tab--on::after {
-  right: -9px;
-  background-image: url("/sprites/tab-corner-r.svg");
 }
 
 .tab:disabled {
@@ -356,9 +324,19 @@ pre {
   min-width: 0;
   min-height: 0;
   overflow: auto;
+}
+
+/* One canvas, painted twice: the workspace, and the open tab that opens into it.
+   `fixed` anchors the pattern to the window rather than to each element's own
+   top-left corner, which is the only way the tab's texture can continue the
+   page's - with `scroll` every element starts its own checker at its own edge
+   and the squares break at the seam. */
+.stage,
+.tab--on {
   background-color: var(--slate);
   background-image: var(--checker);
   background-size: var(--checker-tile) var(--checker-tile);
+  background-attachment: fixed;
 }
 
 .page {
