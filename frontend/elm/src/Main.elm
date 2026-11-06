@@ -74,6 +74,7 @@ init _ =
       , pathDraft = ""
       , rejected = False
       , client = "claude-desktop"
+      , clientMenu = False
       , copied = ""
       , installNote = ""
       , installOK = False
@@ -205,7 +206,15 @@ update msg model =
             )
 
         SelectClient id ->
-            ( { model | client = id, copied = "", installNote = "" }, Cmd.none )
+            ( { model | client = id, copied = "", installNote = "", clientMenu = False }
+            , Cmd.none
+            )
+
+        ToggleClientMenu ->
+            ( { model | clientMenu = not model.clientMenu }, Cmd.none )
+
+        CloseClientMenu ->
+            ( { model | clientMenu = False }, Cmd.none )
 
         CopySnippet id payload ->
             ( { model | copied = id }, copyToClipboard payload )

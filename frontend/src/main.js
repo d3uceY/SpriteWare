@@ -385,6 +385,22 @@ function restoreScroll(freshScreen) {
   }
 }
 
+// A menu with no room below it opens upward, the way the platform's own popup
+// did for the `<select>` this replaced: a list clipped by the window edge is
+// worse than one that grows the other way. Room is measured from the trigger
+// and the list's scroll height rather than its rendered rect, because flipping
+// on the rendered rect would oscillate - each flip makes the other direction
+// look correct on the next pass.
+function placeMenu() {
+  const trigger = document.querySelector(".menu__trigger");
+  const list = document.querySelector(".menu__list");
+  if (!trigger || !list) return;
+
+  const room = window.innerHeight - trigger.getBoundingClientRect().bottom - 8;
+  const need = list.scrollHeight + 4;
+  list.classList.toggle("menu__list--up", need > room);
+}
+
 function boot() {
   // Elm swaps its whole rendered tree on every update, including the node that
   // was handed to `init`, so the thing to watch is the body: every patch shows
@@ -392,12 +408,14 @@ function boot() {
   const observer = new MutationObserver(() =>
     requestAnimationFrame(() => {
       startSprites();
+      placeMenu();
       restoreScroll(syncView());
     }),
   );
   observer.observe(document.body, { childList: true, subtree: true });
 
   startSprites();
+  placeMenu();
   restoreScroll(syncView());
 }
 

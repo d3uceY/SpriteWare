@@ -147,6 +147,7 @@ type alias Model =
     , pathDraft : String
     , rejected : Bool
     , client : String
+    , clientMenu : Bool
     , copied : String
     , installNote : String
     , installOK : Bool
@@ -177,6 +178,8 @@ type Msg
     | SubmitPath
     | ForgetPath
     | SelectClient String
+    | ToggleClientMenu
+    | CloseClientMenu
     | CopySnippet String String
     | InstallClient String
     | SetSkillScope String

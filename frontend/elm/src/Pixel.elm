@@ -1,4 +1,4 @@
-module Pixel exposing (Icon(..), Word(..), icon, mascot, word)
+module Pixel exposing (Icon(..), Word(..), caret, icon, mascot, word)
 
 {-| The only pixel art in the app: the mascot, the three nav icons, the display
 words, and the card frame.
@@ -117,6 +117,23 @@ mascot artPx =
         , label = "SpriteWare"
         , frameMs = 2000
         , timing = "2:90"
+        }
+
+
+{-| The menu caret: 7x4 art at two screen pixels each, so the chevron is drawn
+rather than set. A native `<select>` brings its own arrow, and the whole point of
+`caret` is that nothing here does.
+-}
+caret : Html msg
+caret =
+    sprite
+        { name = "caret"
+        , w = 7
+        , h = 4
+        , artPx = 2
+        , label = ""
+        , frameMs = 0
+        , timing = ""
         }
 
 

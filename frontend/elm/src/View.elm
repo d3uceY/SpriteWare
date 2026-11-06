@@ -665,33 +665,103 @@ clientTab model client =
         [ Html.text client.label ]
 
 
-{-| Eleven agents do not fit as pills without turning into a wall, so the
-choice is a native picker: one row, every option, and the keyboard and screen
-reader get the platform behaviour for free.
+{-| Eleven agents do not fit as pills without turning into a wall, so the choice
+is one row that opens a list. A native `<select>` cannot be used: the platform
+draws its popup, arrow and all, so the one control the app could not make look
+like itself was the one with the most options. This is a listbox instead - a
+drawn trigger, a drawn panel, and a button per option, which also means the
+keyboard can tab through them.
 -}
 clientPicker : Model -> Html Msg
 clientPicker model =
+    let
+        client =
+            currentClient model
+    in
     Html.div [ Attr.class "picker" ]
         [ Html.label [ Attr.class "label", Attr.for "assistant" ] [ Html.text "Assistant" ]
-        , Html.select
-            [ Attr.id "assistant"
-            , Attr.class "select"
-            , Events.on "change"
-                (Decode.at [ "target", "value" ] Decode.string
-                    |> Decode.map SelectClient
-                )
-            ]
+        , Html.div [ Attr.class "menu" ]
+            (Html.button
+                [ Attr.id "assistant"
+                , Attr.class "menu__trigger"
+                , Attr.attribute "aria-haspopup" "listbox"
+                , Attr.attribute "aria-expanded"
+                    (if model.clientMenu then
+                        "true"
+
+                     else
+                        "false"
+                    )
+                , Events.onClick ToggleClientMenu
+                , Events.on "keydown" escapeKey
+                ]
+                [ Html.span [ Attr.class "menu__value" ] [ Html.text client.label ]
+                , Html.span [ Attr.class "menu__caret" ] [ Pixel.caret ]
+                ]
+                :: menuItems model
+            )
+        ]
+
+
+{-| The panel and the click-catcher behind it. The scrim is a fixed, transparent
+sheet: clicking anywhere outside the list closes it without a port or a document
+listener.
+-}
+menuItems : Model -> List (Html Msg)
+menuItems model =
+    if model.clientMenu then
+        [ Html.div [ Attr.class "menu__scrim", Events.onClick CloseClientMenu ] []
+        , Html.ul [ Attr.class "menu__list", Attr.attribute "role" "listbox" ]
             (List.map (clientOption model) model.clients)
         ]
+
+    else
+        []
 
 
 clientOption : Model -> Client -> Html Msg
 clientOption model client =
-    Html.option
-        [ Attr.value client.id
-        , Attr.selected (model.client == client.id)
+    let
+        chosen =
+            model.client == client.id
+    in
+    Html.li
+        [ Attr.class "menu__item"
+        , Attr.attribute "role" "presentation"
         ]
-        [ Html.text client.label ]
+        [ Html.button
+            [ Attr.class
+                (if chosen then
+                    "menu__option menu__option--on"
+
+                 else
+                    "menu__option"
+                )
+            , Attr.attribute "role" "option"
+            , Attr.attribute "aria-selected"
+                (if chosen then
+                    "true"
+
+                 else
+                    "false"
+                )
+            , Events.onClick (SelectClient client.id)
+            ]
+            [ Html.text client.label ]
+        ]
+
+
+escapeKey : Decode.Decoder Msg
+escapeKey =
+    Decode.field "key" Decode.string
+        |> Decode.andThen
+            (\key ->
+                if key == "Escape" then
+                    Decode.succeed CloseClientMenu
+
+                else
+                    Decode.fail "not Escape"
+            )
 
 
 serverUrl : Status -> String

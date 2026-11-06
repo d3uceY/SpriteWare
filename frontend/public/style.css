@@ -499,13 +499,13 @@ pre {
 .field {
   width: 100%;
   height: 34px;
-  padding: 0 11px;
-  background: var(--paper);
-  border: 1px solid var(--line-strong);
+  padding: 0 9px;
+  border: 3px solid transparent;
+  border-image: url("/sprites/btn-ghost.png") 3 fill stretch;
+  background: transparent;
   color: var(--ink);
   font-family: var(--font-mono);
   font-size: 12px;
-  transition: border-color var(--quick) var(--ease), box-shadow var(--quick) var(--ease);
 }
 
 .field::placeholder {
@@ -517,9 +517,8 @@ pre {
 /* Focus is a ring on paper and on slate: mint reads on both, and the border
    change is what makes it legible for a keyboard user at a glance. */
 .field:focus {
-  border-color: var(--leaf);
-  outline: 0;
-  box-shadow: 0 0 0 3px var(--mint-strong);
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
 }
 
 .row {
@@ -736,9 +735,11 @@ pre {
 }
 
 /* Assistant picker -------------------------------------------------------
-   Eleven agents as pills is a wall; a native select is one calm row and gets
-   the keyboard and screen-reader behaviour for free. It does not stretch,
-   because a control that wide reads as a form and not as a choice. */
+   Eleven agents as pills is a wall, so the choice is one row that opens a list.
+   The trigger, the panel and the text field all use the ghost button frame,
+   which is what keeps the only control with many options in the same material as
+   everything else. A native `<select>` could not be styled at all: the platform
+   drew the popup and the arrow. */
 
 .picker {
   display: flex;
@@ -746,28 +747,129 @@ pre {
   gap: 12px;
 }
 
-.select {
+.menu {
+  position: relative;
   flex: 0 1 320px;
   min-width: 0;
-  height: 32px;
-  padding: 0 9px;
-  background: var(--paper);
-  border: 1px solid var(--line-strong);
+}
+
+.menu__trigger {
+  /* Above the scrim, so clicking it while open closes the menu instead of
+     being swallowed by the click-catcher. */
+  position: relative;
+  z-index: 32;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  height: 34px;
+  padding: 0 9px 0 10px;
+  border: 3px solid transparent;
+  border-image: url("/sprites/btn-ghost.png") 3 fill stretch;
+  background: transparent;
   color: var(--ink);
   font: inherit;
   font-size: 13px;
   font-weight: 600;
-  transition: border-color var(--quick) var(--ease), box-shadow var(--quick) var(--ease);
+  text-align: left;
+  cursor: pointer;
+  filter: drop-shadow(0 2px 0 var(--line-strong));
+  transition: filter var(--quick) var(--ease), transform 90ms var(--ease);
 }
 
-.select:hover {
-  border-color: var(--faint);
+.menu__trigger:hover {
+  filter: brightness(0.975) drop-shadow(0 2px 0 var(--line-strong));
 }
 
-.select:focus-visible {
-  border-color: var(--leaf);
-  outline: 0;
-  box-shadow: 0 0 0 3px var(--mint-strong);
+/* Open reads as held down: the same shape with its lip gone. */
+.menu__trigger[aria-expanded="true"] {
+  transform: translateY(2px);
+  filter: drop-shadow(0 0 0 var(--line-strong));
+}
+
+.menu__trigger:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+
+.menu__value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu__caret {
+  display: flex;
+  flex: none;
+}
+
+/* Click anywhere else to close. Fixed, so it also covers the chrome. */
+.menu__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+
+.menu__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 31;
+  max-height: 244px;
+  margin: 0;
+  padding: 4px;
+  overflow: auto;
+  list-style: none;
+  border: 3px solid transparent;
+  border-image: url("/sprites/btn-ghost.png") 3 fill stretch;
+  filter: drop-shadow(0 3px 0 var(--line-strong));
+}
+
+/* No room below: grow upward instead, the way the platform's own popup did. */
+.menu__list--up {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.menu__item {
+  display: block;
+}
+
+.menu__option {
+  display: block;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background var(--quick) var(--ease), color var(--quick) var(--ease);
+}
+
+.menu__option:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.menu__option--on {
+  background: var(--mint);
+  color: var(--leaf-deep);
+  font-weight: 600;
+}
+
+.menu__option:focus-visible {
+  outline: 2px solid var(--leaf);
+  outline-offset: -2px;
 }
 
 /* Snippet ---------------------------------------------------------------- */
@@ -917,7 +1019,7 @@ pre {
     gap: 2px;
   }
 
-  .picker .select {
+  .picker .menu {
     flex: 1;
   }
 }
@@ -927,7 +1029,8 @@ pre {
   .btn,
   .seg__btn,
   .field,
-  .select,
+  .menu__trigger,
+  .menu__option,
   .url {
     transition: none;
   }
