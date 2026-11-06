@@ -20,11 +20,20 @@ type alias Spec =
     { name : String
     , w : Int
     , h : Int
-    , artPx : Int
+    , artPx : Float
     , label : String
     , frameMs : Int
     , timing : String
     }
+
+
+{-| A CSS length from a count of art pixels. `String.fromFloat` drops the
+decimal point on whole numbers, so 2 stays "2px" and 1.25 becomes "1.25px" -
+which is what a tab 20% larger than the old one needs.
+-}
+pxOf : Float -> String
+pxOf value =
+    String.fromFloat value ++ "px"
 
 
 {-| One sprite strip, sized by how many CSS pixels one art pixel takes.
@@ -36,10 +45,10 @@ sprite : Spec -> Html msg
 sprite spec =
     let
         box =
-            String.fromInt (spec.w * spec.artPx) ++ "px"
+            pxOf (toFloat spec.w * spec.artPx)
 
         tall =
-            String.fromInt (spec.h * spec.artPx) ++ "px"
+            pxOf (toFloat spec.h * spec.artPx)
 
         animated =
             not (String.isEmpty spec.timing)
@@ -52,7 +61,7 @@ sprite spec =
                 1
 
         strip =
-            String.fromInt (spec.w * frames * spec.artPx) ++ "px"
+            pxOf (toFloat (spec.w * frames) * spec.artPx)
 
         timingAttrs =
             if animated then
@@ -72,7 +81,7 @@ sprite spec =
          , Attr.attribute "data-frames" (String.fromInt frames)
          , Attr.attribute "data-fw" (String.fromInt spec.w)
          , Attr.attribute "data-fh" (String.fromInt spec.h)
-         , Attr.attribute "data-art-px" (String.fromInt spec.artPx)
+         , Attr.attribute "data-art-px" (String.fromFloat spec.artPx)
          , Attr.attribute "aria-hidden"
             (if String.isEmpty spec.label then
                 "true"
@@ -104,7 +113,7 @@ mascot artPx =
         { name = "mascot"
         , w = 16
         , h = 16
-        , artPx = artPx
+        , artPx = toFloat artPx
         , label = "SpriteWare"
         , frameMs = 2000
         , timing = "2:90"
@@ -117,16 +126,17 @@ type Icon
     | BlocksIcon
 
 
-{-| Nav icons keep their own colours at every state; the active tab is already
-said by the row's background and label.
+{-| Nav icons are 16x16 art shown in a 20px tab: one and a quarter screen
+pixels per art pixel. The tab grew by a fifth, so the icons grew with it; the
+browser keeps the scaling nearest-neighbour, so the pixels stay square.
 -}
-icon : Icon -> Int -> Html msg
-icon which artPx =
+icon : Icon -> Html msg
+icon which =
     sprite
         { name = nameOf which
         , w = 16
         , h = 16
-        , artPx = artPx
+        , artPx = 1.25
         , label = ""
         , frameMs = 0
         , timing = ""
@@ -168,7 +178,7 @@ word which artPx =
         { name = name
         , w = width
         , h = 7
-        , artPx = artPx
+        , artPx = toFloat artPx
         , label = label
         , frameMs = 0
         , timing = ""

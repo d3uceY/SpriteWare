@@ -8,7 +8,9 @@ import Pixel exposing (Icon(..), Word(..), icon)
 import Types exposing (Client, Model, Msg(..), Setup, Status, Tab(..), Tool)
 
 
-{-| One shell, four screens. The rail is always there; the stage changes.
+{-| One window, four screens. The chrome is a strip along the top and the
+stage below it changes; every screen is a tab, the way an editor shows
+open documents.
 -}
 view : Model -> Html Msg
 view model =
@@ -16,9 +18,26 @@ view model =
         [ Attr.class "app"
         , Attr.attribute "data-view" (viewName model)
         ]
-        [ rail model
-        , Html.main_ [ Attr.class "stage" ] [ stage model ]
+        [ chrome model
+        , Html.main_
+            [ Attr.class "stage"
+            , Attr.attribute "role" "tabpanel"
+            , Attr.attribute "aria-labelledby" (tabId (shownTab model))
+            ]
+            [ stage model ]
         ]
+
+
+{-| Which tab the stage is showing. Until a path is confirmed, setup borrows
+the Aseprite tab because that is the screen that can make progress.
+-}
+shownTab : Model -> Tab
+shownTab model =
+    if not model.setup.confirmed then
+        AsepriteTab
+
+    else
+        model.tab
 
 
 viewName : Model -> String
@@ -55,36 +74,54 @@ stage model =
                 toolsPage model
 
 
-{-| The rail: the mark, three destinations, and the connection state.
+{-| The strip along the top: the mark and connection state, then one tab per
+screen.
 
-Every label names the screen it opens; the pixel art is the only decoration.
+The tabs are drawn frames (`tab.png` for a closed chip, `tab-on.png` for the
+open one) with real text inside, so a tab can name its screen without a second
+set of word art. The open frame has no bottom edge, which is what lets the
+selected tab flow into the stage below.
 -}
-rail : Model -> Html Msg
-rail model =
-    Html.aside [ Attr.class "rail" ]
-        [ Html.div [ Attr.class "brand" ]
-            [ Pixel.mascot 3
-            , Pixel.word BrandWord 2
+chrome : Model -> Html Msg
+chrome model =
+    Html.header [ Attr.class "chrome" ]
+        [ Html.div [ Attr.class "topbar" ]
+            [ Html.div [ Attr.class "brand" ]
+                [ Pixel.mascot 2
+                , Pixel.word BrandWord 2
+                ]
+            , statePlate model
             ]
-        , Html.nav [ Attr.class "nav" ]
-            [ navItem model ServerTab ServerIcon "Server"
-            , navItem model AsepriteTab BrushIcon "Aseprite"
-            , navItem model ToolsTab BlocksIcon "Tools"
+        , Html.nav
+            [ Attr.class "tabs"
+            , Attr.attribute "role" "tablist"
+            , Attr.attribute "aria-label" "Screens"
             ]
-        , Html.footer [ Attr.class "rail__foot" ]
-            [ statePlate model ]
+            [ tabButton model ServerTab ServerIcon "Server"
+            , tabButton model AsepriteTab BrushIcon "Aseprite"
+            , tabButton model ToolsTab BlocksIcon "Tools"
+            ]
         ]
 
 
-navItem : Model -> Tab -> Icon -> String -> Html Msg
-navItem model tab which label =
+tabId : Tab -> String
+tabId tab =
+    case tab of
+        ServerTab ->
+            "tab-server"
+
+        AsepriteTab ->
+            "tab-aseprite"
+
+        ToolsTab ->
+            "tab-tools"
+
+
+tabButton : Model -> Tab -> Icon -> String -> Html Msg
+tabButton model tab which label =
     let
         active =
-            if not model.setup.confirmed then
-                tab == AsepriteTab
-
-            else
-                model.tab == tab
+            shownTab model == tab
 
         locked =
             not model.setup.confirmed && tab /= AsepriteTab
@@ -92,28 +129,30 @@ navItem model tab which label =
     Html.button
         [ Attr.class
             (if active then
-                "navi navi--on"
+                "tab tab--on"
 
              else
-                "navi"
+                "tab"
             )
-        , Attr.disabled locked
-        , Attr.attribute "aria-current"
+        , Attr.id (tabId tab)
+        , Attr.attribute "role" "tab"
+        , Attr.attribute "aria-selected"
             (if active then
-                "page"
+                "true"
 
              else
                 "false"
             )
+        , Attr.disabled locked
         , Events.onClick (SelectTab tab)
         ]
-        [ icon which 1
-        , Html.span [ Attr.class "navi__label" ] [ Html.text label ]
+        [ icon which
+        , Html.span [ Attr.class "tab__label" ] [ Html.text label ]
         ]
 
 
-{-| The state plate in the rail foot, the way vectile shows its model state:
-a dot, a word, and the detail.
+{-| The connection state at the right edge of the strip: a dot and a word, the
+way vectile shows its model state.
 -}
 statePlate : Model -> Html Msg
 statePlate model =
@@ -134,13 +173,15 @@ statePlate model =
         ]
 
 
-{-| Page heading: a drawn title and one line of real text that says what the
-page is for. The title is art, so its words live in the alt attribute.
+{-| Page head: a mono kicker, the drawn title, one line of intent, and the rule
+that closes the band. The title is art, so its words live in the alt attribute;
+its size comes from the sprite (4 art pixels per pixel), not from CSS.
 -}
-pageHead : Pixel.Word -> String -> Html msg
-pageHead title lead =
+pageHead : String -> Pixel.Word -> String -> Html msg
+pageHead kicker title lead =
     Html.header [ Attr.class "page__head" ]
-        [ Html.h1 [ Attr.class "page__title" ] [ Pixel.word title 3 ]
+        [ Html.span [ Attr.class "page__kicker" ] [ Html.text kicker ]
+        , Html.h1 [ Attr.class "page__title" ] [ Pixel.word title 4 ]
         , Html.p [ Attr.class "page__lead" ] [ Html.text lead ]
         ]
 
@@ -150,8 +191,12 @@ pageHead title lead =
 setupPage : Model -> Html Msg
 setupPage model =
     Html.div [ Attr.class "page" ]
-        [ pageHead FindWord
-            "Point SpriteWare at Aseprite once. It remembers the path."
+        [ Html.div [ Attr.class "hero" ]
+            [ Html.div [ Attr.class "hero__mark" ] [ Pixel.mascot 5 ]
+            , pageHead "First run"
+                FindWord
+                "Point SpriteWare at Aseprite once. It remembers the path."
+            ]
         , if model.setup.found && not model.rejected then
             suggestion model
 
@@ -263,7 +308,8 @@ serverPage model =
             model.status
     in
     Html.div [ Attr.class "page" ]
-        [ pageHead ServerWord
+        [ pageHead "01 / 03"
+            ServerWord
             "Loopback only. Start it, then connect an assistant."
         , Html.section [ Attr.class "card" ]
             [ Html.div [ Attr.class "statusline" ]
@@ -291,7 +337,17 @@ serverPage model =
                 , Html.span [ Attr.class "statusline__meta" ]
                     [ Html.text (transportLabel status.transport ++ " · " ++ modeLabel status.mode) ]
                 ]
-            , Html.div [ Attr.class "url" ]
+            , Html.div
+                [ Attr.class
+                    ("url"
+                        ++ (if status.running then
+                                " url--on"
+
+                            else
+                                ""
+                           )
+                    )
+                ]
                 [ Html.code [ Attr.class "url__text" ] [ Html.text (serverUrl status) ]
                 , copyButton model "url" (serverUrl status)
                 ]
@@ -693,7 +749,9 @@ segButton status value label =
 asepritePage : Model -> Html Msg
 asepritePage model =
     Html.div [ Attr.class "page" ]
-        [ pageHead AsepriteWord "The program SpriteWare drives. Change it if Aseprite moves."
+        [ pageHead "02 / 03"
+            AsepriteWord
+            "The program SpriteWare drives. Change it if Aseprite moves."
         , Html.section [ Attr.class "card" ]
             [ Html.span [ Attr.class "label" ] [ Html.text "Program" ]
             , Html.code [ Attr.class "code" ] [ Html.text model.setup.path ]
@@ -708,13 +766,29 @@ asepritePage model =
 
 toolsPage : Model -> Html Msg
 toolsPage model =
+    let
+        count =
+            List.length model.tools
+    in
     Html.div [ Attr.class "page" ]
-        [ pageHead ToolsWord
-            (String.fromInt (List.length model.tools)
-                ++ " tools, each a group of related commands."
+        [ pageHead "03 / 03"
+            ToolsWord
+            (String.fromInt count
+                ++ (if count == 1 then
+                        " tool. Each one groups related commands."
+
+                    else
+                        " tools, each a group of related commands."
+                   )
             )
         , Html.section [ Attr.class "card card--flush" ]
-            [ Html.ul [ Attr.class "tools" ] (List.map toolRow model.tools) ]
+            [ if count == 0 then
+                Html.p [ Attr.class "empty" ]
+                    [ Html.text "No tools registered. Restart the app if this stays empty." ]
+
+              else
+                Html.ul [ Attr.class "tools" ] (List.map toolRow model.tools)
+            ]
         ]
 
 
