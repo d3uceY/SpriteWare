@@ -7,4 +7,6 @@ frontend/public/elm.js
 frontend/elm-stuff
 build/linux/appimage/build
 build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
-references/
+reference/
+# working notes, not shipped
+internal documents/
