@@ -23,10 +23,15 @@ internal/
   font/                     the 5x7 font that draw kind=text uses
   skill/                    the SKILL.md tree, embedded
   mcpserver/                server setup, resources, instructions
+  eval/                     benchmarks, runs and the criteria scorer
   config/                   settings file
 frontend/                   Elm UI, built with Vite
+eval/                       the practice tasks and every attempt at them
+  benchmarks/<slug>/        benchmark.yaml: setup, steps, criteria
+  runs/<date>-<slug>-<tech>/ source, evidence, run.yaml, .technique, review.yaml
 build/                      packaging assets for Windows, macOS, Linux
 cmd/                        small dev tools, not part of the app
+  spriteware/               the eval CLI: list, new, add, brief, check, score, table
 ```
 
 ## Where to change things
@@ -43,6 +48,9 @@ cmd/                        small dev tools, not part of the app
 | change the agent's instructions | `internal/skill/SKILL.md` |
 | fix an agent config path | `backend/install.go`, function `entryFor` |
 | change a skill install path | `internal/skill/skill.go`, function `DirFor` |
+| add a practice task | a folder under `eval/benchmarks/` with a `benchmark.yaml` |
+| add a criterion kind | `internal/eval/eval.go` (the closed list) and `internal/eval/check.go` (the answer) |
+| change the review form | `internal/eval/form.go`, function `ReviewForm` |
 | change the window | `frontend/elm/src/View.elm` |
 
 ## The split that matters
