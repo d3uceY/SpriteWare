@@ -20,6 +20,7 @@ local EXTENSION_VERSION = "0.1.0"
 local FEATURES = {
   "dump", "draw_batch", "cel_batch", "frame_batch", "tag_batch",
   "cel_reset", "frame_normalise", "palette_dump", "doc_duplicate",
+  "layer_group", "layer_merge", "palette_snap", "select_mask", "slice",
 }
 
 local SPRITEWARE = {}
@@ -277,6 +278,57 @@ local function pset(img, x, y, color)
   end
 end
 
+-- Selection --------------------------------------------------------------
+
+-- usable_selection returns the sprite's selection, or nil when there is none.
+--
+-- Reading `spr.selection` is protected: under `aseprite -b` there is no visible
+-- mask and the property can raise where a Selection would be returned.
+local function usable_selection(spr)
+  local ok, selection = pcall(function() return spr.selection end)
+  if not ok or selection == nil then return nil end
+  local emptyOk, empty = pcall(function() return selection.isEmpty end)
+  if emptyOk and empty then return nil end
+  return selection
+end
+
+-- mask_test builds the predicate a draw checks before writing a pixel.
+--
+-- Only `contains` is used. `Selection:bounds()` reports an empty rectangle
+-- whenever the mask is not being drawn on screen, which under `aseprite -b` is
+-- always, so a bounds check would reject every pixel of a real selection.
+local function mask_test(selection)
+  if selection == nil then
+    return function() return true end
+  end
+  return function(x, y) return selection:contains(Point(x, y)) end
+end
+
+-- selection_area measures the mask by scanning the canvas. `select.info` wants
+-- the rectangle and the pixel count, and both have to be measured for the same
+-- reason bounds cannot be trusted.
+local function selection_area(spr, selection)
+  local minX, minY, maxX, maxY, pixels = math.huge, math.huge, -1, -1, 0
+  for y = 0, spr.height - 1 do
+    for x = 0, spr.width - 1 do
+      if selection:contains(Point(x, y)) then
+        pixels = pixels + 1
+        if x < minX then minX = x end
+        if y < minY then minY = y end
+        if x > maxX then maxX = x end
+        if y > maxY then maxY = y end
+      end
+    end
+  end
+  if maxX < 0 then return { empty = true, x = 0, y = 0, width = 0, height = 0, pixels = 0 } end
+  return {
+    empty = false,
+    x = minX, y = minY,
+    width = maxX - minX + 1, height = maxY - minY + 1,
+    pixels = pixels,
+  }
+end
+
 local function hex_components(hex)
   local s = tostring(hex or ""):gsub("#", "")
   if #s ~= 6 and #s ~= 8 then
@@ -337,6 +389,51 @@ local function palette_hexes(spr)
   return out
 end
 
+-- Blend modes -------------------------------------------------------------
+--
+-- The blend modes a layer reports are plain integers, and so is the `BlendMode`
+-- table Aseprite exposes to Lua. Both use the compositing enum (MULTIPLY is 14,
+-- not 1), which is why the numbers here come from `BlendMode` rather than from a
+-- hand-written table: a wrong constant would silently set a different mode.
+local BLEND_ENUM = {
+  normal = "NORMAL",
+  multiply = "MULTIPLY",
+  screen = "SCREEN",
+  overlay = "OVERLAY",
+  darken = "DARKEN",
+  lighten = "LIGHTEN",
+  color_dodge = "COLOR_DODGE",
+  color_burn = "COLOR_BURN",
+  hard_light = "HARD_LIGHT",
+  soft_light = "SOFT_LIGHT",
+  difference = "DIFFERENCE",
+  exclusion = "EXCLUSION",
+  hue = "HUE",
+  saturation = "SATURATION",
+  color = "COLOR",
+  luminosity = "LUMINOSITY",
+  addition = "ADDITION",
+  subtract = "SUBTRACT",
+  divide = "DIVIDE",
+}
+
+local BLEND_SHORT = {}
+for short, enumName in pairs(BLEND_ENUM) do
+  local value = BlendMode[enumName]
+  if value ~= nil then BLEND_SHORT[value] = short end
+end
+
+function blend_name(value)
+  if value == nil then return "" end
+  return BLEND_SHORT[tonumber(value)] or tostring(value)
+end
+
+function blend_value(short)
+  local enumName = BLEND_ENUM[tostring(short):lower()]
+  if enumName == nil then return nil end
+  return BlendMode[enumName]
+end
+
 local function layer_entries(spr)
   local out = arr()
   local function walk(layers, depth)
@@ -347,7 +444,7 @@ local function layer_entries(spr)
         isGroup = layer.isGroup,
         visible = layer.isVisible,
         opacity = layer.opacity,
-        blendMode = tostring(layer.blendMode or ""):gsub("^BlendMode%.", ""),
+        blendMode = blend_name(layer.blendMode),
         cels = arr(),
       }
       if not layer.isGroup then
@@ -400,17 +497,19 @@ end
 
 H["doc.info"] = function(args)
   local spr = asprite(args)
+  local summary = sprite_summary(spr)
   return {
-    sprite = sprite_summary(spr),
+    sprite = summary,
     layers = layer_entries(spr),
     frames = frame_entries(spr),
     tags = tag_entries(spr),
+    slices = slice_entries(spr),
     palette = palette_hexes(spr),
-    activeFrame = spr.frame,
+    activeFrame = active_frame_number(spr),
     activeLayer = active_layer_index(spr),
     summary = string.format("%s %dx%d %s, %d frame(s), %d layer(s), %d colour(s)",
-      sprite_summary(spr).name, spr.width, spr.height,
-      sprite_summary(spr).colorMode, #spr.frames, #spr.layers, #spr.palettes[1]),
+      summary.name, spr.width, spr.height,
+      summary.colorMode, #spr.frames, #spr.layers, #spr.palettes[1]),
   }
 end
 
@@ -573,6 +672,7 @@ H["doc.dump"] = function(args)
     layers = layers,
     frames = frame_entries(spr),
     tags = tag_entries(spr),
+    slices = slice_entries(spr),
     palette = palette_hexes(spr),
     activeFrame = active_frame_number(spr),
     activeLayer = active_layer_index(spr),
@@ -608,6 +708,23 @@ function tag_entries(spr)
       to = tag.toFrame.frameNumber,
       direction = tostring(tag.aniDir or ""):gsub("^AniDir%.", ""):lower(),
     }
+  end
+  return out
+end
+
+-- slice_entries reports every slice: the rectangle, plus the 9-patch centre
+-- when one is set. A slice's bounds can change per frame in Aseprite; the first
+-- key is the one an exporter needs, and that is what this reports.
+function slice_entries(spr)
+  local out = arr()
+  for _, slice in ipairs(spr.slices) do
+    local b = slice.bounds
+    local entry = { name = slice.name, x = b.x, y = b.y, width = b.width, height = b.height }
+    local center = slice.center
+    if center and center.width > 0 and center.height > 0 then
+      entry.center = { x = center.x, y = center.y, width = center.width, height = center.height }
+    end
+    out[#out + 1] = entry
   end
   return out
 end
@@ -669,7 +786,23 @@ H["layer.set"] = function(args)
   local layer = require_layer(spr, args.name)
   if args.visible ~= nil then layer.isVisible = args.visible and true or false end
   if args.opacity ~= nil then layer.opacity = math.max(0, math.min(255, tonumber(args.opacity))) end
-  return { name = layer.name, visible = layer.isVisible, opacity = layer.opacity }
+  if args.blendMode ~= nil then
+    local value = blend_value(args.blendMode)
+    if value == nil then
+      local accepted = arr()
+      for name in pairs(BLEND_ENUM) do accepted[#accepted + 1] = name end
+      table.sort(accepted)
+      fail("invalid_args", "Unknown blend mode '" .. tostring(args.blendMode) .. "'.",
+        { modes = accepted })
+    end
+    layer.blendMode = value
+  end
+  return {
+    name = layer.name,
+    visible = layer.isVisible,
+    opacity = layer.opacity,
+    blendMode = blend_name(layer.blendMode),
+  }
 end
 
 H["layer.duplicate"] = function(args)
@@ -724,6 +857,176 @@ H["layer.activate"] = function(args)
   local layer = require_layer(spr, args.name)
   spr.activeLayer = layer
   return { name = layer.name }
+end
+
+-- siblings_of returns a layer's siblings in stack order. A root layer's parent
+-- is the Sprite, which has no `layers` list of its own, so root siblings are
+-- the sprite's list.
+local function siblings_of(spr, layer)
+  local parent = layer.parent
+  if parent == spr or not parent.isGroup then return spr.layers end
+  return parent.layers
+end
+
+local function stack_index_of(spr, layer)
+  for i, sibling in ipairs(siblings_of(spr, layer)) do
+    if sibling == layer then return i end
+  end
+  return nil
+end
+
+-- resolve_sources turns a list of names into layers, refusing the two things a
+-- merge or a group cannot do: take a group itself, or span two parents.
+local function resolve_sources(spr, names, verb)
+  if type(names) ~= "table" or #names == 0 then
+    fail("invalid_args", "layer." .. verb .. " needs `layers`: the names to work on.")
+  end
+
+  local sources, seen, parent = {}, {}, nil
+  for _, name in ipairs(names) do
+    local layer = require_layer(spr, name)
+    if not seen[layer] then
+      seen[layer] = true
+      if layer.isGroup then
+        fail("invalid_args", "'" .. layer.name .. "' is a group; " .. verb .. " works on image layers.",
+          { layers = names })
+      end
+      if parent == nil then
+        parent = layer.parent
+      elseif layer.parent ~= parent then
+        fail("invalid_args",
+          "Every layer passed to " .. verb .. " must share a parent; '" .. layer.name .. "' does not.",
+          { layers = names })
+      end
+      sources[#sources + 1] = layer
+    end
+  end
+
+  -- Bottom to top, whatever order the caller listed them in.
+  local order = {}
+  for i, sibling in ipairs(siblings_of(spr, sources[1])) do order[sibling] = i end
+  table.sort(sources, function(a, b) return (order[a] or 0) < (order[b] or 0) end)
+  return sources, parent
+end
+
+H["layer.group"] = function(args)
+  local spr = asprite(args)
+  local sources, parent = resolve_sources(spr, args.layers, "group")
+
+  -- The group takes the slot of the lowest layer going in, so the stack does not
+  -- jump when a group is made.
+  local index = stack_index_of(spr, sources[1])
+  local group = spr:newGroup()
+  group.name = tostring(args.name or args.to or "Group")
+  group.parent = parent
+  group.stackIndex = index
+
+  for _, layer in ipairs(sources) do layer.parent = group end
+  return { name = group.name, layers = args.layers, index = index - 1 }
+end
+
+H["layer.ungroup"] = function(args)
+  local spr = asprite(args)
+  local group = require_layer(spr, args.name)
+  if not group.isGroup then
+    fail("invalid_args", "'" .. group.name .. "' is not a group; ungroup only takes a group.",
+      { name = group.name })
+  end
+
+  local parent = group.parent
+  local groupName = group.name
+  -- A slot counter, not a live index: each child inserted at `index` pushes the
+  -- group and everything before it down, so the next child goes one further.
+  local index = stack_index_of(spr, group)
+  local names = arr()
+  for _, child in ipairs(group.layers) do
+    names[#names + 1] = child.name
+    child.parent = parent
+    child.stackIndex = index
+    index = index + 1
+  end
+  -- Deleting the group invalidates its own handle, so every read of it has to
+  -- happen above this line.
+  spr:deleteLayer(group)
+
+  return { name = groupName, layers = names }
+end
+
+H["layer.merge"] = function(args)
+  local spr = asprite(args)
+  local sources, parent = resolve_sources(spr, args.layers, "merge")
+  if #sources < 2 then
+    fail("invalid_args", "layer.merge needs at least two layers; one layer alone has nothing to merge with.",
+      { layers = args.layers })
+  end
+
+  local index = stack_index_of(spr, sources[1])
+  local merged = spr:newLayer()
+  merged.name = tostring(args.to or args.name or sources[1].name)
+
+  for _, frame in ipairs(spr.frames) do
+    local img = Image(spr.width, spr.height, spr.colorMode)
+    for _, layer in ipairs(sources) do
+      local cel = layer:cel(frame)
+      if cel then img:drawImage(cel.image, cel.position) end
+    end
+    spr:newCel(merged, frame, img, Point(0, 0))
+  end
+
+  for _, layer in ipairs(sources) do spr:deleteLayer(layer) end
+
+  merged.parent = parent
+  local siblings = siblings_of(spr, merged)
+  merged.stackIndex = math.min(index, #siblings)
+  return { name = merged.name, merged = #sources, layers = args.layers }
+end
+
+-- Selection --------------------------------------------------------------
+--
+-- A selection is document state, not a tool mode: once set, every draw is
+-- clipped by it. That is what Aseprite itself does, and it makes a local edit
+-- expressible in one sentence instead of a per-pixel list.
+
+local function selection_payload(spr, selection)
+  if selection == nil then
+    return { empty = true, x = 0, y = 0, width = 0, height = 0, pixels = 0 }
+  end
+  return selection_area(spr, selection)
+end
+
+H["select.set"] = function(args)
+  local spr = asprite(args)
+  local x = math.floor(tonumber(args.x) or 0)
+  local y = math.floor(tonumber(args.y) or 0)
+  local w = math.floor(tonumber(args.width) or 0)
+  local h = math.floor(tonumber(args.height) or 0)
+  if w <= 0 or h <= 0 then
+    fail("invalid_args", "select.set needs a width and height above zero.", { x = x, y = y, width = w, height = h })
+  end
+
+  local selection = Selection(Rectangle(x, y, w, h))
+  spr.selection = selection
+  return selection_payload(spr, selection)
+end
+
+H["select.all"] = function(args)
+  local spr = asprite(args)
+  local selection = Selection(Rectangle(0, 0, spr.width, spr.height))
+  spr.selection = selection
+  return selection_payload(spr, selection)
+end
+
+H["select.none"] = function(args)
+  local spr = asprite(args)
+  local selection = Selection(Rectangle(0, 0, 0, 0))
+  pcall(function() selection:deselect() end)
+  spr.selection = selection
+  return selection_payload(spr, nil)
+end
+
+H["select.info"] = function(args)
+  local spr = asprite(args)
+  return selection_payload(spr, usable_selection(spr))
 end
 
 -- Frames ----------------------------------------------------------------
@@ -1262,12 +1565,113 @@ H["tag.delete"] = function(args)
   fail("invalid_args", "No tag named '" .. tostring(args.name) .. "'.")
 end
 
+-- Slices ------------------------------------------------------------------
+--
+-- A slice names a rectangle of the canvas: the 9-patch region of a UI panel, or
+-- a character's bounding box. Exporters read it, so an importer does not have to
+-- guess where a panel's border ends.
+
+local function find_slice(spr, name)
+  for _, slice in ipairs(spr.slices) do
+    if slice.name == name then return slice end
+  end
+  return nil
+end
+
+H["slice.list"] = function(args)
+  return { slices = slice_entries(asprite(args)) }
+end
+
+H["slice.create"] = function(args)
+  local spr = asprite(args)
+  local name = tostring(args.name or "slice")
+  local x = math.floor(tonumber(args.x) or 0)
+  local y = math.floor(tonumber(args.y) or 0)
+  local w = math.floor(tonumber(args.width) or 0)
+  local h = math.floor(tonumber(args.height) or 0)
+  if w <= 0 or h <= 0 then
+    fail("invalid_args", "slice.create needs a width and height above zero.", { name = name })
+  end
+  if find_slice(spr, name) then
+    fail("invalid_args", "A slice named '" .. name .. "' already exists.", { name = name, hint = "slice op=update moves it" })
+  end
+
+  local slice = spr:newSlice(Rectangle(x, y, w, h))
+  slice.name = name
+  if type(args.center) == "table" then
+    local c = args.center
+    local cw = math.floor(tonumber(c.width) or 0)
+    local ch = math.floor(tonumber(c.height) or 0)
+    if cw > 0 and ch > 0 then
+      slice.center = Rectangle(math.floor(tonumber(c.x) or 0), math.floor(tonumber(c.y) or 0), cw, ch)
+    end
+  end
+  return { name = name, x = x, y = y, width = w, height = h }
+end
+
+H["slice.update"] = function(args)
+  local spr = asprite(args)
+  local slice = find_slice(spr, tostring(args.name or ""))
+  if not slice then
+    fail("slice_not_found", "No slice named '" .. tostring(args.name) .. "'.",
+      { slices = slice_entries(spr) })
+  end
+
+  local b = slice.bounds
+  local x = math.floor(tonumber(args.x) or b.x)
+  local y = math.floor(tonumber(args.y) or b.y)
+  local w = math.floor(tonumber(args.width) or b.width)
+  local h = math.floor(tonumber(args.height) or b.height)
+  if w <= 0 or h <= 0 then
+    fail("invalid_args", "slice.update needs a width and height above zero.", { name = slice.name })
+  end
+  slice.bounds = Rectangle(x, y, w, h)
+
+  if type(args.center) == "table" then
+    local c = args.center
+    local cw = math.floor(tonumber(c.width) or 0)
+    local ch = math.floor(tonumber(c.height) or 0)
+    if cw > 0 and ch > 0 then
+      slice.center = Rectangle(math.floor(tonumber(c.x) or 0), math.floor(tonumber(c.y) or 0), cw, ch)
+    end
+  end
+  if type(args.rename) == "string" and args.rename ~= "" then slice.name = args.rename end
+  return { name = slice.name, x = x, y = y, width = w, height = h }
+end
+
+H["slice.delete"] = function(args)
+  local spr = asprite(args)
+  local slice = find_slice(spr, tostring(args.name or ""))
+  if not slice then
+    fail("slice_not_found", "No slice named '" .. tostring(args.name) .. "'.",
+      { slices = slice_entries(spr) })
+  end
+  spr:deleteSlice(slice)
+  return { deleted = true, name = tostring(args.name) }
+end
+
 -- Drawing ---------------------------------------------------------------
 
 H["draw.apply"] = function(args)
   local spr = asprite(args)
   local ops = args.ops or {}
   if #ops == 0 then return { pixelsChanged = 0, opsApplied = 0 } end
+
+  -- A selection clips every draw, the way Aseprite's own tools behave.
+  -- `ignoreSelection` opts out for a deliberate whole-cel edit.
+  --
+  -- Written as an if, not `x and nil or y`: that idiom falls through to the last
+  -- operand when the middle one is nil, which is exactly the value meant here.
+  local selection = nil
+  if args.ignoreSelection ~= true then selection = usable_selection(spr) end
+  local inside = mask_test(selection)
+  -- Shadows the plain pset above for the rest of this handler, so every kind
+  -- that writes one pixel respects the mask without an `if` at each call site.
+  local function pset(img, x, y, colour)
+    if x >= 0 and y >= 0 and x < img.width and y < img.height and inside(x, y) then
+      img:putPixel(x, y, colour)
+    end
+  end
 
   -- Resolve every target before touching anything, so a bad op in the middle of
   -- a batch cannot leave the sprite half-drawn.
@@ -1290,7 +1694,7 @@ H["draw.apply"] = function(args)
       local w, h = tonumber(op.width) or 0, tonumber(op.height) or 0
       for py = y, y + h - 1 do
         for px = x, x + w - 1 do
-          if px >= 0 and py >= 0 and px < img.width and py < img.height then
+          if px >= 0 and py >= 0 and px < img.width and py < img.height and inside(px, py) then
             if app.pixelColor.rgbaA(img:getPixel(px, py)) > 0 then
               img:putPixel(px, py, app.pixelColor.rgba(0, 0, 0, 0))
               changed = changed + 1
@@ -1374,7 +1778,7 @@ H["draw.apply"] = function(args)
       local to = color_value(spr, op.to)
       for py = 0, img.height - 1 do
         for px = 0, img.width - 1 do
-          if img:getPixel(px, py) == from then
+          if img:getPixel(px, py) == from and inside(px, py) then
             img:putPixel(px, py, to)
             changed = changed + 1
           end
@@ -1469,7 +1873,7 @@ H["draw.apply"] = function(args)
       for py = 0, img.height - 1 do
         for px = 0, img.width - 1 do
           local p = img:getPixel(px, py)
-          if app.pixelColor.rgbaA(p) > 0 then
+          if app.pixelColor.rgbaA(p) > 0 and inside(px, py) then
             local out = shifted(p)
             if out ~= p then
               img:putPixel(px, py, out)
@@ -1661,7 +2065,7 @@ H["draw.apply"] = function(args)
       for py = 0, img.height - 1 do
         for px = 0, img.width - 1 do
           local p = img:getPixel(px, py)
-          if app.pixelColor.rgbaA(p) > 0 then
+          if app.pixelColor.rgbaA(p) > 0 and inside(px, py) then
             local out = cache[p]
             if out == nil then
               local r, g, b = app.pixelColor.rgbaR(p), app.pixelColor.rgbaG(p), app.pixelColor.rgbaB(p)
@@ -1714,7 +2118,7 @@ H["draw.apply"] = function(args)
       for py = 0, img.height - 1 do
         for px = 0, img.width - 1 do
           local p = img:getPixel(px, py)
-          if app.pixelColor.rgbaA(p) > 0 then
+          if app.pixelColor.rgbaA(p) > 0 and inside(px, py) then
             local out = cache[p]
             if out == nil then
               local r, g, b = app.pixelColor.rgbaR(p), app.pixelColor.rgbaG(p), app.pixelColor.rgbaB(p)
@@ -1760,6 +2164,102 @@ H["palette.set"] = function(args)
   end
   spr:setPalette(pal)
   return { colors = palette_hexes(spr) }
+end
+
+-- palette.snap moves every pixel onto the nearest palette entry.
+--
+-- This is what turns a stray anti-aliased edge into clean pixel art: after a
+-- resize or a paint-over, the art and the palette have drifted, and the fix is
+-- to pull the art back rather than invent new palette entries for it.
+H["palette.snap"] = function(args)
+  local spr = asprite(args)
+  local pal = spr.palettes[1]
+  if not pal or #pal == 0 then
+    fail("invalid_args", "The document has no palette to snap to.")
+  end
+
+  local entries = {}
+  for i = 0, #pal - 1 do
+    local c = pal:getColor(i)
+    entries[#entries + 1] = {
+      index = i,
+      r = c.red, g = c.green, b = c.blue,
+      hex = string.format("#%02x%02x%02x", c.red, c.green, c.blue),
+    }
+  end
+
+  local onlyLayer = args.layer
+  local onlyFrame = tonumber(args.frame)
+
+  local cache = {}
+  local function snap(pixel)
+    local cached = cache[pixel]
+    if cached ~= nil then return cached end
+    local r = app.pixelColor.rgbaR(pixel)
+    local g = app.pixelColor.rgbaG(pixel)
+    local b = app.pixelColor.rgbaB(pixel)
+    local best, bestDistance = entries[1], math.huge
+    for _, e in ipairs(entries) do
+      local dr, dg, db = e.r - r, e.g - g, e.b - b
+      local d = dr * dr + dg * dg + db * db
+      if d < bestDistance then best, bestDistance = e, d end
+    end
+    local out
+    if spr.colorMode == ColorMode.INDEXED then
+      out = app.pixelColor.index(best.index)
+    else
+      out = app.pixelColor.rgba(best.r, best.g, best.b, app.pixelColor.rgbaA(pixel))
+    end
+    cache[pixel] = out
+    return out
+  end
+
+  local changed, visited = 0, 0
+  local moves = {}
+
+  local function snap_image(img)
+    for y = 0, img.height - 1 do
+      for x = 0, img.width - 1 do
+        local p = img:getPixel(x, y)
+        if app.pixelColor.rgbaA(p) > 0 then
+          visited = visited + 1
+          local out = snap(p)
+          if out ~= p then
+            img:putPixel(x, y, out)
+            changed = changed + 1
+            local from = color_hex(spr, p) or "#000000"
+            local to = color_hex(spr, out) or "#000000"
+            local key = from .. ">" .. to
+            moves[key] = (moves[key] or 0) + 1
+          end
+        end
+      end
+    end
+  end
+
+  local function walk(layers)
+    for _, layer in ipairs(layers) do
+      if layer.isGroup then
+        walk(layer.layers)
+      elseif onlyLayer == nil or onlyLayer == "" or layer.name == onlyLayer then
+        for _, cel in ipairs(layer.cels) do
+          if onlyFrame == nil or cel.frameNumber == onlyFrame then
+            snap_image(cel.image)
+          end
+        end
+      end
+    end
+  end
+  walk(spr.layers)
+
+  local distinct = 0
+  for _ in pairs(moves) do distinct = distinct + 1 end
+  return {
+    pixelsChanged = changed,
+    pixelsVisited = visited,
+    snappedColours = distinct,
+    moves = moves,
+  }
 end
 
 --------------------------------------------------------------------------------
