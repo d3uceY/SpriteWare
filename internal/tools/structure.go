@@ -111,11 +111,26 @@ func (s *Service) dispatch(
 	return ok(map[string]any{"results": results, "failed": failures, "summary": summary}, summary), nil
 }
 
+// summaryOf is the one-line text beside a structured result.
+//
+// A bare "done" tells a caller that reads only text nothing about what happened,
+// so a named result says which name and how many things it holds.
 func summaryOf(opName string, r opResult) string {
 	if !r.OK {
 		return opName + " failed: " + r.Error
 	}
-	return opName + " done"
+	data, isMap := r.Data.(map[string]any)
+	if !isMap {
+		return opName + " done"
+	}
+	name, _ := data["name"].(string)
+	if name == "" {
+		return opName + " done"
+	}
+	if n := countOf(data["layers"]); n > 0 {
+		return fmt.Sprintf("%s %s: %d layer(s)", opName, name, n)
+	}
+	return opName + " " + name
 }
 
 // extractOps reads either the flat argument map or an `ops` array.
@@ -167,23 +182,33 @@ func (s *Service) registerLayer(srv *server.MCPServer) {
 		"duplicate": "layer.duplicate",
 		"reorder":   "layer.reorder",
 		"activate":  "layer.activate",
+		"group":     "layer.group",
+		"ungroup":   "layer.ungroup",
+		"merge":     "layer.merge",
 	}
+
+	ops := []string{"list", "create", "rename", "delete", "set", "duplicate", "reorder", "activate", "group", "ungroup", "merge"}
 
 	tool := mcp.NewTool("layer",
 		mcp.WithDescription(
-			"Manage layers. Ops: list, create, rename, delete, set, duplicate, reorder, activate.\n"+
+			"Manage layers. Ops: list, create, rename, delete, set, duplicate, reorder, activate, group, ungroup, merge.\n"+
 				"Every op may be repeated in an `ops` array, applied as one undo step: "+
 				"layer(ops=[{op:\"set\",name:\"a\",visible:false},{op:\"set\",name:\"b\",opacity:128}]).\n"+
 				indexNote+"\n"+
 				"A layer name may be a plain name or a \"group/child\" path. A name that matches more "+
-				"than one layer fails and lists every match instead of silently picking one."),
-		mcp.WithString("op", mcp.Required(),
-			mcp.Enum("list", "create", "rename", "delete", "set", "duplicate", "reorder", "activate")),
+				"than one layer fails and lists every match instead of silently picking one.\n"+
+				"`group` puts the named layers into one new group, which takes the slot of the lowest "+
+				"layer moved. `ungroup` lifts a group's children into its parent and deletes the group. "+
+				"`merge` composites the named layers into one, bottom to top, and deletes the originals: "+
+				"the result keeps the pixels, not the blend modes."),
+		mcp.WithString("op", mcp.Required(), mcp.Enum(ops...)),
 		mcp.WithArray("ops", mcp.Description("Batch: an array of {op, …args} applied in order."), batchItems()),
-		mcp.WithString("name", mcp.Description("Target layer, or the new name for op=create.")),
-		mcp.WithString("to", mcp.Description("New name for rename, or the copy's name for duplicate.")),
+		mcp.WithString("name", mcp.Description("Target layer, the new name for op=create, or the group's name for op=group.")),
+		mcp.WithString("to", mcp.Description("New name for rename, the copy's name for duplicate, or the merged layer's name for merge.")),
+		mcp.WithArray("layers", mcp.Description("For group, ungroup and merge: the layer names to act on. Every name must share a parent."), stringItems()),
 		mcp.WithBoolean("visible", mcp.Description("For op=set.")),
 		mcp.WithNumber("opacity", mcp.Description("For op=set, 0-255.")),
+		mcp.WithString("blendMode", mcp.Description("For op=set: normal, multiply, screen, overlay, darken, lighten, color_dodge, color_burn, hard_light, soft_light, difference, exclusion, hue, saturation, color, luminosity, addition, subtract, divide.")),
 		mcp.WithNumber("index", mcp.Description("For reorder: 0-based stack position, 0 at the bottom. The result reports where the layer actually ended up.")),
 		mcp.WithString("sprite", mcp.Description("Target sprite by absolute path.")),
 	)

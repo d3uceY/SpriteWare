@@ -49,11 +49,22 @@ layer ops=[
 Then draw each part on its own layer from the first pixel. `draw` takes
 `target.layer` per op, so one call can lay out several parts.
 
-SpriteWare creates flat layers only — there is no group primitive. A `/` in a
-name is a literal character, not a new group, so build a fresh rig from unique
-flat names (`arm-near`, `arm-far`). Group paths such as `torso/arm-near` resolve
-layers inside groups that already exist in the document, which is why they save
-you from renaming the user's structure.
+A `/` in a name is a literal character, not a new group. To nest, make the group
+after the parts exist:
+
+```
+layer op=group layers=["arm-far","torso","arm-near"] name="body"
+```
+
+The group takes the slot of the lowest layer moved, so the stack does not jump.
+`layer op=ungroup name="body"` puts the children back where the group was, and
+`layer op=merge` flattens named layers into one when a rig is finished — that
+loses the parts, so merge at export time, not while you are still checking
+boundaries.
+
+Group paths such as `torso/arm-near` resolve layers inside groups that already
+exist in the document, which is why they save you from renaming the user's
+structure.
 
 ## Splitting an existing sprite
 
