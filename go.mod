@@ -5,6 +5,7 @@ go 1.26.0
 require (
 	github.com/mark3labs/mcp-go v1.5.0
 	github.com/wailsapp/wails/v3 v3.0.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
