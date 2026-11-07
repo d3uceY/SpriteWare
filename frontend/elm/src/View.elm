@@ -4,7 +4,7 @@ import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
 import Json.Decode as Decode
-import Pixel exposing (Icon(..), Word(..), icon)
+import Pixel exposing (Icon(..), icon)
 import Types exposing (Client, Model, Msg(..), Status, Tab(..), Tool)
 
 
@@ -79,17 +79,16 @@ stage model =
 screen.
 
 The tabs are drawn frames (`tab.png` for a closed chip, `tab-on.png` for the
-open one) with real text inside, so a tab can name its screen without a second
-set of word art. The open frame has no bottom edge, which is what lets the
-selected tab flow into the stage below.
+open one) with real text inside. The open frame has no bottom edge, which is
+what lets the selected tab flow into the stage below.
 -}
 chrome : Model -> Html Msg
 chrome model =
     Html.header [ Attr.class "chrome" ]
         [ Html.div [ Attr.class "topbar" ]
             [ Html.div [ Attr.class "brand" ]
-                [ Pixel.mascot 2
-                , Pixel.word BrandWord 2
+                [ Pixel.mascot
+                , Pixel.text "" "SpriteWare"
                 ]
             , statePlate model
             ]
@@ -168,21 +167,19 @@ statePlate model =
             else
                 ( "idle", "Stopped" )
     in
-    Html.div [ Attr.class "state" ]
-        [ Html.span [ Attr.class ("state__dot state__dot--" ++ modifier) ] []
+    Html.div [ Attr.class "state", Attr.attribute "role" "status" ]
+        [ Pixel.led modifier
         , Html.span [ Attr.class "state__word" ] [ Html.text word ]
         ]
 
 
-{-| Page head: a mono kicker, the drawn title, one line of intent, and the rule
-that closes the band. The title is art, so its words live in the alt attribute;
-its size comes from the sprite (4 art pixels per pixel), not from CSS.
+{-| Page head: the title set in the drawn glyph face, and one line of intent. The
+size is `--px` in CSS, so it shrinks with the window.
 -}
-pageHead : String -> Pixel.Word -> String -> Html msg
-pageHead kicker title lead =
+pageHead : String -> String -> Html msg
+pageHead title lead =
     Html.header [ Attr.class "page__head" ]
-        [ Html.span [ Attr.class "page__kicker" ] [ Html.text kicker ]
-        , Html.h1 [ Attr.class "page__title" ] [ Pixel.word title 4 ]
+        [ Html.h1 [ Attr.class "page__title" ] [ Pixel.text "" title ]
         , Html.p [ Attr.class "page__lead" ] [ Html.text lead ]
         ]
 
@@ -192,12 +189,8 @@ pageHead kicker title lead =
 setupPage : Model -> Html Msg
 setupPage model =
     Html.div [ Attr.class "page" ]
-        [ Html.div [ Attr.class "hero" ]
-            [ Html.div [ Attr.class "hero__mark" ] [ Pixel.mascot 5 ]
-            , pageHead "First run"
-                FindWord
-                "Point SpriteWare at Aseprite once. It remembers the path."
-            ]
+        [ pageHead "Find Aseprite"
+            "Point SpriteWare at Aseprite once. It remembers the path."
         , Html.section
             [ Attr.class
                 (if model.setup.searching then
@@ -254,7 +247,7 @@ pathField model =
             , Attr.title "Browse for the Aseprite program"
             , Events.onClick BrowsePath
             ]
-            [ Pixel.iconAt FolderIcon 1
+            [ icon FolderIcon
             , Html.span [] [ Html.text "Browse" ]
             ]
         ]
@@ -270,7 +263,7 @@ findButton model =
         , Attr.disabled model.setup.searching
         , Events.onClick FindPath
         ]
-        [ Pixel.iconAt SearchIcon 1
+        [ icon SearchIcon
         , Html.span []
             [ Html.text
                 (if model.setup.searching then
@@ -306,7 +299,7 @@ confirmDialog model =
                 , Attr.attribute "aria-labelledby" "found-title"
                 ]
                 [ Html.div [ Attr.class "dialog__head" ]
-                    [ Html.div [ Attr.class "dialog__mark" ] [ Pixel.mascot 3 ]
+                    [ Html.div [ Attr.class "dialog__mark" ] [ Pixel.mascot ]
                     , Html.div [ Attr.class "dialog__headline" ]
                         [ Html.span [ Attr.class "label" ] [ Html.text "Found Aseprite" ]
                         , Html.h2 [ Attr.id "found-title", Attr.class "dialog__title" ]
@@ -391,81 +384,90 @@ problemNote model =
 -}
 serverPage : Model -> Html Msg
 serverPage model =
+    Html.div [ Attr.class "page" ]
+        [ pageHead "Server"
+            "Loopback only. Start it, then connect an assistant."
+        , startCard model
+        , connectCard model
+        , skillCard model
+        ]
+
+
+startCard : Model -> Html Msg
+startCard model =
     let
         status =
             model.status
     in
-    Html.div [ Attr.class "page" ]
-        [ pageHead "01 / 03"
-            ServerWord
-            "Loopback only. Start it, then connect an assistant."
-        , Html.section [ Attr.class "card" ]
-            [ Html.div [ Attr.class "statusline" ]
-                [ Html.span
-                    [ Attr.class
-                        ("statusline__dot statusline__dot--"
-                            ++ (if status.running then
-                                    "live"
+    Html.section [ Attr.class "card" ]
+        [ Html.div [ Attr.class "statusline" ]
+            [ Pixel.led
+                (if status.running then
+                    "live"
 
-                                else
-                                    "idle"
-                               )
-                        )
-                    ]
-                    []
-                , Html.span [ Attr.class "statusline__word" ]
-                    [ Html.text
-                        (if status.running then
-                            "Listening"
+                 else
+                    "idle"
+                )
+            , Html.span [ Attr.class "statusline__word" ]
+                [ Html.text
+                    (if status.running then
+                        "Listening"
 
-                         else
-                            "Stopped"
-                        )
-                    ]
-                , Html.span [ Attr.class "statusline__meta" ]
-                    [ Html.text (transportLabel status.transport) ]
-                ]
-            , Html.div
-                [ Attr.class
-                    ("url"
-                        ++ (if status.running then
-                                " url--on"
-
-                            else
-                                ""
-                           )
+                     else
+                        "Stopped"
                     )
                 ]
-                [ Html.code [ Attr.class "url__text" ] [ Html.text (serverUrl status) ]
-                , copyButton model "url" (serverUrl status)
-                ]
-            , Html.div [ Attr.class "row row--between" ]
-                [ Html.button
-                    [ Attr.class
-                        (if status.running then
-                            "btn btn--ghost"
+            , Html.span [ Attr.class "statusline__meta" ]
+                [ Html.text (transportLabel status.transport) ]
+            ]
+        , Html.div
+            [ Attr.class
+                ("url"
+                    ++ (if status.running then
+                            " url--on"
 
-                         else
-                            "btn"
-                        )
-                    , Events.onClick StartStop
-                    ]
+                        else
+                            ""
+                       )
+                )
+            ]
+            [ Html.code [ Attr.class "url__text" ] [ Html.text (serverUrl status) ]
+            , copyButton model "url" (serverUrl status)
+            ]
+        , Html.div [ Attr.class "row row--between" ]
+            [ Html.button
+                [ Attr.class
+                    (if status.running then
+                        "btn btn--ghost btn--icon"
+
+                     else
+                        "btn btn--icon"
+                    )
+                , Events.onClick StartStop
+                ]
+                [ icon
+                    (if status.running then
+                        StopIcon
+
+                     else
+                        PlayIcon
+                    )
+                , Html.span []
                     [ Html.text
                         (if status.running then
                             "Stop"
+
                          else
                             "Start server"
                         )
                     ]
-                , Html.div [ Attr.class "seg" ]
-                    [ segButton status "headless" "Background"
-                    , segButton status "live" "Editor window"
-                    ]
                 ]
-            , problemNote model
+            , Html.div [ Attr.class "seg" ]
+                [ segButton status "headless" "Background"
+                , segButton status "live" "Editor window"
+                ]
             ]
-        , connectCard model
-        , skillCard model
+        , problemNote model
         ]
 
 
@@ -895,11 +897,13 @@ segButton status value label =
 asepritePage : Model -> Html Msg
 asepritePage model =
     Html.div [ Attr.class "page" ]
-        [ pageHead "02 / 03"
-            AsepriteWord
+        [ pageHead "Aseprite"
             "The program SpriteWare drives. Change it if Aseprite moves."
         , Html.section [ Attr.class "card" ]
-            [ Html.span [ Attr.class "label" ] [ Html.text "Program" ]
+            [ Html.div [ Attr.class "statusline" ]
+                [ Pixel.led "live"
+                , Html.span [ Attr.class "label" ] [ Html.text "Program" ]
+                ]
             , Html.code [ Attr.class "code" ] [ Html.text model.setup.path ]
             , Html.div [ Attr.class "row" ]
                 [ Html.button [ Attr.class "btn btn--ghost", Events.onClick ForgetPath ]
@@ -917,8 +921,7 @@ toolsPage model =
             List.length model.tools
     in
     Html.div [ Attr.class "page" ]
-        [ pageHead "03 / 03"
-            ToolsWord
+        [ pageHead "Tools"
             (String.fromInt count
                 ++ (if count == 1 then
                         " tool. Each one groups related commands."
@@ -927,14 +930,14 @@ toolsPage model =
                         " tools, each a group of related commands."
                    )
             )
-        , Html.section [ Attr.class "card card--flush" ]
-            [ if count == 0 then
-                Html.p [ Attr.class "empty" ]
+        , if count == 0 then
+            Html.section [ Attr.class "card" ]
+                [ Html.p [ Attr.class "empty" ]
                     [ Html.text "No tools registered. Restart the app if this stays empty." ]
+                ]
 
-              else
-                Html.ul [ Attr.class "tools" ] (List.map toolRow model.tools)
-            ]
+          else
+            Html.ul [ Attr.class "tools" ] (List.map toolRow model.tools)
         ]
 
 

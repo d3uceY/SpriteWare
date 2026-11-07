@@ -79,7 +79,7 @@ func runGUI() {
 		Height:           620,
 		MinWidth:         680,
 		MinHeight:        460,
-		BackgroundColour: application.NewRGB(11, 13, 18),
+		BackgroundColour: application.NewRGB(211, 203, 190),
 		URL:              "/",
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,

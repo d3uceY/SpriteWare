@@ -1,140 +1,50 @@
-module Pixel exposing (Icon(..), Word(..), caret, icon, iconAt, mascot, word)
+module Pixel exposing (Icon(..), caret, icon, led, mascot, text)
 
-{-| The only pixel art in the app: the mascot, the three nav icons, the display
-words, and the card frame.
+{-| The pixel art in the app. Every sheet in `public/sprites` was drawn through
+SpriteWare's own MCP server, and the `.aseprite` sources sit in
+`assets/sprites`.
 
-Every PNG here was drawn through SpriteWare's own MCP server — `sprite op=new`,
-`draw` with the grid op, `export op=png`, `sprite op=save_as` — and the
-`.aseprite` files next to them in `assets/sprites` are the editable source.
+Nothing here knows a size or a frame count. A sprite is a class name, and
+`style.css` owns the geometry (`--w`, `--h`, `--n`, `--px`) and the animation:
+frames are stepped with `background-position`, so a sprite needs no script, no
+re-diffing and no clock of its own.
 
-The markup carries the sheet facts so `sprite.js` can drive it; that is the same
-engine that will play longer clips, and the mascot already needs it: its sheet
-is two frames, eyes open and eyes shut, with a per-frame timing rule.
 -}
 
 import Html exposing (Html)
 import Html.Attributes as Attr
 
 
-type alias Spec =
-    { name : String
-    , w : Int
-    , h : Int
-    , artPx : Float
-    , label : String
-    , frameMs : Int
-    , timing : String
-    }
-
-
-{-| A CSS length from a count of art pixels. `String.fromFloat` drops the
-decimal point on whole numbers, so 2 stays "2px" and 1.25 becomes "1.25px" -
-which is what a tab 20% larger than the old one needs.
--}
-pxOf : Float -> String
-pxOf value =
-    String.fromFloat value ++ "px"
-
-
-{-| One sprite strip, sized by how many CSS pixels one art pixel takes.
-
-`frameMs` and `timing` are only emitted when a sprite actually animates, so a
-single-frame icon stays inert.
--}
-sprite : Spec -> Html msg
-sprite spec =
-    let
-        box =
-            pxOf (toFloat spec.w * spec.artPx)
-
-        tall =
-            pxOf (toFloat spec.h * spec.artPx)
-
-        animated =
-            not (String.isEmpty spec.timing)
-
-        frames =
-            if animated then
-                2
-
-            else
-                1
-
-        strip =
-            pxOf (toFloat (spec.w * frames) * spec.artPx)
-
-        timingAttrs =
-            if animated then
-                [ Attr.attribute "data-frame-ms" (String.fromInt spec.frameMs)
-                , Attr.attribute "data-timing" spec.timing
-                ]
-
-            else
-                []
-    in
+sprite : String -> Html msg
+sprite name =
     Html.span
-        ([ Attr.class "sprite"
-         , Attr.style "width" box
-         , Attr.style "height" tall
-         , Attr.attribute "data-sprite" ""
-         , Attr.attribute "data-sheet" ("/sprites/" ++ spec.name ++ ".png")
-         , Attr.attribute "data-frames" (String.fromInt frames)
-         , Attr.attribute "data-fw" (String.fromInt spec.w)
-         , Attr.attribute "data-fh" (String.fromInt spec.h)
-         , Attr.attribute "data-art-px" (String.fromFloat spec.artPx)
-         , Attr.attribute "aria-hidden"
-            (if String.isEmpty spec.label then
-                "true"
-
-             else
-                "false"
-            )
-         ]
-            ++ timingAttrs
-        )
-        [ Html.img
-            [ Attr.src ("/sprites/" ++ spec.name ++ ".png")
-            , Attr.alt spec.label
-            , Attr.style "width" strip
-            , Attr.style "height" tall
-            , Attr.attribute "draggable" "false"
-            ]
-            []
+        [ Attr.class ("px px--" ++ name)
+        , Attr.attribute "aria-hidden" "true"
         ]
+        []
 
 
-{-| The mascot: two frames, eyes open then shut. It holds open for two seconds
-and blinks for ninety milliseconds, so the loop reads as a blink rather than a
-twitch.
+{-| Three frames: eyes open, shut, and looking to the side.
 -}
-mascot : Int -> Html msg
-mascot artPx =
-    sprite
-        { name = "mascot"
-        , w = 16
-        , h = 16
-        , artPx = toFloat artPx
-        , label = "SpriteWare"
-        , frameMs = 2000
-        , timing = "2:90"
-        }
+mascot : Html msg
+mascot =
+    sprite "mascot"
 
 
-{-| The menu caret: 7x4 art at two screen pixels each, so the chevron is drawn
-rather than set. A native `<select>` brings its own arrow, and the whole point of
-`caret` is that nothing here does.
--}
 caret : Html msg
 caret =
-    sprite
-        { name = "caret"
-        , w = 7
-        , h = 4
-        , artPx = 2
-        , label = ""
-        , frameMs = 0
-        , timing = ""
-        }
+    sprite "caret"
+
+
+{-| The state lamp: `live` pulses, `todo` blinks amber, anything else is dark.
+-}
+led : String -> Html msg
+led state =
+    Html.span
+        [ Attr.class ("px px--led px--led-" ++ state)
+        , Attr.attribute "aria-hidden" "true"
+        ]
+        []
 
 
 type Icon
@@ -143,31 +53,15 @@ type Icon
     | BlocksIcon
     | SearchIcon
     | FolderIcon
+    | PlayIcon
+    | StopIcon
 
 
-{-| Nav icons are 16x16 art shown in a 20px tab: one and a quarter screen
-pixels per art pixel. The tab grew by a fifth, so the icons grew with it; the
-browser keeps the scaling nearest-neighbour, so the pixels stay square.
+{-| The nav icons are two-frame sheets that only play while their tab is open.
 -}
 icon : Icon -> Html msg
 icon which =
-    iconAt which 1.25
-
-
-{-| The same art at an explicit size, for icons that sit inside a control whose
-height is already decided.
--}
-iconAt : Icon -> Float -> Html msg
-iconAt which artPx =
-    sprite
-        { name = nameOf which
-        , w = 16
-        , h = 16
-        , artPx = artPx
-        , label = ""
-        , frameMs = 0
-        , timing = ""
-        }
+    sprite (nameOf which)
 
 
 nameOf : Icon -> String
@@ -188,50 +82,48 @@ nameOf which =
         FolderIcon ->
             "icon-folder"
 
+        PlayIcon ->
+            "icon-play"
 
-{-| Display text, drawn on a 5x7 grid rather than set. Only the words the app
-actually writes exist as art, so the type stays honest: a heading is an image
-with its text as the alt.
+        StopIcon ->
+            "icon-stop"
+
+
+{-| Display text, set one drawn glyph at a time from the `glyphs` sheet.
+
+The classes pick the tone and the size (`--px` in CSS), so the same word can be
+a masthead or a ghost numeral. The words live in `aria-label`: the glyphs
+themselves are decoration.
+
 -}
-type Word
-    = BrandWord
-    | ServerWord
-    | AsepriteWord
-    | ToolsWord
-    | FindWord
+text : String -> String -> Html msg
+text classes content =
+    Html.span
+        [ Attr.class ("glyphs " ++ classes)
+        , Attr.attribute "role" "img"
+        , Attr.attribute "aria-label" content
+        ]
+        (content |> String.toUpper |> String.toList |> List.map glyph)
 
 
-word : Word -> Int -> Html msg
-word which artPx =
-    let
-        ( name, width, label ) =
-            wordInfo which
-    in
-    sprite
-        { name = name
-        , w = width
-        , h = 7
-        , artPx = toFloat artPx
-        , label = label
-        , frameMs = 0
-        , timing = ""
-        }
+glyph : Char -> Html msg
+glyph character =
+    Html.span
+        [ Attr.class "glyph"
+        , Attr.attribute "style" ("--i:" ++ String.fromInt (glyphIndex character))
+        ]
+        []
 
 
-wordInfo : Word -> ( String, Int, String )
-wordInfo which =
-    case which of
-        BrandWord ->
-            ( "word-brand", 59, "SpriteWare" )
+{-| The order the sheet was drawn in. A character with no glyph is a space.
+-}
+glyphOrder : String
+glyphOrder =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .:/-"
 
-        ServerWord ->
-            ( "word-server", 35, "Server" )
 
-        AsepriteWord ->
-            ( "word-aseprite", 47, "Aseprite" )
-
-        ToolsWord ->
-            ( "word-tools", 29, "Tools" )
-
-        FindWord ->
-            ( "word-find", 77, "Find Aseprite" )
+glyphIndex : Char -> Int
+glyphIndex character =
+    String.indexes (String.fromChar character) glyphOrder
+        |> List.head
+        |> Maybe.withDefault 36

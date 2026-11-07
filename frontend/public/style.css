@@ -1,74 +1,48 @@
-/* SpriteWare - one design system, in one file.
+/* SpriteWare - one design system, in one file. See DESIGN.md.
  *
- * The app is a canvas, not a page: a recessed Aseprite-slate workspace with a
- * whisper of transparency checker behind it, and white pixel-framed cards
- * standing on top. Everything hard-edged gets a hard lip instead of a blur -
- * cards, buttons, tabs - so depth is drawn rather than smeared.
+ * Aseprite's own light theme, kept quiet: a beige window, a slate workspace,
+ * grey keys with black outlines, white wells for anything you read or type, and
+ * one red for the key to press next. Nothing glows, nothing is decorative.
  *
- * Type: Albert Sans for every voice (weight carries emphasis), IBM Plex Mono
- * for data lines only - paths, URLs, config text, tool names. The font faces
- * are imported in src/main.js: this file is copied verbatim from public/, so a
- * bare @import here would be a 404.
+ * Frames are PNGs drawn in Aseprite through SpriteWare's own MCP server and
+ * sliced with border-image at two screen pixels per art pixel, so one asset
+ * draws a box of any size with its corners intact. The page title is drawn too:
+ * the glyph sheet is set one cell at a time, sized by --px.
  *
- * Display words are drawn art on a 5x7 pixel face: a page title is an image
- * with its text in alt, so its size comes from the sprite, not from CSS.
+ * Fonts are imported in src/main.js: this file is copied verbatim from public/,
+ * so a bare @import here would be a 404.
  *
- * Scale: 15 / 13 / 12 / 11. Weights: 500 and 600. Nothing else.
- * Spacing: 4 / 8 / 12 / 16 / 24 / 32 / 40 / 64. Nothing else.
- * One accent, and exactly one filled button per screen.
+ * Labels, tabs and buttons: Pixelify Sans. Reading text: Albert Sans. Data:
+ * IBM Plex Mono. Spacing: 4 / 8 / 12 / 16 / 24 / 32. Nothing eases: a press
+ * moves a key by exactly its lip.
  */
 
 :root {
-  /* Paper is warm, never #fff: a surface rather than a hole. */
-  --paper: #fffdfa;
-  --surface: #f6f4ef;
-  --surface-2: #ece9e2;
-
-  /* The workspace. Aseprite's slate, flat, which is what lets the open tab
-     paint the same colour and run into the page without a seam. */
+  --black: #000;
+  --ink: #101417;
+  --beige: #d3cbbe;
+  --hot: #faf0e6;
   --slate: #7d929e;
-  --slate-lip: #5b6e78;
-  --chip: #c6c6c6;
+  --slate-hi: #99b3c2;
+  --grey: #c6c6c6;
+  --grey-hi: #d9d9d9;
+  --grey-lo: #8e8e8e;
+  --white: #fff;
 
-  /* Aseprite's transparency checker, dialled down until it is felt rather than
-     seen. Both the tab strip and the stage paint it, so one surface runs from
-     the chrome down into the page. */
-  --checker: repeating-conic-gradient(
-    rgb(255 255 255 / 0.035) 0% 25%,
-    rgb(255 255 255 / 0) 0% 50%
-  );
-  --checker-tile: 16px;
+  --red: #ff5555;
+  --red-deep: #c23838;
+  --blue: #2c4c91;
+  --yellow: #ffebb6;
+  --green-text: #1a5a1a;
+  --red-text: #a11d1d;
+  --muted: #4f473b;
 
-  --ink: #171b1d;
-  --ink-soft: #3d4950;
-  --muted: #5b6870;
-  --faint: #7d8890;
-  --ghost: #b9b6ad;
-
-  --line: #e7e3db;
-  --line-strong: #d5d0c6;
-
-  --mint: #e4f3ea;
-  --mint-strong: #c6e8d5;
-  --leaf: #1e8a4e;
-  --leaf-deep: #15703e;
-  --accent: #15703e;
-  --accent-deep: #0b4a27;
-  --accent-ink: #ffffff;
-
-  --amber: #a15a05;
-  --danger: #b8352a;
-  --danger-soft: #fbeae7;
-
+  --font-display: "Pixelify Sans Variable", "Pixelify Sans", ui-monospace, monospace;
   --font-sans: "Albert Sans Variable", "Albert Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --quick: 130ms;
-
-  /* On slate, quiet text has to be quiet by size and tracking, not by opacity:
-     white only reaches 3.3:1 there and a 70% ink lands at 3.3:1 too, so page
-     level copy is full ink and the hierarchy is carried by scale. */
+  /* One art pixel of a sprite or a glyph; whoever uses one sets it. */
+  --px: 2px;
 }
 
 * {
@@ -83,53 +57,39 @@ body,
 
 body {
   margin: 0;
-  background: var(--paper);
-  color: var(--ink-soft);
+  background: var(--beige);
+  color: var(--black);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.5;
-  letter-spacing: -0.004em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 ::selection {
-  background: var(--mint-strong);
-  color: var(--ink);
+  background: var(--red);
+  color: var(--black);
 }
 
-/* Thin, quiet scrollbars: the platform default is a second grey bar competing
-   with the cards. */
 ::-webkit-scrollbar {
-  width: 11px;
-  height: 11px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--line-strong);
-  border: 3px solid transparent;
-  background-clip: content-box;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--faint);
-  background-clip: content-box;
-}
-
-/* The canvas is mid-tone, so its own bar has to be light or it vanishes. */
-.stage::-webkit-scrollbar-thumb {
-  background: rgb(255 255 255 / 0.3);
-  background-clip: content-box;
-}
-
-.stage::-webkit-scrollbar-thumb:hover {
-  background: rgb(255 255 255 / 0.55);
-  background-clip: content-box;
+  width: 14px;
+  height: 14px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--grey);
+  border-left: 2px solid var(--black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--beige);
+  border: 2px solid var(--black);
+  box-shadow: inset 2px 2px 0 var(--hot);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--hot);
 }
 
 h1,
@@ -140,20 +100,171 @@ pre {
   margin: 0;
 }
 
-/* Sprite art ---------------------------------------------------------------
-   The crop box the engine moves the strip inside. One art pixel stays one art
-   pixel at any scale. */
+/* Sprites ----------------------------------------------------------------
+   A sprite is a class. The sheet, the frame size (--w x --h in art pixels) and
+   the frame count (--n) live here; the size on screen is --px per art pixel.
+   Frames are stepped with background-position, so nothing needs a script. */
 
-.sprite {
-  display: inline-flex;
+.px {
+  --w: 16;
+  --h: 16;
+  --n: 1;
+  display: inline-block;
   flex: none;
-  overflow: hidden;
+  width: calc(var(--w) * var(--px));
+  height: calc(var(--h) * var(--px));
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: calc(var(--w) * var(--n) * var(--px)) calc(var(--h) * var(--px));
+  image-rendering: pixelated;
 }
 
-.sprite img {
-  display: block;
+.px--mascot {
+  --n: 3;
+  background-image: url("/sprites/mascot.png");
+  animation: mascot 5.2s steps(1, end) infinite;
+}
+
+.px--led {
+  --w: 8;
+  --h: 8;
+  --n: 5;
+  background-image: url("/sprites/led.png");
+}
+
+.px--led-live {
+  animation: led-live 1.6s steps(1, end) infinite;
+}
+
+.px--led-idle {
+  background-position: calc(var(--w) * var(--px) * -2) 0;
+}
+
+.px--led-todo {
+  animation: led-todo 1s steps(1, end) infinite;
+}
+
+.px--caret {
+  --w: 9;
+  --h: 5;
+  background-image: url("/sprites/caret.png");
+}
+
+.px--nav-server,
+.px--nav-aseprite,
+.px--nav-tools {
+  --n: 2;
+}
+
+.px--nav-server {
+  background-image: url("/sprites/nav-server.png");
+  animation-duration: 0.7s;
+}
+
+.px--nav-aseprite {
+  background-image: url("/sprites/nav-aseprite.png");
+  animation-duration: 1.1s;
+}
+
+.px--nav-tools {
+  background-image: url("/sprites/nav-tools.png");
+  animation-duration: 0.9s;
+}
+
+.px--icon-search {
+  background-image: url("/sprites/icon-search.png");
+}
+
+.px--icon-folder {
+  background-image: url("/sprites/icon-folder.png");
+}
+
+.px--icon-play {
+  background-image: url("/sprites/icon-play.png");
+}
+
+.px--icon-stop {
+  background-image: url("/sprites/icon-stop.png");
+}
+
+@keyframes mascot {
+  0% {
+    background-position: 0 0;
+  }
+
+  68% {
+    background-position: calc(var(--w) * var(--px) * -1) 0;
+  }
+
+  70% {
+    background-position: 0 0;
+  }
+
+  84% {
+    background-position: calc(var(--w) * var(--px) * -2) 0;
+  }
+
+  95% {
+    background-position: 0 0;
+  }
+}
+
+@keyframes led-live {
+  0% {
+    background-position: 0 0;
+  }
+
+  50% {
+    background-position: calc(var(--w) * var(--px) * -1) 0;
+  }
+}
+
+@keyframes led-todo {
+  0% {
+    background-position: calc(var(--w) * var(--px) * -3) 0;
+  }
+
+  50% {
+    background-position: calc(var(--w) * var(--px) * -4) 0;
+  }
+}
+
+@keyframes frame-2 {
+  0% {
+    background-position: 0 0;
+  }
+
+  50% {
+    background-position: calc(var(--w) * var(--px) * -1) 0;
+  }
+}
+
+/* A nav icon holds still until its tab is the open one, or is pointed at. */
+.tab--on .px,
+.tab:hover:not(:disabled) .px {
+  animation-name: frame-2;
+  animation-timing-function: steps(1, end);
+  animation-iteration-count: infinite;
+}
+
+/* Glyphs -----------------------------------------------------------------
+   Display text from the 41-cell sheet (7x8 art pixels a cell, with its pale
+   shadow drawn in). --i is the cell; --px is the size. */
+
+.glyphs {
+  display: inline-flex;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.glyph {
+  flex: none;
+  width: calc(7 * var(--px));
+  height: calc(8 * var(--px));
+  background: url("/sprites/glyphs.png") no-repeat;
+  background-position: calc(var(--i) * -7 * var(--px)) 0;
+  background-size: calc(41 * 7 * var(--px)) calc(8 * var(--px));
   image-rendering: pixelated;
-  user-select: none;
 }
 
 /* Shell ------------------------------------------------------------------ */
@@ -164,15 +275,9 @@ pre {
   height: 100%;
 }
 
-/* Chrome -----------------------------------------------------------------
-   Two rows: the mark and the connection state, then the tabs. The tab row's
-   ink line is the boundary with the canvas, and the open tab paints over that
-   line with the canvas's own colour - it has no bottom edge - so it opens into
-   the page instead of sitting on top of it. */
-
 .chrome {
   flex: none;
-  background: var(--paper);
+  background: var(--beige);
 }
 
 .topbar {
@@ -180,341 +285,248 @@ pre {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  height: 52px;
-  padding: 0 16px 0 14px;
+  height: 56px;
+  padding: 0 16px;
 }
 
 .brand {
   display: flex;
   flex: none;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
-/* Tabs -------------------------------------------------------------------
-   Each frame is a 16x16 PNG drawn in Aseprite and sliced 2px, so one asset
-   draws a tab of any width. The strip is the same warm paper as the bar above
-   it, so the chrome reads as one block instead of two. A closed tab is grey. The
-   open one is its outline only, with the canvas texture painted behind it and no
-   bottom edge, so its last pixel row covers the strip's ink line and it opens
-   into the page below. */
-
-.tabs {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 46px;
-  padding: 0 14px;
-  background: var(--paper);
-  border-bottom: 1px solid var(--ink);
+.brand .px {
+  --px: 2px;
 }
 
-.tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 38px;
-  /* The bottom pixel row is spent covering the row's hairline. */
-  margin-bottom: -1px;
-  padding: 0 15px 0 10px;
-  /* Slice 3 = a 3px rounded top corner, drawn stepped in the art. The open
-     frame is the same arc with its outside cells painted paper, because its
-     fill is a CSS background and would otherwise square off the corner. */
-  border: 3px solid transparent;
-  border-image: url("/sprites/tab.png") 3 fill stretch;
-  background: transparent;
-  color: var(--ink);
-  font: inherit;
-  font-size: 13.5px;
-  font-weight: 600;
-  letter-spacing: 0;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: filter var(--quick) var(--ease);
+.brand .glyphs {
+  --px: 2px;
 }
 
-/* No second frame for hover: dimming the chip is honest pixel feedback and
-   keeps the outline, fill and label in the same relationship. */
-.tab:hover:not(:disabled):not(.tab--on) {
-  filter: brightness(0.96);
-}
-
-.tab--on {
-  border-image-source: url("/sprites/tab-on.png");
-}
-
-.tab:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-.tab:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
-}
-
-/* The connection state as a plate: it reads as a fact about the app rather than
-   a button, which is why it is a chip and not a pill of colour. */
-
+/* The state plate: a white well holding a lamp and a word. */
 .state {
   display: inline-flex;
   flex: none;
   align-items: center;
   gap: 8px;
-  height: 27px;
-  padding: 0 11px 0 10px;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  height: 36px;
+  padding: 0 12px 0 8px;
+  border: 6px solid transparent;
+  border-image: url("/sprites/plate.png") 3 fill / 6px stretch;
+  image-rendering: pixelated;
 }
 
-.state__dot {
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-}
-
-.state__dot--live {
-  background: var(--leaf);
-  box-shadow: 0 0 0 3px rgb(30 138 78 / 0.16);
-  animation: breathe 2.6s var(--ease) infinite;
-}
-
-.state__dot--idle {
-  background: var(--ghost);
-}
-
-.state__dot--todo {
-  background: var(--amber);
+.state .px {
+  --px: 2px;
 }
 
 .state__word {
-  font-size: 11.5px;
+  font-family: var(--font-display);
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: 0.005em;
-  color: var(--ink);
   white-space: nowrap;
 }
 
-/* A listening server is a living thing, so the halo breathes. */
-@keyframes breathe {
-  0%,
-  100% {
-    box-shadow: 0 0 0 3px rgb(30 138 78 / 0.16);
-  }
+/* Tabs --------------------------------------------------------------------
+   Grey keys standing on a black rail. The open tab is slate and taller, and its
+   fill runs into the stage below, so it reads as the page it opens. Frames are
+   open-bottom, which is what lets that fill cover the rail. */
 
-  50% {
-    box-shadow: 0 0 0 6px rgb(30 138 78 / 0.05);
-  }
+.tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 48px;
+  padding: 0 16px;
+  border-bottom: 2px solid var(--black);
 }
 
-/* Stage ------------------------------------------------------------------
-   The workspace is a canvas. Aseprite shows a transparency checker behind the
-   art, so at 3.5% it is the most honest atmosphere this app could have: it says
-   what the program is without a single ornament, and it makes the cards read as
-   objects laid on a surface rather than sections of a page. */
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 16px 0 6px;
+  border: solid transparent;
+  border-width: 6px 6px 0;
+  border-image: url("/sprites/tab.png") 3 3 0 3 fill / 6px 6px 0 6px stretch;
+  background: transparent;
+  color: var(--black);
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  image-rendering: pixelated;
+}
+
+.tab:hover:not(:disabled):not(.tab--on) {
+  filter: brightness(1.08);
+}
+
+.tab--on {
+  height: 46px;
+  margin-bottom: -2px;
+  border-image-source: url("/sprites/tab-on.png");
+}
+
+.tab:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* Stage -------------------------------------------------------------------
+   The workspace: flat slate. */
 
 .stage {
   flex: 1;
   min-width: 0;
   min-height: 0;
   overflow: auto;
-}
-
-/* One canvas, painted twice: the workspace, and the open tab that opens into it.
-   `fixed` anchors the pattern to the window rather than to each element's own
-   top-left corner, which is the only way the tab's texture can continue the
-   page's - with `scroll` every element starts its own checker at its own edge
-   and the squares break at the seam. */
-.stage,
-.tab--on {
-  background-color: var(--slate);
-  background-image: var(--checker);
-  background-size: var(--checker-tile) var(--checker-tile);
-  background-attachment: fixed;
+  background: var(--slate);
 }
 
 .page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-width: 780px;
+  gap: 16px;
+  max-width: 720px;
   margin: 0 auto;
-  padding: 40px 40px 64px;
+  padding: 24px 32px 48px;
 }
-
-/* A masthead, not a heading: kicker, drawn title, one line of intent, and a
-   rule that closes the band the way a book closes its running head. */
 
 .page__head {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid rgb(23 27 29 / 0.22);
-}
-
-.page__kicker {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--ink);
+  gap: 8px;
+  padding-bottom: 8px;
 }
 
 .page__title {
-  /* The title is drawn art, so the heading is a box and nothing else. */
+  --px: 4px;
   margin: 0;
   font-size: 0;
   line-height: 0;
 }
 
 .page__lead {
-  max-width: 58ch;
-  font-size: 13.5px;
-  line-height: 1.55;
-  /* Ink, not white: on slate white only reaches 3.3:1 and ink clears 5:1, so
-     the hierarchy is carried by the drawn title above it. */
+  max-width: 56ch;
+  font-size: 15px;
+  line-height: 1.5;
   color: var(--ink);
   text-wrap: pretty;
 }
 
-/* First run is the one screen that can afford a hero: the mascot at five art
-   pixels, feet on the rule, beside the drawn title. */
-
-.hero {
-  display: flex;
-  align-items: flex-end;
-  gap: 24px;
-}
-
-.hero .page__head {
-  flex: 1;
-  min-width: 0;
-}
-
-.hero__mark {
-  /* Flex, not block: an inline sprite sits on the text baseline and would leave
-     its descender space between the mascot's feet and the rule below. */
-  display: flex;
-  flex: none;
-}
-
-/* Cards -----------------------------------------------------------------
-   The frame is a 24x24 PNG drawn in Aseprite, sliced 8px in from each edge:
-   the corners keep their cut pixel and the edges stretch, so one asset draws
-   every card size. 8px border + 8px padding keeps the 16px inset the content
-   expects. */
+/* Cards -------------------------------------------------------------------
+   A 16x16 window frame sliced at 4 art pixels. The lip is a drop-shadow, which
+   follows the notched silhouette; a box-shadow would square the corners. */
 
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 8px;
-  background: transparent;
+  padding: 4px 8px 8px;
   border: 8px solid transparent;
-  border-image: url("/sprites/card.png") 8 fill stretch;
-  border-radius: 0;
-  /* A hard lip, not a blur: the frame is pixel art, so the depth under it is
-     four solid rows rather than a shadow. */
-  box-shadow: 0 4px 0 var(--slate-lip);
+  border-image: url("/sprites/card.png") 4 fill / 8px stretch;
+  background: transparent;
+  filter: drop-shadow(0 2px 0 var(--black));
+  image-rendering: pixelated;
 }
 
-.card__title {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--ink);
-}
-
-/* A title and its one instruction line, tight together. */
 .card__head {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
-.card--flush {
-  padding: 4px 6px;
+.card__title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .card__lead {
-  font-size: 13px;
-  color: var(--muted);
+  font-size: 14px;
   text-wrap: pretty;
 }
 
-/* Text ------------------------------------------------------------------- */
+/* Text -------------------------------------------------------------------- */
 
-/* Labels are technical voice: mono, tracked, and never larger than the thing
-   they label. */
 .label {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.16em;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--blue);
 }
 
 .hint {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--muted);
   text-wrap: pretty;
 }
 
 .hint--ok {
-  color: var(--leaf-deep);
+  color: var(--green-text);
 }
 
 .hint--bad {
-  color: var(--danger);
+  color: var(--red-text);
 }
 
-/* An error is the one thing allowed to shout, and it keeps its own plate. */
 .note {
-  font-size: 12.5px;
-  color: var(--ink);
+  font-size: 13px;
 }
 
 .note--bad {
-  padding: 9px 11px;
-  background: var(--danger-soft);
-  color: var(--danger);
-  font-size: 12.5px;
+  padding: 4px 8px;
+  border: 6px solid transparent;
+  border-image: url("/sprites/plate-bad.png") 3 fill / 6px stretch;
+  color: var(--red-text);
+  image-rendering: pixelated;
+}
+
+/* Wells -------------------------------------------------------------------
+   Anything you read or type sits in a white well with a black outline. */
+
+.code,
+.snippet__code,
+.url,
+.pathfield,
+.tools {
+  border: 6px solid transparent;
+  border-image: url("/sprites/plate.png") 3 fill / 6px stretch;
+  background: transparent;
+  image-rendering: pixelated;
 }
 
 .code {
-  padding: 10px 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  padding: 2px 6px;
   font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--ink-soft);
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
-
-/* Path field ------------------------------------------------------------
-   One frame around the input and the Browse button, so both ways of naming a
-   path read as one control. Browse sits inside the frame behind a hairline
-   rather than beside it as a third button. */
 
 .pathfield {
   display: flex;
   align-items: center;
-  height: 38px;
-  padding-left: 9px;
-  border: 3px solid transparent;
-  border-image: url("/sprites/btn-ghost.png") 3 fill stretch;
-  background: transparent;
+  height: 42px;
+  padding-left: 4px;
 }
 
-/* Focus belongs to the whole control: the ring has to wrap the browse segment
-   too, or half the thing looks unfocused while it is being used. */
+/* The ring wraps the browse segment too, or half the control looks idle. */
 .pathfield:focus-within {
-  outline: 2px solid var(--leaf);
+  outline: 2px solid var(--blue);
   outline-offset: 2px;
 }
 
@@ -524,9 +536,9 @@ pre {
   height: 100%;
   border: 0;
   background: transparent;
-  color: var(--ink);
+  color: var(--black);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .pathfield__input:focus {
@@ -534,38 +546,39 @@ pre {
 }
 
 .pathfield__input::placeholder {
-  /* 4.7:1 on paper: a placeholder is text, and a pale one is not a style
-     choice, it is a contrast failure. */
-  color: #6b757b;
+  color: #6e6e6e;
 }
 
 .pathfield__browse {
   display: flex;
   flex: none;
   align-items: center;
-  gap: 7px;
+  gap: 4px;
   height: 100%;
   margin-left: 8px;
-  padding: 0 10px 0 9px;
+  padding: 0 10px 0 4px;
   border: 0;
-  border-left: 1px solid var(--line-strong);
+  border-left: 2px solid var(--grey);
   background: transparent;
-  color: var(--leaf-deep);
-  font: inherit;
-  font-size: 12px;
+  color: var(--blue);
+  font-family: var(--font-display);
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--quick) var(--ease), color var(--quick) var(--ease);
+}
+
+.pathfield__browse .px {
+  --px: 1px;
+  margin: 0 2px;
 }
 
 .pathfield__browse:hover {
-  background: var(--mint);
-  color: var(--accent-deep);
+  background: var(--yellow);
 }
 
 .pathfield__browse:focus-visible {
-  outline: 2px solid var(--leaf);
-  outline-offset: -2px;
+  outline: 2px solid var(--blue);
+  outline-offset: -4px;
 }
 
 .row {
@@ -583,129 +596,124 @@ pre {
   justify-content: space-between;
 }
 
-/* Buttons ----------------------------------------------------------------
-   Three levels and no more: one filled action per screen, ghost for the second
-   thing you might press, and a link for the copy affordances. The frame is a
-   12x12 PNG sliced 3px, so a button's corners are stepped rather than rounded -
-   RetroUI's cut, at a third of its weight. The fill lives in the art because a
-   CSS background would paint over the notch and square it off again, which is
-   also why hover lightens instead of swapping colour.
-
-   The lip is a `drop-shadow` rather than a `box-shadow`: a box shadow is a
-   rectangle, so its corners would show as small square tabs poking out of the
-   notched ones. A drop shadow follows the painted silhouette instead. */
+/* Buttons -----------------------------------------------------------------
+   Three levels: one red key per screen, a grey key for the second thing you
+   might press, and a link for copy. The frame is a 12x12 key sliced at 3,
+   bevel included; the lip is a drop-shadow, and a press is the key going down
+   by exactly the lip. */
 
 .btn {
-  height: 34px;
-  padding: 0 14px;
-  border: 3px solid transparent;
-  border-image: url("/sprites/btn.png") 3 fill stretch;
+  height: 42px;
+  padding: 0 12px;
+  border: 6px solid transparent;
+  border-image: url("/sprites/btn.png") 3 fill / 6px stretch;
   background: transparent;
-  color: var(--accent-ink);
-  font: inherit;
-  font-size: 13px;
+  color: var(--black);
+  font-family: var(--font-display);
+  font-size: 16px;
   font-weight: 600;
-  letter-spacing: -0.005em;
   white-space: nowrap;
   cursor: pointer;
-  filter: drop-shadow(0 2px 0 var(--accent-deep));
-  transition: filter var(--quick) var(--ease), transform 90ms var(--ease);
+  filter: drop-shadow(0 2px 0 var(--black));
+  image-rendering: pixelated;
 }
 
 .btn:hover:not(:disabled) {
-  filter: brightness(1.12) drop-shadow(0 2px 0 var(--accent-deep));
+  filter: brightness(1.08) drop-shadow(0 2px 0 var(--black));
 }
 
 .btn:active:not(:disabled) {
   transform: translateY(2px);
-  filter: brightness(1.12) drop-shadow(0 0 0 var(--accent-deep));
+  filter: drop-shadow(0 0 0 var(--black));
 }
 
 .btn:focus-visible {
-  outline: 2px solid var(--leaf);
-  outline-offset: 2px;
+  outline: 2px solid var(--blue);
+  outline-offset: 4px;
 }
 
 .btn:disabled {
   cursor: not-allowed;
-  opacity: 0.45;
+  opacity: 0.5;
 }
 
-/* A button whose label has art beside it. Without flex the sprite sits on the
-   text baseline and drags the label above centre. */
 .btn--icon {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
-/* The same frame with the paper fill, so a second action reads as the same
-   object in a quieter material. */
+.btn--icon .px {
+  --px: 1px;
+  margin: 0 2px;
+}
+
 .btn--ghost {
   border-image-source: url("/sprites/btn-ghost.png");
-  color: var(--ink);
-  filter: drop-shadow(0 2px 0 var(--line-strong));
 }
 
-.btn--ghost:hover:not(:disabled) {
-  filter: brightness(0.975) drop-shadow(0 2px 0 var(--line-strong));
-}
-
-.btn--ghost:active:not(:disabled) {
-  filter: brightness(0.975) drop-shadow(0 0 0 var(--line-strong));
-}
-
-/* The copy affordance: reads as a link, so it never competes with a button and
-   sheds the frame entirely. */
+/* Copy: reads as a link. */
 .btn--link {
-  height: 32px;
+  height: 28px;
   padding: 0 6px;
   border: 0;
   border-image: none;
   background: transparent;
-  color: var(--leaf-deep);
-  font-size: 12px;
+  color: var(--blue);
+  font-size: 15px;
   filter: none;
 }
 
 .btn--link:hover:not(:disabled) {
-  background: transparent;
-  color: var(--leaf);
+  background: var(--yellow);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
+  filter: none;
 }
 
-/* Segmented control ------------------------------------------------------ */
+.btn--link:active:not(:disabled) {
+  transform: none;
+  filter: none;
+}
+
+.btn--link:focus-visible {
+  outline-offset: 0;
+}
+
+/* Segmented control: a well with one raised key in it. */
 
 .seg {
   display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  background: var(--surface-2);
-  border: 1px solid var(--line-strong);
+  border: 6px solid transparent;
+  border-image: url("/sprites/plate.png") 3 fill / 6px stretch;
+  image-rendering: pixelated;
 }
 
 .seg__btn {
-  height: 28px;
-  padding: 0 11px;
+  height: 30px;
+  padding: 0 12px;
   border: 0;
   background: transparent;
   color: var(--muted);
-  font: inherit;
-  font-size: 12px;
+  font-family: var(--font-display);
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--quick) var(--ease), color var(--quick) var(--ease);
 }
 
 .seg__btn:hover:not(:disabled) {
-  color: var(--ink);
+  background: var(--yellow);
+  color: var(--black);
 }
 
 .seg__btn--on {
-  background: var(--paper);
-  color: var(--ink);
-  box-shadow: 0 1px 0 rgb(23 27 29 / 0.1), 0 1px 3px rgb(23 27 29 / 0.07);
+  background: var(--grey);
+  color: var(--black);
+  box-shadow: inset 2px 2px 0 var(--white), inset -2px -2px 0 var(--grey-lo);
+}
+
+.seg__btn--on:hover:not(:disabled) {
+  background: var(--grey);
 }
 
 .seg__btn:disabled {
@@ -713,93 +721,68 @@ pre {
 }
 
 .seg__btn:focus-visible {
-  outline: 2px solid var(--leaf);
-  outline-offset: 1px;
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
 }
 
-/* Status line and URL ----------------------------------------------------
-   The state word is the largest thing on this card on purpose: it is the one
-   fact the screen exists to answer. */
+/* Status and address ------------------------------------------------------ */
 
 .statusline {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
 }
 
-.statusline__dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.statusline__dot--live {
-  background: var(--leaf);
-  box-shadow: 0 0 0 4px var(--mint);
-  animation: breathe 2.6s var(--ease) infinite;
-}
-
-.statusline__dot--idle {
-  background: var(--ghost);
+.statusline .px--led {
+  --px: 2px;
 }
 
 .statusline__word {
-  font-size: 15px;
+  font-family: var(--font-display);
+  font-size: 20px;
   font-weight: 600;
-  letter-spacing: -0.015em;
-  color: var(--ink);
+  line-height: 1.2;
 }
 
 .statusline__meta {
   margin-left: auto;
   font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
+  font-size: 12px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
-  font-variant-numeric: tabular-nums;
 }
 
-/* The address is the thing people came for, so it gets the ink - and the plate
-   turns mint once something is actually listening on it. */
+/* The address is what people came for, and its well turns green once something
+   is listening on it. */
 .url {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 6px 4px 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  transition: background var(--quick) var(--ease), border-color var(--quick) var(--ease);
+  padding: 0 2px 0 6px;
 }
 
 .url--on {
-  background: var(--mint);
-  border-color: var(--mint-strong);
+  border-image-source: url("/sprites/plate-live.png");
 }
 
 .url__text {
   flex: 1;
   min-width: 0;
-  padding: 7px 0;
+  padding: 4px 0;
   font-family: var(--font-mono);
-  font-size: 12.5px;
-  color: var(--ink);
+  font-size: 14px;
   overflow-wrap: anywhere;
 }
 
-/* Assistant picker -------------------------------------------------------
+/* Assistant picker ---------------------------------------------------------
    Eleven agents as pills is a wall, so the choice is one row that opens a list.
-   The trigger, the panel and the text field all use the ghost button frame,
-   which is what keeps the only control with many options in the same material as
-   everything else. A native `<select>` could not be styled at all: the platform
-   drew the popup and the arrow. */
+   A native <select> cannot be themed: the platform draws its popup and arrow. */
 
 .picker {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .menu {
@@ -809,43 +792,45 @@ pre {
 }
 
 .menu__trigger {
-  /* Above the scrim, so clicking it while open closes the menu instead of
-     being swallowed by the click-catcher. */
+  /* Above the scrim, so clicking it while open closes the menu. */
   position: relative;
   z-index: 32;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  height: 34px;
-  padding: 0 9px 0 10px;
-  border: 3px solid transparent;
-  border-image: url("/sprites/btn-ghost.png") 3 fill stretch;
+  height: 42px;
+  padding: 0 8px 0 8px;
+  border: 6px solid transparent;
+  border-image: url("/sprites/btn-ghost.png") 3 fill / 6px stretch;
   background: transparent;
-  color: var(--ink);
-  font: inherit;
-  font-size: 13px;
+  color: var(--black);
+  font-family: var(--font-display);
+  font-size: 16px;
   font-weight: 600;
   text-align: left;
   cursor: pointer;
-  filter: drop-shadow(0 2px 0 var(--line-strong));
-  transition: filter var(--quick) var(--ease), transform 90ms var(--ease);
+  filter: drop-shadow(0 2px 0 var(--black));
+  image-rendering: pixelated;
 }
 
 .menu__trigger:hover {
-  filter: brightness(0.975) drop-shadow(0 2px 0 var(--line-strong));
+  filter: brightness(1.08) drop-shadow(0 2px 0 var(--black));
 }
 
-/* Open reads as held down: the same shape with its lip gone. */
 .menu__trigger[aria-expanded="true"] {
   transform: translateY(2px);
-  filter: drop-shadow(0 0 0 var(--line-strong));
+  filter: drop-shadow(0 0 0 var(--black));
+}
+
+.menu__trigger[aria-expanded="true"] .px--caret {
+  transform: rotate(180deg);
 }
 
 .menu__trigger:focus-visible {
-  outline: 2px solid var(--leaf);
-  outline-offset: 2px;
+  outline: 2px solid var(--blue);
+  outline-offset: 4px;
 }
 
 .menu__value {
@@ -870,24 +855,25 @@ pre {
 
 .menu__list {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   left: 0;
   right: 0;
   z-index: 31;
-  max-height: 244px;
+  max-height: 260px;
   margin: 0;
-  padding: 4px;
+  padding: 0;
   overflow: auto;
   list-style: none;
-  border: 3px solid transparent;
-  border-image: url("/sprites/btn-ghost.png") 3 fill stretch;
-  filter: drop-shadow(0 3px 0 var(--line-strong));
+  border: 6px solid transparent;
+  border-image: url("/sprites/plate.png") 3 fill / 6px stretch;
+  filter: drop-shadow(0 2px 0 var(--black));
+  image-rendering: pixelated;
 }
 
-/* No room below: grow upward instead, the way the platform's own popup did. */
+/* No room below: grow upward instead. */
 .menu__list--up {
   top: auto;
-  bottom: calc(100% + 4px);
+  bottom: calc(100% + 6px);
 }
 
 .menu__item {
@@ -897,72 +883,68 @@ pre {
 .menu__option {
   display: block;
   width: 100%;
-  padding: 7px 8px;
+  padding: 5px 8px;
   border: 0;
   background: transparent;
-  color: var(--ink-soft);
-  font: inherit;
-  font-size: 13px;
+  color: var(--black);
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 500;
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
-  transition: background var(--quick) var(--ease), color var(--quick) var(--ease);
 }
 
 .menu__option:hover {
-  background: var(--surface-2);
-  color: var(--ink);
+  background: var(--yellow);
 }
 
-.menu__option--on {
-  background: var(--mint);
-  color: var(--leaf-deep);
+.menu__option--on,
+.menu__option--on:hover {
+  background: var(--red);
   font-weight: 600;
 }
 
 .menu__option:focus-visible {
-  outline: 2px solid var(--leaf);
+  outline: 2px solid var(--blue);
   outline-offset: -2px;
 }
 
-/* Snippet ---------------------------------------------------------------- */
+/* Snippet ------------------------------------------------------------------ */
 
 .snippet__code {
   width: 100%;
   max-height: 208px;
-  padding: 11px 12px;
+  padding: 4px 6px;
   overflow: auto;
-  background: var(--surface);
-  border: 1px solid var(--line);
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 12.5px;
   line-height: 1.65;
-  color: var(--ink-soft);
   tab-size: 2;
 }
 
-/* Skill ------------------------------------------------------------------ */
+/* Skill -------------------------------------------------------------------- */
 
 .skill {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .skill .seg {
   align-self: flex-start;
 }
 
-/* Where the file would go, with a dot for whether it is already there. */
+/* Where the file would go, with a square for whether it is already there. */
 .target {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -975,24 +957,22 @@ pre {
 
 .target__dot {
   flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--black);
 }
 
 .target__dot--found {
-  background: var(--leaf);
+  background: #64c864;
 }
 
 .target__dot--missing {
-  background: var(--ghost);
+  background: var(--grey);
 }
 
-/* Tools list ------------------------------------------------------------- */
+/* Tools: a list in a well, the way Aseprite lists files. -------------------- */
 
 .tools {
-  display: flex;
-  flex-direction: column;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1001,45 +981,43 @@ pre {
 .tool {
   display: grid;
   grid-template-columns: 136px minmax(0, 1fr);
-  gap: 20px;
+  gap: 16px;
   align-items: baseline;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--line);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--grey);
 }
 
 .tool:last-child {
   border-bottom: 0;
 }
 
+.tool:hover {
+  background: var(--yellow);
+}
+
 .tool__name {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
-  color: var(--ink);
 }
 
 .tool__blurb {
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.5;
   color: var(--muted);
 }
 
-/* An empty list says why it is empty instead of showing a frameless card. */
 .empty {
-  padding: 28px 12px;
-  font-size: 13px;
+  padding: 16px 8px;
   color: var(--muted);
   text-align: center;
 }
 
-/* Searching --------------------------------------------------------------
-   The sweep is the one animation in the app that means "working" rather than
-   "arriving": a band rolling down the card in ten hard steps, at the speed a
-   disk scan actually feels like. It is the card's own material, not a spinner
-   borrowed from somewhere else. */
+/* Searching ----------------------------------------------------------------
+   The one animation that means "working": a band rolling down the card in ten
+   hard steps, the speed a disk scan feels like. */
 
 .card--scan {
-  position: relative;
   overflow: hidden;
 }
 
@@ -1049,18 +1027,18 @@ pre {
   inset: 0;
   background: linear-gradient(
       180deg,
-      rgb(46 196 182 / 0.02),
-      rgb(46 196 182 / 0.18),
-      rgb(46 196 182 / 0.02)
+      rgb(255 85 85 / 0.03),
+      rgb(255 85 85 / 0.22),
+      rgb(255 85 85 / 0.03)
     )
-    0 0 / 100% 26px no-repeat;
+    0 0 / 100% 32px no-repeat;
   pointer-events: none;
   animation: scan 1.25s steps(10, end) infinite;
 }
 
 @keyframes scan {
   from {
-    background-position: 0 -26px;
+    background-position: 0 -32px;
   }
 
   to {
@@ -1068,11 +1046,9 @@ pre {
   }
 }
 
-/* The confirm dialog -----------------------------------------------------
-   A path the app found is a guess, so it stops the screen. The plate is its own
-   drawn frame (dialog.png, sliced 6): outer ink, one paper pixel, inner ink.
-   Nothing else in the app has a double edge, which is what makes this read as a
-   different kind of object from a card rather than a floating one. */
+/* The confirm dialog -------------------------------------------------------
+   A path the app found is a guess, so it stops the screen. Its frame has a
+   double edge, which nothing else in the app has. */
 
 .dialog__wrap {
   position: fixed;
@@ -1086,21 +1062,20 @@ pre {
 .dialog__scrim {
   position: absolute;
   inset: 0;
-  background: rgb(23 27 29 / 0.55);
+  background: rgb(0 0 0 / 0.45);
 }
 
 .dialog {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  width: min(440px, 100%);
-  padding: 12px;
-  border: 6px solid transparent;
-  border-image: url("/sprites/dialog.png") 6 fill stretch;
-  /* The lip follows the painted silhouette. A box shadow would square off the
-     cut corners. */
-  filter: drop-shadow(0 5px 0 rgb(23 27 29 / 0.45));
+  gap: 16px;
+  width: min(460px, 100%);
+  padding: 8px 8px 12px;
+  border: 12px solid transparent;
+  border-image: url("/sprites/dialog.png") 6 fill / 12px stretch;
+  filter: drop-shadow(0 4px 0 var(--black));
+  image-rendering: pixelated;
 }
 
 .dialog__head {
@@ -1114,6 +1089,10 @@ pre {
   flex: none;
 }
 
+.dialog__mark .px {
+  --px: 3px;
+}
+
 .dialog__headline {
   display: flex;
   flex-direction: column;
@@ -1122,67 +1101,49 @@ pre {
 }
 
 .dialog__title {
-  font-size: 17px;
+  font-family: var(--font-display);
+  font-size: 24px;
   font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--ink);
+  line-height: 1.15;
 }
 
 .dialog__path {
-  padding: 9px 10px;
-  background: var(--surface);
-  border-left: 3px solid var(--mint-strong);
+  padding: 6px 8px;
+  background: var(--white);
+  border: 2px solid var(--black);
   font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--ink-soft);
+  font-size: 12.5px;
   overflow-wrap: anywhere;
 }
 
 .dialog__lead {
-  font-size: 12.5px;
-  color: var(--muted);
+  font-size: 13.5px;
   text-wrap: pretty;
 }
 
-/* Narrow ----------------------------------------------------------------- */
+/* Narrow ------------------------------------------------------------------ */
 
 @media (max-width: 760px) {
-  .topbar {
-    gap: 12px;
-    padding: 0 10px;
-  }
-
+  .topbar,
   .tabs {
-    gap: 6px;
-    padding: 0 10px;
+    padding: 0 12px;
   }
 
   .tab {
-    padding: 0 12px 0 9px;
-    font-size: 13px;
-  }
-
-  /* The mascot carries the brand when the drawn word will not fit beside the
-     tabs and the state. */
-  .brand .sprite:last-child {
-    display: none;
+    padding: 0 12px 0 4px;
+    font-size: 15px;
   }
 
   .page {
-    gap: 16px;
-    padding: 24px 16px 40px;
+    padding: 16px 16px 40px;
   }
 
-  .hero {
-    gap: 16px;
-  }
-
-  .hero__mark {
-    display: none;
+  .page__title {
+    --px: 3px;
   }
 
   .tool {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2px;
   }
 
@@ -1195,23 +1156,15 @@ pre {
   }
 }
 
+@media (max-width: 560px) {
+  .brand .glyphs {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .tab,
-  .btn,
-  .seg__btn,
-  .pathfield__browse,
-  .menu__trigger,
-  .menu__option,
-  .url {
-    transition: none;
-  }
-
+  .px,
   .card--scan::after {
-    animation: none;
-  }
-
-  .state__dot--live,
-  .statusline__dot--live {
     animation: none;
   }
 }

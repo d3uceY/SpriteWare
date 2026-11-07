@@ -13,11 +13,11 @@ import gsap from "gsap";
 // is a URL the browser cannot resolve, so the fonts are imported here instead
 // and bundled with the app.
 import "@fontsource-variable/albert-sans";
+import "@fontsource-variable/pixelify-sans";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 
 import { MCPService } from "../bindings/github.com/d3uceY/spriteware/backend/index.js";
-import { startSprites } from "./sprite.js";
 
 const STATUS_EVENT = "mcp:status";
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -286,29 +286,26 @@ function describe(err) {
 // ---------------------------------------------------------------------------
 // Motion
 //
-// A view change fades its page in and starts any sprite clips. Nothing blinks,
-// and none of it runs under reduced motion.
+// A view change prints the title a glyph at a time and sets the page's blocks
+// down in a few hard steps. Sprites animate in CSS. Nothing here runs under
+// reduced motion.
 // ---------------------------------------------------------------------------
 
-// Expo out: the movement is over almost before it is noticed, which is what
-// stops a short UI animation reading as a slow one.
-const EASE = "expo.out";
+// Pixels do not tween: every move here is quantised to a handful of positions.
+const STEP = "steps(3)";
 
-// The page title is drawn pixel art, so it arrives the way the sprite was made:
-// seven rows of art pixels, snapped rather than eased. This is the one moment in
-// the app that shows its own material, and it is 440ms long.
-function drawTitle() {
-  const word = document.querySelector(".page__title .sprite");
-  if (!word) return;
+function printTitle() {
+  const glyphs = document.querySelectorAll(".page__title .glyph");
+  if (glyphs.length === 0) return;
 
   gsap.fromTo(
-    word,
-    { clipPath: "inset(0% 0% 100% 0%)" },
+    glyphs,
+    { autoAlpha: 0 },
     {
-      clipPath: "inset(0% 0% 0% 0%)",
-      duration: 0.44,
-      ease: "steps(7)",
-      clearProps: "clipPath",
+      autoAlpha: 1,
+      duration: 0.001,
+      stagger: 0.04,
+      clearProps: "visibility,opacity",
     },
   );
 }
@@ -318,28 +315,29 @@ function enterPage() {
   if (blocks.length === 0) return;
 
   gsap.from(blocks, {
-    y: 12,
+    y: 8,
     opacity: 0,
-    duration: 0.44,
-    stagger: 0.055,
-    ease: EASE,
+    duration: 0.24,
+    stagger: 0.05,
+    ease: STEP,
     clearProps: "transform,opacity",
   });
 
-  drawTitle();
+  printTitle();
 }
 
-// First paint: the chrome settles before the page does, so the window arrives as
-// two layers rather than as one image switching on.
+// First paint: the chrome settles before the page does.
 function enterChrome() {
   gsap.from([".topbar", ".tabs"], {
     y: -8,
     opacity: 0,
-    duration: 0.5,
-    stagger: 0.07,
-    ease: EASE,
+    duration: 0.3,
+    stagger: 0.06,
+    ease: STEP,
     clearProps: "transform,opacity",
   });
+
+  enterPage();
 }
 
 // Elm re-renders the whole tree, so this runs only when the view changes. It
@@ -523,7 +521,6 @@ function boot() {
   // up there, and nowhere else is guaranteed to survive one.
   const observer = new MutationObserver(() =>
     requestAnimationFrame(() => {
-      startSprites();
       placeMenu();
       syncDialog();
       restoreScroll(syncView());
@@ -531,7 +528,6 @@ function boot() {
   );
   observer.observe(document.body, { childList: true, subtree: true });
 
-  startSprites();
   placeMenu();
   syncDialog();
   restoreScroll(syncView());
