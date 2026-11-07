@@ -157,9 +157,6 @@ update msg model =
         ChooseProjectFolder ->
             ( model, request { action = "choose-project", target = "" } )
 
-        ClearProjectFolder ->
-            ( model, request { action = "clear-project", target = "" } )
-
         GotError message ->
             ( { model | error = Just message }, Cmd.none )
 
@@ -189,7 +186,22 @@ update msg model =
             ( model, request { action = "mode", target = mode } )
 
         ConfirmCandidate ->
-            ( model, request { action = "confirm-path", target = model.setup.candidate } )
+            -- Close the dialog first. If the path turns out to be unusable, the
+            -- reason belongs on the card; a modal that stays up would hide the
+            -- only thing that explains why nothing happened.
+            ( { model | rejected = True }
+            , request { action = "confirm-path", target = model.setup.candidate }
+            )
+
+        BrowsePath ->
+            ( { model | error = Nothing }, request { action = "browse-aseprite", target = "" } )
+
+        FindPath ->
+            -- Searching again is also the way back from "not this one", so the
+            -- dismissal is cleared here rather than on a timer.
+            ( { model | rejected = False, error = Nothing }
+            , request { action = "find-aseprite", target = "" }
+            )
 
         RejectCandidate ->
             ( { model | rejected = True }, Cmd.none )

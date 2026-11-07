@@ -496,29 +496,76 @@ pre {
   overflow-wrap: anywhere;
 }
 
-.field {
-  width: 100%;
-  height: 34px;
-  padding: 0 9px;
+/* Path field ------------------------------------------------------------
+   One frame around the input and the Browse button, so both ways of naming a
+   path read as one control. Browse sits inside the frame behind a hairline
+   rather than beside it as a third button. */
+
+.pathfield {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  padding-left: 9px;
   border: 3px solid transparent;
   border-image: url("/sprites/btn-ghost.png") 3 fill stretch;
+  background: transparent;
+}
+
+/* Focus belongs to the whole control: the ring has to wrap the browse segment
+   too, or half the thing looks unfocused while it is being used. */
+.pathfield:focus-within {
+  outline: 2px solid var(--leaf);
+  outline-offset: 2px;
+}
+
+.pathfield__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
   background: transparent;
   color: var(--ink);
   font-family: var(--font-mono);
   font-size: 12px;
 }
 
-.field::placeholder {
+.pathfield__input:focus {
+  outline: none;
+}
+
+.pathfield__input::placeholder {
   /* 4.7:1 on paper: a placeholder is text, and a pale one is not a style
      choice, it is a contrast failure. */
   color: #6b757b;
 }
 
-/* Focus is a ring on paper and on slate: mint reads on both, and the border
-   change is what makes it legible for a keyboard user at a glance. */
-.field:focus {
+.pathfield__browse {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  height: 100%;
+  margin-left: 8px;
+  padding: 0 10px 0 9px;
+  border: 0;
+  border-left: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--leaf-deep);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--quick) var(--ease), color var(--quick) var(--ease);
+}
+
+.pathfield__browse:hover {
+  background: var(--mint);
+  color: var(--accent-deep);
+}
+
+.pathfield__browse:focus-visible {
   outline: 2px solid var(--leaf);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .row {
@@ -582,6 +629,14 @@ pre {
 .btn:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+/* A button whose label has art beside it. Without flex the sprite sits on the
+   text baseline and drags the label above centre. */
+.btn--icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* The same frame with the paper fill, so a second action reads as the same
@@ -977,6 +1032,118 @@ pre {
   text-align: center;
 }
 
+/* Searching --------------------------------------------------------------
+   The sweep is the one animation in the app that means "working" rather than
+   "arriving": a band rolling down the card in ten hard steps, at the speed a
+   disk scan actually feels like. It is the card's own material, not a spinner
+   borrowed from somewhere else. */
+
+.card--scan {
+  position: relative;
+  overflow: hidden;
+}
+
+.card--scan::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+      180deg,
+      rgb(46 196 182 / 0.02),
+      rgb(46 196 182 / 0.18),
+      rgb(46 196 182 / 0.02)
+    )
+    0 0 / 100% 26px no-repeat;
+  pointer-events: none;
+  animation: scan 1.25s steps(10, end) infinite;
+}
+
+@keyframes scan {
+  from {
+    background-position: 0 -26px;
+  }
+
+  to {
+    background-position: 0 100%;
+  }
+}
+
+/* The confirm dialog -----------------------------------------------------
+   A path the app found is a guess, so it stops the screen. The plate is its own
+   drawn frame (dialog.png, sliced 6): outer ink, one paper pixel, inner ink.
+   Nothing else in the app has a double edge, which is what makes this read as a
+   different kind of object from a card rather than a floating one. */
+
+.dialog__wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.dialog__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(23 27 29 / 0.55);
+}
+
+.dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(440px, 100%);
+  padding: 12px;
+  border: 6px solid transparent;
+  border-image: url("/sprites/dialog.png") 6 fill stretch;
+  /* The lip follows the painted silhouette. A box shadow would square off the
+     cut corners. */
+  filter: drop-shadow(0 5px 0 rgb(23 27 29 / 0.45));
+}
+
+.dialog__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dialog__mark {
+  display: flex;
+  flex: none;
+}
+
+.dialog__headline {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dialog__title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.dialog__path {
+  padding: 9px 10px;
+  background: var(--surface);
+  border-left: 3px solid var(--mint-strong);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.dialog__lead {
+  font-size: 12.5px;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
 /* Narrow ----------------------------------------------------------------- */
 
 @media (max-width: 760px) {
@@ -1022,17 +1189,25 @@ pre {
   .picker .menu {
     flex: 1;
   }
+
+  .dialog__wrap {
+    padding: 16px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .tab,
   .btn,
   .seg__btn,
-  .field,
+  .pathfield__browse,
   .menu__trigger,
   .menu__option,
   .url {
     transition: none;
+  }
+
+  .card--scan::after {
+    animation: none;
   }
 
   .state__dot--live,

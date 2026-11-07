@@ -1,7 +1,8 @@
 // Command spriteforge draws SpriteWare's own artwork the way an assistant would:
 // an MCP client of SpriteWare itself.
 //
-// It launches cmd/spriteware-mcp, creates a document, draws each sprite with the
+// It launches the app in "mcp --stdio" mode, creates a document, draws each
+// sprite with the
 // `draw` grid op, saves the .aseprite and exports the PNG. Nothing reaches into
 // the internals: if a step fails, it fails for an assistant too.
 //
@@ -53,9 +54,12 @@ var (
 	serverPalette = map[string]string{"K": tealDeep, "B": teal, "A": amber}
 	brushPalette  = map[string]string{"K": plum, "B": coral, "A": amber}
 	toolsPalette  = map[string]string{"K": indigo, "B": violet, "A": cyan}
+	folderPalette = map[string]string{"K": plum, "B": amber, "A": "#FFE9A6"}
+	searchPalette = map[string]string{"W": "#FFFDFA", "A": amber}
 	mascotPalette = map[string]string{"K": ink, "B": teal, "W": white, "D": ink, "S": cheekPink}
 	wordPalette   = map[string]string{"K": "#1F1F1F"}
 	cardPalette   = map[string]string{"K": "#DCDCDC", "W": white}
+	dialogPalette = map[string]string{"K": ink, "W": white}
 )
 
 // ---------------------------------------------------------------------------
@@ -117,10 +121,84 @@ var cardRows = func() []string {
 // open 2s, shut 90ms.
 var mascotFrames = [][]string{mascotOpen, mascotBlink}
 
+// A magnifier, for the button that searches for Aseprite by itself. It sits on
+// the accent green, so the rim is paper rather than ink: a dark outline
+// disappears into the fill, and the lens is amber so the glass still reads.
+var searchRows = []string{
+	"................",
+	"....WWWWWW......",
+	"..WWAAAAAAWW....",
+	".WAAAAAAAAAAW...",
+	".WAAWAAAAAAAW...",
+	".WAAWAAAAAAAW...",
+	".WAAAAAAAAAAW...",
+	"..WWAAAAAAWW....",
+	"...WWWWWWWW.....",
+	".......WWW......",
+	"........WAAW....",
+	".........WAAW...",
+	"..........WAAW..",
+	"...........WW...",
+	"................",
+	"................",
+}
+
+// An amber folder with a lighter tab, for the button that opens the file picker.
+var folderRows = []string{
+	"................",
+	"................",
+	"...KKKKK........",
+	"..KAAAAAK.......",
+	"..KAAAAAKKKKKK..",
+	"..KBBBBBBBBBBK..",
+	"..KBBBBBBBBBBK..",
+	"..KBBBBBBBBBBK..",
+	"..KBBBBBBBBBBK..",
+	"..KBBBBBBBBBBK..",
+	"..KKKKKKKKKKKK..",
+	"................",
+	"................",
+	"................",
+	"................",
+	"................",
+}
+
+// The confirm dialog is a 24x24 plate the CSS slices 6px in from each edge. Two
+// ink edges with a paper pixel between them: no card in the app is drawn with a
+// double edge, which is what makes a dialog read as a different kind of object.
+var dialogRows = []string{
+	"..KKKKKKKKKKKKKKKKKKKK..",
+	".KWWWWWWWWWWWWWWWWWWWWK.",
+	"KWWWWWWWWWWWWWWWWWWWWWWK",
+	"KWWKKKKKKKKKKKKKKKKKKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKWWWWWWWWWWWWWWWWKWWK",
+	"KWWKKKKKKKKKKKKKKKKKKWWK",
+	"KWWWWWWWWWWWWWWWWWWWWWWK",
+	".KWWWWWWWWWWWWWWWWWWWWK.",
+	"..KKKKKKKKKKKKKKKKKKKK..",
+}
+
 var sprites = []art{
 	{name: "nav-server", frames: [][]string{serverRows}, legend: serverPalette},
 	{name: "nav-aseprite", frames: [][]string{brushRows}, legend: brushPalette},
 	{name: "nav-tools", frames: [][]string{toolsRows}, legend: toolsPalette},
+	{name: "icon-search", frames: [][]string{searchRows}, legend: searchPalette},
+	{name: "icon-folder", frames: [][]string{folderRows}, legend: folderPalette},
 	{name: "mascot", frames: mascotFrames, legend: mascotPalette},
 	wordSprite("word-brand", "SPRITEWARE"),
 	wordSprite("word-server", "SERVER"),
@@ -128,6 +206,7 @@ var sprites = []art{
 	wordSprite("word-tools", "TOOLS"),
 	wordSprite("word-find", "FIND ASEPRITE"),
 	{name: "card", frames: [][]string{cardRows}, legend: cardPalette},
+	{name: "dialog", frames: [][]string{dialogRows}, legend: dialogPalette},
 }
 
 // wordSprite builds one drawn word. An unknown letter is a programming error, so
@@ -280,8 +359,8 @@ func dial(command string) (*session, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	_ = cancel // the process owns the deadline; the link closes on exit
 
-	// The server defaults to stdio and resolves from the repository root.
-	c, err := client.NewStdioMCPClient(command, os.Environ(), "run", "./cmd/spriteware-mcp")
+	// The app serves stdio when asked; it resolves from the repository root.
+	c, err := client.NewStdioMCPClient(command, os.Environ(), "run", ".", "mcp", "--stdio")
 	if err != nil {
 		return nil, fmt.Errorf("start the MCP server: %w", err)
 	}

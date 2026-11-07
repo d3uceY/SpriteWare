@@ -1,4 +1,4 @@
-module Pixel exposing (Icon(..), Word(..), caret, icon, mascot, word)
+module Pixel exposing (Icon(..), Word(..), caret, icon, iconAt, mascot, word)
 
 {-| The only pixel art in the app: the mascot, the three nav icons, the display
 words, and the card frame.
@@ -141,6 +141,8 @@ type Icon
     = ServerIcon
     | BrushIcon
     | BlocksIcon
+    | SearchIcon
+    | FolderIcon
 
 
 {-| Nav icons are 16x16 art shown in a 20px tab: one and a quarter screen
@@ -149,11 +151,19 @@ browser keeps the scaling nearest-neighbour, so the pixels stay square.
 -}
 icon : Icon -> Html msg
 icon which =
+    iconAt which 1.25
+
+
+{-| The same art at an explicit size, for icons that sit inside a control whose
+height is already decided.
+-}
+iconAt : Icon -> Float -> Html msg
+iconAt which artPx =
     sprite
         { name = nameOf which
         , w = 16
         , h = 16
-        , artPx = 1.25
+        , artPx = artPx
         , label = ""
         , frameMs = 0
         , timing = ""
@@ -171,6 +181,12 @@ nameOf which =
 
         BlocksIcon ->
             "nav-tools"
+
+        SearchIcon ->
+            "icon-search"
+
+        FolderIcon ->
+            "icon-folder"
 
 
 {-| Display text, drawn on a 5x7 grid rather than set. Only the words the app

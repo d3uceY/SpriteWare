@@ -5,7 +5,7 @@ import Html.Attributes as Attr
 import Html.Events as Events
 import Json.Decode as Decode
 import Pixel exposing (Icon(..), Word(..), icon)
-import Types exposing (Client, Model, Msg(..), Setup, Status, Tab(..), Tool)
+import Types exposing (Client, Model, Msg(..), Status, Tab(..), Tool)
 
 
 {-| One window, four screens. The chrome is a strip along the top and the
@@ -25,6 +25,7 @@ view model =
             , Attr.attribute "aria-labelledby" (tabId (shownTab model))
             ]
             [ stage model ]
+        , confirmDialog model
         ]
 
 
@@ -186,7 +187,7 @@ pageHead kicker title lead =
         ]
 
 
-{-| First run: ask about the binary. The suggestion is never assumed.
+{-| First run: ask about the binary.
 -}
 setupPage : Model -> Html Msg
 setupPage model =
@@ -197,38 +198,47 @@ setupPage model =
                 FindWord
                 "Point SpriteWare at Aseprite once. It remembers the path."
             ]
-        , if model.setup.found && not model.rejected then
-            suggestion model
+        , Html.section
+            [ Attr.class
+                (if model.setup.searching then
+                    "card card--scan"
 
-          else
-            manualPath model
-        , problemNote model
-        ]
-
-
-suggestion : Model -> Html Msg
-suggestion model =
-    Html.section [ Attr.class "card" ]
-        [ Html.h2 [ Attr.class "card__title" ] [ Html.text "Found Aseprite" ]
-        , Html.code [ Attr.class "code" ] [ Html.text model.setup.candidate ]
-        , Html.div [ Attr.class "row row--end" ]
-            [ Html.button [ Attr.class "btn btn--ghost", Events.onClick RejectCandidate ]
-                [ Html.text "Choose another" ]
-            , Html.button [ Attr.class "btn", Events.onClick ConfirmCandidate ]
-                [ Html.text "Use this" ]
+                 else
+                    "card"
+                )
+            ]
+            [ Html.div [ Attr.class "card__head" ]
+                [ Html.h2 [ Attr.class "card__title" ] [ Html.text "Where is Aseprite?" ]
+                , Html.p [ Attr.class "card__lead" ]
+                    [ Html.text "Let SpriteWare sweep the disk for it, or point at the program yourself." ]
+                ]
+            , pathField model
+            , Html.div [ Attr.class "row row--between" ]
+                [ findButton model
+                , Html.button
+                    [ Attr.class "btn btn--ghost"
+                    , Attr.disabled (String.isEmpty (String.trim model.pathDraft))
+                    , Events.onClick SubmitPath
+                    ]
+                    [ Html.text "Use this path" ]
+                ]
+            , searchHint model
+            , problemNote model
             ]
         ]
 
 
-manualPath : Model -> Html Msg
-manualPath model =
-    Html.section [ Attr.class "card" ]
-        [ Html.h2 [ Attr.class "card__title" ] [ Html.text "Where is Aseprite?" ]
-        , Html.label [ Attr.class "label", Attr.for "aseprite-path" ]
-            [ Html.text "Path" ]
-        , Html.input
+{-| One field with two ways in: type a path, or open the platform's own file
+picker from the button sitting inside the same frame. The button belongs in the
+field because it answers the same question; a separate row of actions would put
+three buttons where the user has two decisions.
+-}
+pathField : Model -> Html Msg
+pathField model =
+    Html.div [ Attr.class "pathfield" ]
+        [ Html.input
             [ Attr.id "aseprite-path"
-            , Attr.class "field"
+            , Attr.class "pathfield__input"
             , Attr.type_ "text"
             , Attr.placeholder "C:\\Program Files\\Aseprite\\aseprite.exe"
             , Attr.value model.pathDraft
@@ -238,33 +248,111 @@ manualPath model =
             , Events.on "keydown" enterKey
             ]
             []
-        , Html.div [ Attr.class "row" ]
-            [ Html.button [ Attr.class "btn", Events.onClick SubmitPath ]
-                [ Html.text "Use path" ]
-            , if model.setup.found then
-                Html.button [ Attr.class "btn btn--ghost", Events.onClick RejectCandidate ]
-                    [ Html.text "Use found path" ]
-
-              else
-                Html.text ""
+        , Html.button
+            [ Attr.class "pathfield__browse"
+            , Attr.type_ "button"
+            , Attr.title "Browse for the Aseprite program"
+            , Events.onClick BrowsePath
             ]
-        , searchHint model
+            [ Pixel.iconAt FolderIcon 1
+            , Html.span [] [ Html.text "Browse" ]
+            ]
         ]
+
+
+{-| The one filled action on this screen: it is the answer most people want,
+and it is also the only thing here that takes a while.
+-}
+findButton : Model -> Html Msg
+findButton model =
+    Html.button
+        [ Attr.class "btn btn--icon"
+        , Attr.disabled model.setup.searching
+        , Events.onClick FindPath
+        ]
+        [ Pixel.iconAt SearchIcon 1
+        , Html.span []
+            [ Html.text
+                (if model.setup.searching then
+                    "Searching…"
+
+                 else
+                    "Find it"
+                )
+            ]
+        ]
+
+
+{-| The path a search returns is a guess, so it arrives in a dialog that names
+it and asks. `alertdialog` rather than `dialog`: it interrupts to ask for an
+answer, and a screen reader should say so.
+-}
+confirmDialog : Model -> Html Msg
+confirmDialog model =
+    -- Only until it is confirmed: the candidate stays set afterwards so the
+    -- Aseprite screen can show it, and a prompt about a path that is already
+    -- saved would never stop asking.
+    if model.setup.found && not model.setup.confirmed && not model.rejected then
+        Html.div [ Attr.class "dialog__wrap", Attr.attribute "data-dialog" "" ]
+            [ Html.div
+                [ Attr.class "dialog__scrim"
+                , Events.onClick RejectCandidate
+                ]
+                []
+            , Html.div
+                [ Attr.class "dialog"
+                , Attr.attribute "role" "alertdialog"
+                , Attr.attribute "aria-modal" "true"
+                , Attr.attribute "aria-labelledby" "found-title"
+                ]
+                [ Html.div [ Attr.class "dialog__head" ]
+                    [ Html.div [ Attr.class "dialog__mark" ] [ Pixel.mascot 3 ]
+                    , Html.div [ Attr.class "dialog__headline" ]
+                        [ Html.span [ Attr.class "label" ] [ Html.text "Found Aseprite" ]
+                        , Html.h2 [ Attr.id "found-title", Attr.class "dialog__title" ]
+                            [ Html.text "Is this the one?" ]
+                        ]
+                    ]
+                , Html.code [ Attr.class "dialog__path" ] [ Html.text model.setup.candidate ]
+                , Html.p [ Attr.class "dialog__lead" ]
+                    [ Html.text
+                        "SpriteWare will run it for every job. Nothing is saved until you say yes."
+                    ]
+                , Html.div [ Attr.class "row row--end" ]
+                    [ Html.button
+                        [ Attr.class "btn btn--ghost"
+                        , Attr.attribute "data-dialog-cancel" ""
+                        , Events.onClick RejectCandidate
+                        ]
+                        [ Html.text "Not this one" ]
+                    , Html.button
+                        [ Attr.class "btn"
+                        , Attr.attribute "data-dialog-confirm" ""
+                        , Events.onClick ConfirmCandidate
+                        ]
+                        [ Html.text "Use this path" ]
+                    ]
+                ]
+            ]
+
+    else
+        Html.text ""
 
 
 searchHint : Model -> Html Msg
 searchHint model =
     if model.setup.searching then
         Html.p [ Attr.class "hint" ]
-            [ Html.text "Searching install folders." ]
+            [ Html.text "Sweeping PATH, the usual install folders, and the folders around them." ]
 
     else if List.isEmpty model.setup.searched then
-        Html.text ""
+        Html.p [ Attr.class "hint" ]
+            [ Html.text "Nothing is saved until you confirm a path." ]
 
     else
         Html.p [ Attr.class "hint" ]
             [ Html.text
-                ("Searched PATH, install folders, and "
+                ("Looked at PATH, the install folders, and "
                     ++ String.fromInt (List.length model.setup.searched)
                     ++ " nearby folders."
                 )
@@ -335,7 +423,7 @@ serverPage model =
                         )
                     ]
                 , Html.span [ Attr.class "statusline__meta" ]
-                    [ Html.text (transportLabel status.transport ++ " · " ++ modeLabel status.mode) ]
+                    [ Html.text (transportLabel status.transport) ]
                 ]
             , Html.div
                 [ Attr.class
@@ -538,43 +626,43 @@ skillCard model =
 
 {-| Which folder "This project" means. Left to itself it is the folder
 SpriteWare was started from, which from a shortcut is the install directory, so
-the chosen folder is shown and can be changed.
+the chosen folder is shown and can be changed - and until there is one, the
+card says so instead of printing a folder nobody picked.
 -}
 projectRow : Model -> Html Msg
 projectRow model =
-    Html.div [ Attr.class "row row--between" ]
-        [ Html.span [ Attr.class "target" ]
-            [ Html.text
-                (if model.projectChosen then
-                    model.project
-
-                 else
-                    "Project folder: not chosen"
-                )
-            ]
-        , Html.div [ Attr.class "row" ]
-            [ Html.button
-                [ Attr.class "btn btn--link"
-                , Events.onClick ChooseProjectFolder
-                ]
+    Html.div [ Attr.class "project" ]
+        [ Html.div [ Attr.class "row row--between" ]
+            [ Html.span [ Attr.class "target" ]
                 [ Html.text
                     (if model.projectChosen then
-                        "Change folder"
+                        model.project
 
                      else
-                        "Choose folder"
+                        "Project folder: not chosen"
                     )
                 ]
-            , if model.projectChosen then
-                Html.button
+            , Html.div [ Attr.class "row" ]
+                [ Html.button
                     [ Attr.class "btn btn--link"
-                    , Events.onClick ClearProjectFolder
+                    , Events.onClick ChooseProjectFolder
                     ]
-                    [ Html.text "Use launch folder" ]
+                    [ Html.text
+                        (if model.projectChosen then
+                            "Change folder"
 
-              else
-                Html.text ""
+                         else
+                            "Choose folder"
+                        )
+                    ]
+                ]
             ]
+        , if model.projectChosen then
+            Html.text ""
+
+          else
+            Html.p [ Attr.class "hint" ]
+                [ Html.text "The path below is relative to it. Pick the folder you are working in to install there." ]
         ]
 
 
@@ -650,21 +738,6 @@ fallbackClient =
     }
 
 
-clientTab : Model -> Client -> Html Msg
-clientTab model client =
-    Html.button
-        [ Attr.class
-            (if model.client == client.id then
-                "tabs__tab tabs__tab--on"
-
-             else
-                "tabs__tab"
-            )
-        , Events.onClick (SelectClient client.id)
-        ]
-        [ Html.text client.label ]
-
-
 {-| Eleven agents do not fit as pills without turning into a wall, so the choice
 is one row that opens a list. A native `<select>` cannot be used: the platform
 draws its popup, arrow and all, so the one control the app could not make look
@@ -678,13 +751,16 @@ clientPicker model =
         client =
             currentClient model
     in
+    -- No visible "Assistant" label: the trigger already names the agent, and a
+    -- label beside a dropdown that says what it is spells out the obvious. The
+    -- accessible name lives on the button instead.
     Html.div [ Attr.class "picker" ]
-        [ Html.label [ Attr.class "label", Attr.for "assistant" ] [ Html.text "Assistant" ]
-        , Html.div [ Attr.class "menu" ]
+        [ Html.div [ Attr.class "menu" ]
             (Html.button
                 [ Attr.id "assistant"
                 , Attr.class "menu__trigger"
                 , Attr.attribute "aria-haspopup" "listbox"
+                , Attr.attribute "aria-label" "Assistant"
                 , Attr.attribute "aria-expanded"
                     (if model.clientMenu then
                         "true"
@@ -877,16 +953,3 @@ transportLabel transport =
 
     else
         "Streamable HTTP"
-
-
-modeLabel : String -> String
-modeLabel mode =
-    case mode of
-        "live" ->
-            "Editor window"
-
-        "headless" ->
-            "Background"
-
-        _ ->
-            "—"

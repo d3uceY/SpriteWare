@@ -174,6 +174,8 @@ type Msg
     | SetMode String
     | ConfirmCandidate
     | RejectCandidate
+    | BrowsePath
+    | FindPath
     | TypedPath String
     | SubmitPath
     | ForgetPath
@@ -188,5 +190,4 @@ type Msg
     | GotSkill Bool String
     | GotSkillText String
     | ChooseProjectFolder
-    | ClearProjectFolder
     | GotProject String Bool

@@ -103,6 +103,22 @@ const actions = {
     await refreshServer();
   },
 
+  // The OS picker is the one way to name a file the user can be sure they
+  // meant: a cancel comes back empty and changes nothing.
+  "browse-aseprite": async () => {
+    const setup = await MCPService.BrowseAsepritePath();
+    send("setupFromJs", toSetup(setup));
+    await refreshServer();
+  },
+
+  // The deep search can walk a while, so the button it came from has already
+  // switched to "Searching…" by the time this resolves.
+  "find-aseprite": async () => {
+    const setup = await MCPService.DetectAseprite();
+    send("setupFromJs", toSetup(setup));
+    await refreshServer();
+  },
+
   "forget-path": async () => {
     const setup = await MCPService.ForgetAsepritePath();
     send("setupFromJs", toSetup(setup));
@@ -121,14 +137,9 @@ const actions = {
 
   // "This project" has to be a folder the user picked: launched from a shortcut,
   // the working directory is the install folder, and a skill written there is one
-  // no agent reads.
+  // no agent reads. With nothing chosen there is no project path at all.
   "choose-project": async () => {
     await MCPService.ChooseProjectFolder();
-    await refreshAfterProjectChange();
-  },
-
-  "clear-project": async () => {
-    await MCPService.ClearProjectFolder();
     await refreshAfterProjectChange();
   },
 
@@ -396,9 +407,114 @@ function placeMenu() {
   const list = document.querySelector(".menu__list");
   if (!trigger || !list) return;
 
+  // The list is capped by its own max-height, so what it needs is the smaller
+  // of its content and that cap. Measuring only scrollHeight flips a list that
+  // already fits into an upward one that hangs off the top of the window.
+  const cap = parseFloat(getComputedStyle(list).maxHeight);
+  const need = Math.min(list.scrollHeight, Number.isFinite(cap) ? cap : Infinity) + 4;
+
   const room = window.innerHeight - trigger.getBoundingClientRect().bottom - 8;
-  const need = list.scrollHeight + 4;
   list.classList.toggle("menu__list--up", need > room);
+}
+
+// ---------------------------------------------------------------------------
+// The confirm dialog
+//
+// Elm re-renders the tree on every message, so the dialog node is new each time
+// it appears and must not re-animate each time it is *still* there. One flag
+// says whether it was already open, and it is cleared when the node goes away.
+// ---------------------------------------------------------------------------
+
+let dialogOpen = false;
+
+function closeDialog() {
+  const wrap = document.querySelector("[data-dialog]");
+  wrap?.querySelector("[data-dialog-cancel]")?.click();
+}
+
+function dialogFocusables(wrap) {
+  return [...wrap.querySelectorAll("button, [href], input, select, textarea, [tabindex]")]
+    .filter((el) => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length > 0);
+}
+
+function onDialogKey(event) {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeDialog();
+    return;
+  }
+
+  // A tab that walks out of a modal lands on controls the user cannot see, so
+  // it wraps instead. Escape is the way out, not Tab.
+  if (event.key !== "Tab") return;
+  const wrap = document.querySelector("[data-dialog]");
+  if (!wrap) return;
+
+  const stops = dialogFocusables(wrap);
+  if (stops.length === 0) return;
+
+  const first = stops[0];
+  const last = stops[stops.length - 1];
+  const active = document.activeElement;
+
+  if (!wrap.contains(active)) {
+    event.preventDefault();
+    first.focus();
+    return;
+  }
+  if (!event.shiftKey && active === last) {
+    event.preventDefault();
+    first.focus();
+  }
+  if (event.shiftKey && active === first) {
+    event.preventDefault();
+    last.focus();
+  }
+}
+
+function syncDialog() {
+  const wrap = document.querySelector("[data-dialog]");
+  const app = document.querySelector(".app");
+
+  // Everything but the dialog is inert while it is up. The chrome has buttons
+  // of its own, so marking only the stage would still let a Tab escape into the
+  // tab strip behind the scrim.
+  if (app) {
+    for (const child of app.children) {
+      if (child.hasAttribute("data-dialog")) continue;
+      child.inert = Boolean(wrap);
+    }
+  }
+
+  if (!wrap) {
+    if (dialogOpen) document.removeEventListener("keydown", onDialogKey);
+    dialogOpen = false;
+    return;
+  }
+
+  if (!dialogOpen) {
+    dialogOpen = true;
+    document.addEventListener("keydown", onDialogKey);
+
+    const plate = wrap.querySelector(".dialog");
+    if (!reducedMotion && plate) {
+      // Four hard steps rather than an ease: the plate lands the way a pixel
+      // dialog box always has, instead of growing like a sheet of paper.
+      gsap.fromTo(
+        plate,
+        { scale: 0.9, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.24, ease: "steps(4)", transformOrigin: "50% 50%" },
+      );
+    }
+  }
+
+  // Elm replaces the dialog's nodes on every message, which drops focus to the
+  // body. Put it back whenever it is no longer inside the dialog - and not
+  // otherwise, or an intentional Tab between the two buttons would be undone.
+  if (!wrap.contains(document.activeElement)) {
+    // Focus the answer, not the dismissal: this dialog exists to be agreed with.
+    wrap.querySelector("[data-dialog-confirm]")?.focus();
+  }
 }
 
 function boot() {
@@ -409,6 +525,7 @@ function boot() {
     requestAnimationFrame(() => {
       startSprites();
       placeMenu();
+      syncDialog();
       restoreScroll(syncView());
     }),
   );
@@ -416,6 +533,7 @@ function boot() {
 
   startSprites();
   placeMenu();
+  syncDialog();
   restoreScroll(syncView());
 }
 
