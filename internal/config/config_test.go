@@ -112,3 +112,27 @@ func TestFindAsepriteRejectsAFolder(t *testing.T) {
 		t.Error("a directory was accepted as the Aseprite executable")
 	}
 }
+
+// A corrupt file is moved aside *and replaced*, so the next reader finds a
+// usable config rather than nothing at all.
+func TestLoadReplacesACorruptFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	if err := os.WriteFile(path, []byte("{ not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	store, err := LoadFrom(path)
+	if err != nil {
+		t.Fatalf("LoadFrom: %v", err)
+	}
+	if got := store.Get().Port; got != DefaultPort {
+		t.Errorf("port = %d, want the default %d", got, DefaultPort)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "config.bad.json")); err != nil {
+		t.Errorf("the corrupt file was not kept: %v", err)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Errorf("no replacement config was written: %v", err)
+	}
+}

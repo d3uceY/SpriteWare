@@ -160,6 +160,12 @@ func LoadFrom(path string) (*Store, error) {
 		var cfg Config
 		if jsonErr := json.Unmarshal(raw, &cfg); jsonErr != nil {
 			_ = os.Rename(path, strings.TrimSuffix(path, ".json")+".bad.json")
+			// The file is moved aside *and replaced*, which is what the package
+			// doc promises. Without the write, Load returns defaults but leaves no
+			// file, and every caller that looks for one reports a missing config.
+			if err := writeFile(path, s.cfg); err != nil {
+				return s, err
+			}
 			break
 		}
 		s.cfg = cfg.Normalize()
