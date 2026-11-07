@@ -4,11 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net"
 	"sync"
-	"time"
 
-	"github.com/mark3labs/mcp-go/server"
 	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"github.com/d3uceY/spriteware/internal/aseprite"
@@ -34,12 +31,8 @@ type MCPStatus struct {
 	LastError       string `json:"lastError,omitempty"`
 }
 
-// transportServer is the shared lifecycle of mcp-go's two HTTP transports, so
-// the service can hold whichever one the settings asked for.
-type transportServer interface {
-	Start(addr string) error
-	Shutdown(ctx context.Context) error
-}
+// transportServer is gone from here: the socket lives in mcpserver.Host, which
+// the CLI uses too. This service keeps the bookkeeping the window needs.
 
 // MCPService exposes the in-process MCP server and settings to the frontend. It
 // binds to 127.0.0.1, so only local clients reach it.
@@ -51,13 +44,9 @@ type MCPService struct {
 	links *link.Selector
 	tools *tools.Service
 
-	mu        sync.Mutex
-	running   bool
-	port      int
-	transport config.Transport
-	srv       transportServer
-	bridge    *link.Bridge
-	lastErr   string
+	mu     sync.Mutex
+	host   mcpserver.Host
+	bridge *link.Bridge
 
 	// candidate is a detected Aseprite the user has not agreed to yet.
 	candidate string
@@ -106,14 +95,6 @@ func (s *MCPService) ServiceShutdown() error {
 	return nil
 }
 
-// endpointPath is where clients reach each transport.
-func endpointPath(transport config.Transport) string {
-	if transport == config.TransportSSE {
-		return "/sse"
-	}
-	return "/mcp"
-}
-
 // StartServer begins an MCP server on 127.0.0.1:port and returns the URL.
 //
 // Starting a running server is a no-op returning the current URL, unless the
@@ -127,27 +108,12 @@ func (s *MCPService) StartServer(port int, transport string) (string, error) {
 		t = config.TransportStreamableHTTP
 	}
 
-	s.mu.Lock()
-	if s.running {
-		if s.transport != t {
-			live := s.transport
-			s.mu.Unlock()
-			return "", fmt.Errorf("MCP server is already running on the %s transport; stop it first", live)
+	if state := s.host.State(); state.Running {
+		if state.Transport != t {
+			return "", fmt.Errorf("MCP server is already running on the %s transport; stop it first", state.Transport)
 		}
-		url := s.url()
-		s.mu.Unlock()
-		return url, nil
+		return state.URL, nil
 	}
-
-	// Fail fast and name the problem, rather than dying silently in the
-	// background.
-	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-	if err != nil {
-		s.mu.Unlock()
-		return "", fmt.Errorf("port %d is in use: %w", port, err)
-	}
-	_ = ln.Close()
-	s.mu.Unlock()
 
 	// Live mode needs the bridge listening before the first call. Starting it
 	// here makes "app running" and "extension can connect" one statement.
@@ -155,39 +121,16 @@ func (s *MCPService) StartServer(port int, transport string) (string, error) {
 		slog.Warn("bridge did not start", "err", err)
 	}
 
-	mcpServer := mcpserver.New(s.tools, Version)
-	var srv transportServer
-	if t == config.TransportSSE {
-		srv = server.NewSSEServer(mcpServer, server.WithKeepAliveInterval(15*time.Second))
-	} else {
-		// The streamable server serves /mcp by default, matching endpointPath.
-		//
-		// No heartbeat: mcp-go raises pings as JSON-RPC requests, and a client
-		// that routes only its own request ids logs every ping as unexpected.
-		srv = server.NewStreamableHTTPServer(mcpServer)
+	url, err := s.host.Start(mcpserver.Options{
+		Port:      port,
+		Transport: t,
+		Tools:     s.tools,
+		Version:   Version,
+	})
+	if err != nil {
+		s.pushStatus()
+		return "", err
 	}
-
-	s.mu.Lock()
-	s.srv = srv
-	s.transport = t
-	s.port = port
-	s.running = true
-	s.lastErr = ""
-	s.mu.Unlock()
-
-	addr := fmt.Sprintf("127.0.0.1:%d", port)
-	url := s.url()
-
-	go func() {
-		if err := srv.Start(addr); err != nil && err.Error() != "http: Server closed" {
-			slog.Error("MCP server stopped", "transport", t, "err", err)
-			s.mu.Lock()
-			s.running = false
-			s.lastErr = err.Error()
-			s.mu.Unlock()
-			s.pushStatus()
-		}
-	}()
 
 	// Persist what worked, so the next launch does not have to guess.
 	if _, saveErr := s.cfg.Update(func(c *config.Config) {
@@ -203,18 +146,8 @@ func (s *MCPService) StartServer(port int, transport string) (string, error) {
 
 // StopServer shuts down the running transport and the bridge.
 func (s *MCPService) StopServer() error {
-	s.mu.Lock()
-	srv := s.srv
-	s.running = false
-	s.srv = nil
-	s.mu.Unlock()
-
-	if srv != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := srv.Shutdown(ctx); err != nil {
-			slog.Error("MCP shutdown error", "err", err)
-		}
+	if err := s.host.Stop(); err != nil {
+		slog.Error("MCP shutdown error", "err", err)
 	}
 	if err := s.StopBridge(); err != nil {
 		slog.Warn("bridge shutdown error", "err", err)
@@ -277,32 +210,26 @@ func (s *MCPService) GetMCPStatus() MCPStatus {
 
 func (s *MCPService) statusLocked() MCPStatus {
 	cfg := s.cfg.Get()
+	state := s.host.State()
 	st := MCPStatus{
-		Running:    s.running,
-		Port:       s.port,
-		Transport:  string(s.transport),
+		Running:    state.Running,
+		Port:       state.Port,
+		URL:        state.URL,
+		Transport:  string(state.Transport),
 		Mode:       string(s.links.Mode()),
 		BridgePort: cfg.BridgePort,
 		ToolCount:  mcpserver.ToolCount(),
-		LastError:  s.lastErr,
+		LastError:  state.LastError,
 	}
 	// Stopped there is no live port, but the configured one beats 0: it is the
 	// number the user would type.
 	if st.Port <= 0 {
 		st.Port = cfg.Port
 	}
-	if s.running && s.port > 0 {
-		st.URL = fmt.Sprintf("http://127.0.0.1:%d%s", s.port, endpointPath(s.transport))
-	}
 	if s.bridge != nil {
-		state := s.bridge.State()
-		st.BridgeConnected = state.Connected
+		st.BridgeConnected = s.bridge.State().Connected
 	}
 	return st
-}
-
-func (s *MCPService) url() string {
-	return fmt.Sprintf("http://127.0.0.1:%d%s", s.port, endpointPath(s.transport))
 }
 
 // SwitchMode changes the connection. Both stay alive, so nothing is lost.
