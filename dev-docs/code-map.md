@@ -1,13 +1,12 @@
 # Code map
 
-Start at `main.go`. It decides between the terminal and the window in four
-lines, then builds the config, the link selector, the service and the window.
+Start at `main.go`. It is about a hundred lines and it shows the whole shape:
+build the config, build the link selector, build the service, open the window.
 
 ```
-main.go                     dispatch: arguments mean the CLI, none means the window
+main.go                     wires the app together
 backend/                    the Go side the UI talks to
   mcp.go                    start/stop the MCP server and the bridge
-  path.go                   the PATH button's bindings
   install.go                the eleven agent configs and the skill installer
   project.go                the project folder and its picker
   setup.go                  finding Aseprite, remembering the answer
@@ -24,8 +23,6 @@ internal/
   font/                     the 5x7 font that draw kind=text uses
   skill/                    the SKILL.md tree, embedded
   mcpserver/                server setup, resources, instructions, the HTTP host
-  cli/                      the `spriteware` command tree (cobra)
-  onpath/                   PATH add/remove, one file per OS
   eval/                     benchmarks, runs and the criteria scorer
   config/                   settings file
 frontend/                   Elm UI, built with Vite
@@ -41,8 +38,7 @@ cmd/                        small dev tools, not part of the app
 
 | You want to | Edit |
 |---|---|
-| add a command | a file in `internal/cli`, hung off the root in `newRoot` (see `cli.md`) |
-| add a setting | the field in `internal/config`, then the key registry in `internal/cli/config.go` |
+| add a setting | the field in `internal/config` |
 | add a tool | a new file in `internal/tools`, register it in `tools.Register`, and add a line to `tools.Catalog` |
 | add a draw behaviour | a `kind` in `internal/tools/drawing.go` (schema) and `luaext/extension/spriteware.lua` |
 | change what a tool returns | the tool's `AddTool` handler |
