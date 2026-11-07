@@ -29,11 +29,11 @@ func TestGlyphsAreStableAcrossFrames(t *testing.T) {
 	paint(second, 2, 2, blue)
 	paint(second, 3, 2, red)
 
-	a, err := ASCII(first, palette, false)
+	a, err := ASCII(first, palette, ASCIIOptions{})
 	if err != nil {
 		t.Fatalf("ASCII: %v", err)
 	}
-	b, err := ASCII(second, palette, false)
+	b, err := ASCII(second, palette, ASCIIOptions{})
 	if err != nil {
 		t.Fatalf("ASCII: %v", err)
 	}
@@ -50,7 +50,7 @@ func TestASCIIRowsMatchTheCanvas(t *testing.T) {
 	i := img(5, 3)
 	paint(i, 0, 0, palette[0])
 
-	grid, err := ASCII(i, palette, true)
+	grid, err := ASCII(i, palette, ASCIIOptions{Rulers: true})
 	if err != nil {
 		t.Fatalf("ASCII: %v", err)
 	}
@@ -73,22 +73,56 @@ func TestASCIIRowsMatchTheCanvas(t *testing.T) {
 	}
 }
 
-// Off-palette colours must be called out: their glyph assignment is not stable
-// between reads.
+// Off-palette colours must be called out, and the same picture must always get
+// the same glyphs: a grid is only comparable between reads if it is stable.
 func TestOffPaletteColoursAreListed(t *testing.T) {
 	palette := []craft.RGB{craft.MustHex("#ff0000")}
-	i := img(2, 1)
+	i := img(3, 1)
 	paint(i, 0, 0, craft.MustHex("#123456"))
+	paint(i, 1, 0, craft.MustHex("#00aa00"))
+	paint(i, 2, 0, craft.MustHex("#123456"))
 
-	grid, err := ASCII(i, palette, false)
+	first, err := ASCII(i, palette, ASCIIOptions{})
 	if err != nil {
 		t.Fatalf("ASCII: %v", err)
 	}
-	if len(grid.OffPalette) != 1 {
-		t.Fatalf("off-palette glyphs = %v, want 1", grid.OffPalette)
+	second, err := ASCII(i, palette, ASCIIOptions{})
+	if err != nil {
+		t.Fatalf("ASCII: %v", err)
 	}
-	if grid.Legend[grid.OffPalette[0]] != "#123456" {
-		t.Errorf("the off-palette glyph does not map to its colour: %v", grid.Legend)
+
+	if len(first.OffPalette) != 2 {
+		t.Fatalf("off-palette glyphs = %v, want 2", first.OffPalette)
+	}
+	if first.Legend[first.OffPalette[0]] != "#00aa00" || first.Legend[first.OffPalette[1]] != "#123456" {
+		t.Fatalf("off-palette glyphs are not ordered by colour: %v", first.Legend)
+	}
+	if first.Rows[0] != second.Rows[0] || len(first.Legend) != len(second.Legend) {
+		t.Fatalf("two reads of one picture disagree: %q then %q", first.Rows[0], second.Rows[0])
+	}
+}
+
+// A region crops the grid and keeps the origin, so a row a caller edits is the
+// row it read.
+func TestASCIIRegionCropsAndKeepsTheOrigin(t *testing.T) {
+	palette := []craft.RGB{craft.MustHex("#00ff00")}
+	i := img(8, 4)
+	for x := 0; x < 8; x++ {
+		paint(i, x, 1, palette[0])
+	}
+
+	grid, err := ASCII(i, palette, ASCIIOptions{Region: image.Rect(3, 1, 6, 3)})
+	if err != nil {
+		t.Fatalf("ASCII: %v", err)
+	}
+	if grid.Width != 3 || grid.Height != 2 {
+		t.Fatalf("grid is %dx%d, want 3x2", grid.Width, grid.Height)
+	}
+	if grid.OriginX != 3 || grid.OriginY != 1 {
+		t.Fatalf("origin is (%d,%d), want (3,1)", grid.OriginX, grid.OriginY)
+	}
+	if grid.Rows[0][0] == Transparent {
+		t.Fatal("the region kept a transparent row it should have cropped to ink")
 	}
 }
 

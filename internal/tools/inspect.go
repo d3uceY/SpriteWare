@@ -6,14 +6,18 @@ import (
 	"encoding/base64"
 	"fmt"
 	"image"
+	"image/color"
 	"image/png"
+	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/d3uceY/spriteware/internal/analyze"
+	"github.com/d3uceY/spriteware/internal/craft"
 	"github.com/d3uceY/spriteware/internal/doc"
 	"github.com/d3uceY/spriteware/internal/export"
 	"github.com/d3uceY/spriteware/internal/protocol"
@@ -27,7 +31,7 @@ const previewTarget = 1024
 func (s *Service) registerLook(srv *server.MCPServer) {
 	tool := mcp.NewTool("look",
 		mcp.WithDescription(
-			"See the work. Ops: preview, ascii, diff, filmstrip.\n"+
+			"See the work. Ops: preview, ascii, diff, filmstrip, onion, compare.\n"+
 				"`preview` returns the frame as an image, nearest-neighbour scaled, over a checkerboard so "+"transparency is visible.\n"+
 				"`ascii` returns an exact text grid with coordinate rulers and a colour legend. Glyphs are bound to "+
 				"palette entries, so a glyph means the same colour on every frame and in every crop. The result "+
@@ -42,12 +46,32 @@ func (s *Service) registerLook(srv *server.MCPServer) {
 		mcp.WithNumber("fromFrame", mcp.Description("For diff: the earlier frame.")),
 		mcp.WithNumber("toFrame", mcp.Description("For diff: the later frame.")),
 		mcp.WithString("layer", mcp.Description("Read one layer instead of the composite.")),
+		mcp.WithNumber("x", mcp.Description("For ascii and preview: left edge of the region to read. Default the whole image.")),
+		mcp.WithNumber("y", mcp.Description("For ascii and preview: top edge of the region.")),
+		mcp.WithNumber("width", mcp.Description("For ascii and preview: region width.")),
+		mcp.WithNumber("height", mcp.Description("For ascii and preview: region height.")),
+		mcp.WithNumber("scale", mcp.Description("For preview: whole-number zoom. Omit to fit the preview budget.")),
+		mcp.WithString("path", mcp.Description("For ascii: read this PNG from disk instead of a document, so an exported file can be checked without opening it.")),
 		mcp.WithBoolean("rulers", mcp.Description("ascii/diff: false drops the rulers, leaving rows you can send straight back to draw.")),
 		mcp.WithString("sprite", mcp.Description("Target sprite by absolute path.")),
 	)
 
 	srv.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		opName := op(req, "preview")
+
+		// `path` reads a PNG instead of a document, so an export can be checked
+		// without opening it. Any other op reading it would ignore it.
+		if p := strings.TrimSpace(req.GetString("path", "")); p != "" {
+			if opName != "ascii" {
+				return fail(protocol.New(protocol.CodeInvalidArgs,
+					"look op=%s does not read `path`; only ascii does", opName)), nil
+			}
+			if strings.TrimSpace(req.GetString("sprite", "")) != "" {
+				return fail(protocol.New(protocol.CodeInvalidArgs,
+					"look ascii reads either `path` or `sprite`, not both")), nil
+			}
+			return asciiFromFile(req)
+		}
 
 		d, err := s.dump(ctx, req)
 		if err != nil {
@@ -70,23 +94,11 @@ func (s *Service) registerLook(srv *server.MCPServer) {
 
 		switch opName {
 		case "ascii":
-			grid, err := render.ASCII(img, palette, rulers)
+			grid, err := render.ASCII(img, palette, render.ASCIIOptions{Rulers: rulers, Region: lookRegion(req)})
 			if err != nil {
 				return fail(protocol.New(protocol.CodeInvalidArgs, "%v", err)), nil
 			}
-			summary := fmt.Sprintf("%dx%d at (%d,%d), %d colour(s)%s",
-				grid.Width, grid.Height, grid.OriginX, grid.OriginY, len(grid.Legend), offPaletteNote(grid.OffPalette))
-			return ok(map[string]any{
-				"op":         "ascii",
-				"width":      grid.Width,
-				"height":     grid.Height,
-				"origin":     map[string]int{"x": grid.OriginX, "y": grid.OriginY},
-				"text":       grid.Text,
-				"rows":       grid.Rows,
-				"legend":     grid.Legend,
-				"offPalette": grid.OffPalette,
-				"summary":    summary,
-			}, grid.Text+"\n\nLegend: "+formatLegend(grid.Legend)+"\n'.' = transparent"+offPaletteNote(grid.OffPalette)), nil
+			return ok(asciiPayload(grid), asciiText(grid)), nil
 
 		case "diff":
 			from := req.GetInt("fromFrame", 1)
@@ -140,7 +152,16 @@ func (s *Service) registerLook(srv *server.MCPServer) {
 			return imageResult(render.Scale(render.WithChecker(strip, 4), scale), summary)
 
 		case "preview":
+			if region := lookRegion(req); !region.Empty() {
+				img = render.Crop(img, region)
+			}
 			scale := render.AutoScale(img.Bounds().Dx(), img.Bounds().Dy(), previewTarget)
+			if want := req.GetInt("scale", 0); want >= 1 {
+				scale = want
+				if scale > 16 {
+					scale = 16
+				}
+			}
 			bounds, hasInk := doc.Bounds(img)
 			summary := fmt.Sprintf("frame %d at %dx, %dx%d%s", frame, scale,
 				img.Bounds().Dx(), img.Bounds().Dy(), inkNote(bounds, hasInk))
@@ -198,6 +219,125 @@ func (s *Service) registerLook(srv *server.MCPServer) {
 	})
 }
 
+// lookRegion reads the crop a look op is limited to. A missing or empty width
+// or height means the whole image.
+func lookRegion(req mcp.CallToolRequest) image.Rectangle {
+	w, h := req.GetInt("width", 0), req.GetInt("height", 0)
+	if w <= 0 || h <= 0 {
+		return image.Rectangle{}
+	}
+	x, y := req.GetInt("x", 0), req.GetInt("y", 0)
+	return image.Rect(x, y, x+w, y+h)
+}
+
+// asciiPayload is the one shape an ascii grid is returned in, whether it came
+// from a document or from a PNG on disk.
+func asciiPayload(grid render.Grid) map[string]any {
+	return map[string]any{
+		"op":         "ascii",
+		"width":      grid.Width,
+		"height":     grid.Height,
+		"origin":     map[string]int{"x": grid.OriginX, "y": grid.OriginY},
+		"text":       grid.Text,
+		"rows":       grid.Rows,
+		"legend":     grid.Legend,
+		"offPalette": grid.OffPalette,
+		"summary":    asciiSummary(grid),
+	}
+}
+
+func asciiSummary(grid render.Grid) string {
+	return fmt.Sprintf("%dx%d at (%d,%d), %d colour(s)%s",
+		grid.Width, grid.Height, grid.OriginX, grid.OriginY, len(grid.Legend),
+		offPaletteNote(grid.OffPalette))
+}
+
+func asciiText(grid render.Grid) string {
+	return grid.Text + "\n\nLegend: " + formatLegend(grid.Legend) +
+		"\n'.' = transparent" + offPaletteNote(grid.OffPalette)
+}
+
+// asciiFromFile renders a PNG as a grid without opening a document.
+//
+// The palette is the file's own colours, sorted, so the glyphs are stable for
+// the same file and a re-export can be compared with the previous one.
+func asciiFromFile(req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	path, err := resolveOutput(req.GetString("path", ""))
+	if err != nil {
+		return fail(err), nil
+	}
+	payload, text, err := asciiFile(path, lookRegion(req), req.GetBool("rulers", true))
+	if err != nil {
+		return fail(err), nil
+	}
+	return ok(payload, text), nil
+}
+
+// asciiFile is the part of asciiFromFile that does not need a request, so the
+// PNG path can be tested without one.
+func asciiFile(path string, region image.Rectangle, rulers bool) (map[string]any, string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, "", protocol.New(protocol.CodeNotFound, "could not read %s: %v", path, err).
+			WithRemediation("check the path, or export the sprite first")
+	}
+	defer f.Close()
+
+	src, err := png.Decode(f)
+	if err != nil {
+		return nil, "", protocol.New(protocol.CodeInvalidArgs, "%s is not a readable PNG: %v", path, err)
+	}
+	img := asNRGBA(src)
+	grid, err := render.ASCII(img, imagePalette(img), render.ASCIIOptions{
+		Rulers: rulers,
+		Region: region,
+	})
+	if err != nil {
+		return nil, "", protocol.New(protocol.CodeInvalidArgs, "%v", err)
+	}
+
+	payload := asciiPayload(grid)
+	payload["path"] = path
+	return payload, asciiText(grid), nil
+}
+
+// asNRGBA is the copy that makes a decoded PNG drawable by the rest of the
+// package: a sub-image shares its parent's stride and offset.
+func asNRGBA(src image.Image) *image.NRGBA {
+	b := src.Bounds()
+	out := image.NewNRGBA(image.Rect(0, 0, b.Dx(), b.Dy()))
+	for y := 0; y < b.Dy(); y++ {
+		for x := 0; x < b.Dx(); x++ {
+			out.SetNRGBA(x, y, color.NRGBAModel.Convert(src.At(b.Min.X+x, b.Min.Y+y)).(color.NRGBA))
+		}
+	}
+	return out
+}
+
+// imagePalette is the distinct opaque colours of an image, ordered by hex so the
+// glyph a colour gets does not depend on where it appears.
+func imagePalette(img *image.NRGBA) []craft.RGB {
+	seen := map[craft.RGB]bool{}
+	out := make([]craft.RGB, 0, 16)
+	b := img.Bounds()
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			c := img.NRGBAAt(x, y)
+			if c.A == 0 {
+				continue
+			}
+			rgb := craft.RGB{R: c.R, G: c.G, B: c.B, A: c.A}
+			if seen[rgb] {
+				continue
+			}
+			seen[rgb] = true
+			out = append(out, rgb)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Hex() < out[j].Hex() })
+	return out
+}
+
 // selectImage returns the composite or one layer of a frame.
 func selectImage(d *doc.Dump, layer string, frame int) (*image.NRGBA, error) {
 	layer = strings.TrimSpace(layer)
@@ -225,7 +365,7 @@ func offPaletteNote(off []string) string {
 	if len(off) == 0 {
 		return ""
 	}
-	return fmt.Sprintf("; %d off-palette glyph(s): %s (their assignment can differ between reads)", len(off), strings.Join(off, ""))
+	return fmt.Sprintf("; %d off-palette glyph(s): %s (ordered by colour, so the same picture always gets the same glyphs)", len(off), strings.Join(off, ""))
 }
 
 func formatLegend(legend map[string]string) string {
@@ -271,7 +411,7 @@ const validateSchema = `{
     "sprite": {"type": "string"},
     "checks": {
       "type": "array",
-      "items": {"type": "string", "enum": ["palette","strays","orphans","gaps","bounds","outline","banding","antialiasing","layers","animation","export_readiness","volume"]}
+      "items": {"type": "string", "enum": ["palette","strays","orphans","gaps","bounds","outline","banding","antialiasing","layers","animation","export_readiness","volume","ui"]}
     },
     "scope": {"type": "string", "enum": ["composite","layer"], "description": "composite (default) judges the whole picture; layer judges each layer alone, which produces false alarms on a correct rig."},
     "strict": {"type": "boolean", "description": "Treat style warnings as failures."},
@@ -296,7 +436,10 @@ func (s *Service) registerValidate(srv *server.MCPServer) {
 		mcp.WithDescription(
 			"Check the sprite against pixel-art rules and report located problems.\n"+
 				"Checks: palette, strays, orphans, gaps, bounds, outline, banding, antialiasing, layers, "+
-				"animation, export_readiness, volume. Omit `checks` to run all of them.\n"+
+				"animation, export_readiness, volume, ui. Omit `checks` to run all of them.\n"+
+				"`ui` judges an interface asset by its own rules: canvas size, colour count, hard alpha, "+
+				"matching canvas corners, slices that fit, even margins. The character checks flag a correct "+
+				"notched panel, so ask for `ui` explicitly rather than relying on the default set.\n"+
 				"`scope` defaults to composite: judging a layer alone reports a correct rigged character as "+
 				"broken, so that is opt-in.\n"+
 				"`expect` runs on top of whatever checks you pick and checks your own plan: per-layer frame "+
@@ -340,17 +483,33 @@ func isEmptyExpect(e analyze.Expect) bool {
 // export
 // ---------------------------------------------------------------------------
 
+// writtenEntry is one image file plus what it holds, so a wrong export is
+// visible in the reply instead of after opening the file.
+type writtenEntry struct {
+	Path   string       `json:"path"`
+	Frames int          `json:"frames,omitempty"`
+	Stats  export.Stats `json:"stats"`
+}
+
+// describeFile measures the frames that produced one file.
+func describeFile(path string, frames ...*image.NRGBA) writtenEntry {
+	return writtenEntry{Path: path, Frames: len(frames), Stats: export.Measure(frames...)}
+}
+
 func (s *Service) registerExport(srv *server.MCPServer) {
 	tool := mcp.NewTool("export",
 		mcp.WithDescription(
 			"Write files. Ops: png, frames, svg, gif, spritesheet, tileset.\n"+
 				"Every op returns the concrete paths it wrote, never the pattern you passed. `frames` numbers "+
 				"files from 0 (`{frame}`) or 1 (`{n}`), and says which.\n"+
+				"Every image file also comes back in `written` with its width, height, opaque pixels and "+
+				"colour list, so an export of the wrong document is visible without opening the file.\n"+
 				"SVG emits one rect per run of identical pixels, grouped per frame.\n"+
 				"`gif` uses the frame durations you set. `spritesheet` writes one packed PNG in a row plus a "+
 				"JSON atlas beside it with per-frame rectangles, the tags, and the document's slices with their "+
-				"9-patch centres; `padding` defaults to 1 so a GPU sampling at non-integer zoom cannot pick up "+
-				"the neighbouring frame.\n"+
+				"9-patch centres and the CSS `border-image` shorthand; each frame carries its "+
+				"`backgroundPosition`; `padding` defaults to 1 so a GPU sampling at non-integer zoom cannot "+
+				"pick up the neighbouring frame, and `padding=0` is the CSS strip.\n"+
 				"`tileset` slices every frame into `tileWidth` x `tileHeight` tiles and keeps one copy of each "+
 				"distinct tile, plus a grid of tile numbers per frame (0 is empty). `format=tiled` adds a .tsx "+
 				"and one .tmx per frame; `format=godot` adds a Godot 4 .tres TileSet.\n"+
@@ -420,7 +579,11 @@ func (s *Service) registerExport(srv *server.MCPServer) {
 				return fail(protocol.New(protocol.CodeOpenFailed, "%v", err)), nil
 			}
 			summary := "wrote " + written
-			return ok(map[string]any{"files": []string{written}, "summary": summary}, summary), nil
+			return ok(map[string]any{
+				"files":   []string{written},
+				"written": []writtenEntry{describeFile(written, img)},
+				"summary": summary,
+			}, summary), nil
 
 		case "frames":
 			frames, err := all()
@@ -433,7 +596,16 @@ func (s *Service) registerExport(srv *server.MCPServer) {
 				return fail(protocol.New(protocol.CodeOpenFailed, "%v", err)), nil
 			}
 			summary := fmt.Sprintf("wrote %d file(s), %s .. %s", len(written), written[0], written[len(written)-1])
-			return ok(map[string]any{"files": written, "frames": frameList, "summary": summary}, summary), nil
+			entries := make([]writtenEntry, 0, len(written))
+			for i := range written {
+				entries = append(entries, describeFile(written[i], frames[i]))
+			}
+			return ok(map[string]any{
+				"files":   written,
+				"written": entries,
+				"frames":  frameList,
+				"summary": summary,
+			}, summary), nil
 
 		case "svg":
 			frames, err := all()
@@ -445,7 +617,12 @@ func (s *Service) registerExport(srv *server.MCPServer) {
 				return fail(protocol.New(protocol.CodeOpenFailed, "%v", err)), nil
 			}
 			summary := "wrote " + written
-			return ok(map[string]any{"files": []string{written}, "frames": frameList, "summary": summary}, summary), nil
+			return ok(map[string]any{
+				"files":   []string{written},
+				"written": []writtenEntry{describeFile(written, frames...)},
+				"frames":  frameList,
+				"summary": summary,
+			}, summary), nil
 
 		case "gif":
 			frames, err := all()
@@ -457,7 +634,12 @@ func (s *Service) registerExport(srv *server.MCPServer) {
 				return fail(protocol.New(protocol.CodeOpenFailed, "%v", err)), nil
 			}
 			summary := fmt.Sprintf("wrote %s, %d frame(s)", written, len(frames))
-			return ok(map[string]any{"files": []string{written}, "frames": frameList, "summary": summary}, summary), nil
+			return ok(map[string]any{
+				"files":   []string{written},
+				"written": []writtenEntry{describeFile(written, frames...)},
+				"frames":  frameList,
+				"summary": summary,
+			}, summary), nil
 
 		case "spritesheet":
 			frames, err := all()
@@ -481,6 +663,7 @@ func (s *Service) registerExport(srv *server.MCPServer) {
 				pngPath, jsonPath, atlas.Width, atlas.Height, len(atlas.Frames))
 			return ok(map[string]any{
 				"files":   []string{pngPath, jsonPath},
+				"written": []writtenEntry{describeFile(pngPath, atlas.Sheet)},
 				"atlas":   atlas,
 				"frames":  frameList,
 				"summary": summary,
@@ -512,6 +695,7 @@ func (s *Service) registerExport(srv *server.MCPServer) {
 				len(written), tiles.TileCount, tiles.Columns)
 			return ok(map[string]any{
 				"files":   written,
+				"written": []writtenEntry{describeFile(written[0], frames...)},
 				"tileset": tiles,
 				"frames":  frameList,
 				"summary": summary,

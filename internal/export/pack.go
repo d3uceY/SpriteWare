@@ -143,6 +143,9 @@ type Atlas struct {
 	Slices   []AtlasSlice `json:"slices,omitempty"`
 	Scale    int          `json:"scale"`
 	Comments string       `json:"comments,omitempty"`
+	// Sheet is the packed picture. Not part of the JSON: it lets the caller
+	// report what the file holds without reading it back.
+	Sheet *image.NRGBA `json:"-"`
 }
 
 // AtlasCell is one frame's place in the sheet. Index is 1-based, like every
@@ -154,6 +157,9 @@ type AtlasCell struct {
 	W          int `json:"w"`
 	H          int `json:"h"`
 	DurationMS int `json:"durationMs,omitempty"`
+	// BackgroundPosition shows this cell from a one-frame-wide element:
+	// `background-position: <value>`. A CSS sprite needs no other maths.
+	BackgroundPosition string `json:"backgroundPosition"`
 }
 
 // AtlasTag is one named range, 1-based and inclusive, as the tag tool takes it.
@@ -173,6 +179,9 @@ type AtlasSlice struct {
 	Width  int       `json:"width"`
 	Height int       `json:"height"`
 	Center *AtlasBox `json:"center,omitempty"`
+	// BorderImage is the CSS shorthand for this 9-patch, at the sheet's own
+	// scale: `border-image: url(<image>) top right bottom left fill / ...`.
+	BorderImage string `json:"borderImage,omitempty"`
 }
 
 // AtlasBox is a rectangle in sheet pixels.
@@ -248,7 +257,8 @@ func Sheet(opts SheetOptions) (string, string, Atlas, error) {
 		x := i * (frameW + padding)
 		blit(sheet, frame, x, 0)
 
-		cell := AtlasCell{Index: i + 1, X: x, Y: 0, W: frameW, H: frameH}
+		cell := AtlasCell{Index: i + 1, X: x, Y: 0, W: frameW, H: frameH,
+			BackgroundPosition: fmt.Sprintf("-%dpx -%dpx", x, 0)}
 		if i < len(durations) {
 			cell.DurationMS = durations[i]
 		}
@@ -258,12 +268,18 @@ func Sheet(opts SheetOptions) (string, string, Atlas, error) {
 		atlas.Tags = append(atlas.Tags, AtlasTag{Name: t.Name, From: t.From, To: t.To, Direction: t.Direction})
 	}
 	for _, s := range opts.Slices {
-		atlas.Slices = append(atlas.Slices, AtlasSlice{
+		entry := AtlasSlice{
 			Name: s.Name, X: s.X * scale, Y: s.Y * scale,
 			Width: s.Width * scale, Height: s.Height * scale,
 			Center: scaleBox(s.Center, scale),
-		})
+		}
+		if s.Center != nil {
+			entry.BorderImage = borderImage(filepath.Base(path), s, scale)
+		}
+		atlas.Slices = append(atlas.Slices, entry)
 	}
+
+	atlas.Sheet = sheet
 
 	pngPath, err := PNG(sheet, path, 1)
 	if err != nil {
@@ -287,6 +303,26 @@ func scaleBox(b *doc.Box, scale int) *AtlasBox {
 		return nil
 	}
 	return &AtlasBox{X: b.X * scale, Y: b.Y * scale, Width: b.Width * scale, Height: b.Height * scale}
+}
+
+// borderImage writes the shorthand a browser needs for a 9-patch.
+//
+// The four slice values are source pixels and the four lengths are the rendered
+// border, so at the sheet's own scale the two are equal. A consumer drawing the
+// panel larger multiplies only the lengths.
+func borderImage(image string, s doc.Slice, scale int) string {
+	c := s.Center
+	left := c.X * scale
+	top := c.Y * scale
+	right := (s.Width - c.X - c.Width) * scale
+	bottom := (s.Height - c.Y - c.Height) * scale
+	for _, v := range []int{left, top, right, bottom} {
+		if v < 0 {
+			return ""
+		}
+	}
+	return fmt.Sprintf("border-image: url(%s) %d %d %d %d fill / %dpx %dpx %dpx %dpx",
+		image, top, right, bottom, left, top, right, bottom, left)
 }
 
 func jsonPathFor(pngPath string) string {

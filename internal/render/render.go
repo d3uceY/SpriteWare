@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -50,29 +51,45 @@ type Grid struct {
 	// Rows are the bare rows: exactly what `draw` kind=grid takes back.
 	Rows   []string
 	Legend map[string]string
-	// OffPalette lists glyphs bound to colours outside the palette. Their
-	// assignment varies between reads, so do not reuse them across grids.
+	// OffPalette lists glyphs bound to colours outside the palette. The order is
+	// by hex, so the same picture always renders the same glyphs.
 	OffPalette []string
+}
+
+// ASCIIOptions narrows what a grid covers.
+type ASCIIOptions struct {
+	// Rulers adds the coordinate labels. Off leaves rows that `draw` kind=grid
+	// takes back unchanged.
+	Rulers bool
+	// Region crops the grid to this rectangle. Empty means the whole image.
+	Region image.Rectangle
 }
 
 // ASCII renders an image one character per pixel.
 //
 // Glyphs bind to palette entries, not to colours in this picture, so B is the
-// same colour on every frame. Off-palette colours get per-read glyphs.
-func ASCII(img *image.NRGBA, palette []craft.RGB, showRulers bool) (Grid, error) {
+// same colour on every frame. Off-palette colours are ordered by hex rather than
+// by first appearance, so an unchanged picture always renders the same
+// characters and two grids can be compared line by line.
+func ASCII(img *image.NRGBA, palette []craft.RGB, opts ASCIIOptions) (Grid, error) {
 	b := img.Bounds()
+	if !opts.Region.Empty() {
+		b = b.Intersect(opts.Region)
+	}
 	w, h := b.Dx(), b.Dy()
 	if w == 0 || h == 0 {
-		return Grid{}, fmt.Errorf("nothing to render: the image is empty")
+		return Grid{}, fmt.Errorf("nothing to render: the region holds no pixels")
 	}
 
 	glyphFor := map[craft.RGB]rune{}
 	legend := map[string]string{}
 	offPalette := []string{}
-	nextOff := 0
 	pool := glyphPool()
-	offBase := len(pool) / 2
 
+	// Palette-bound colours claim their glyph first, so an off-palette colour
+	// can never take a glyph that already means something.
+	off := make([]craft.RGB, 0, 8)
+	seen := map[craft.RGB]bool{}
 	for y := b.Min.Y; y < b.Max.Y; y++ {
 		for x := b.Min.X; x < b.Max.X; x++ {
 			c := img.NRGBAAt(x, y)
@@ -80,26 +97,41 @@ func ASCII(img *image.NRGBA, palette []craft.RGB, showRulers bool) (Grid, error)
 				continue
 			}
 			rgb := craft.RGB{R: c.R, G: c.G, B: c.B, A: c.A}
-			if _, seen := glyphFor[rgb]; seen {
+			if seen[rgb] {
 				continue
 			}
+			seen[rgb] = true
 			idx, _ := craft.Nearest(rgb, palette)
 			if idx >= 0 && idx < len(pool) && palette[idx] == rgb {
 				glyphFor[rgb] = pool[idx]
 				legend[string(pool[idx])] = rgb.Hex()
 				continue
 			}
-			// Not on the palette: take a glyph from the high half and say so,
-			// since the assignment is not stable between reads.
-			if offBase+nextOff >= len(pool) {
-				return Grid{}, fmt.Errorf("too many colours: %d palette entries plus %d off-palette leaves no glyphs free; use a smaller region", len(palette), nextOff+1)
-			}
-			g := pool[offBase+nextOff]
-			nextOff++
-			glyphFor[rgb] = g
-			legend[string(g)] = rgb.Hex()
-			offPalette = append(offPalette, string(g))
+			off = append(off, rgb)
 		}
+	}
+
+	sort.Slice(off, func(i, j int) bool { return off[i].Hex() < off[j].Hex() })
+
+	used := map[rune]bool{}
+	for _, g := range glyphFor {
+		used[g] = true
+	}
+	next := len(pool) / 2
+	for _, rgb := range off {
+		for next < len(pool) && used[pool[next]] {
+			next++
+		}
+		if next >= len(pool) {
+			return Grid{}, fmt.Errorf("too many colours: %d palette entries plus %d off-palette leaves no glyphs free; use a smaller region",
+				len(palette), len(offPalette)+1)
+		}
+		g := pool[next]
+		next++
+		used[g] = true
+		glyphFor[rgb] = g
+		legend[string(g)] = rgb.Hex()
+		offPalette = append(offPalette, string(g))
 	}
 
 	rows := make([]string, 0, h)
@@ -125,7 +157,7 @@ func ASCII(img *image.NRGBA, palette []craft.RGB, showRulers bool) (Grid, error)
 		Legend:     legend,
 		OffPalette: offPalette,
 	}
-	if showRulers {
+	if opts.Rulers {
 		grid.Text = withRulers(rows, b.Min.X, b.Min.Y)
 	} else {
 		grid.Text = strings.Join(rows, "\n")
@@ -188,6 +220,22 @@ func unitsRow(width, originX int) string {
 // ---------------------------------------------------------------------------
 // Images
 // ---------------------------------------------------------------------------
+
+// Crop copies r out of src into a new image whose origin is (0,0), so callers
+// that scale or checkerboard it never see an offset.
+func Crop(src *image.NRGBA, r image.Rectangle) *image.NRGBA {
+	r = r.Intersect(src.Bounds())
+	if r.Empty() {
+		return image.NewNRGBA(image.Rect(0, 0, 0, 0))
+	}
+	out := image.NewNRGBA(image.Rect(0, 0, r.Dx(), r.Dy()))
+	for y := 0; y < r.Dy(); y++ {
+		for x := 0; x < r.Dx(); x++ {
+			out.SetNRGBA(x, y, src.NRGBAAt(r.Min.X+x, r.Min.Y+y))
+		}
+	}
+	return out
+}
 
 // Scale enlarges by a whole number with nearest-neighbour, so a pixel stays a
 // pixel; fractional scaling would blur the information being checked.
@@ -338,11 +386,11 @@ type DiffResult struct {
 // Diff renders a text diff: unchanged cells '.', erased '-', everything else the
 // glyph of the new colour.
 func Diff(before, after *image.NRGBA, palette []craft.RGB, showRulers bool) (DiffResult, error) {
-	beforeGrid, err := ASCII(before, palette, false)
+	beforeGrid, err := ASCII(before, palette, ASCIIOptions{})
 	if err != nil {
 		return DiffResult{}, err
 	}
-	afterGrid, err := ASCII(after, palette, false)
+	afterGrid, err := ASCII(after, palette, ASCIIOptions{})
 	if err != nil {
 		return DiffResult{}, err
 	}

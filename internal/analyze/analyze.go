@@ -88,6 +88,7 @@ const (
 	CheckExpect     = "expect"
 	CheckVolume     = "volume"
 	CheckCompliance = "compliance"
+	CheckUI = "ui"
 )
 
 // AllChecks is the default set, in the order they are reported.
@@ -200,6 +201,9 @@ func Run(d *doc.Dump, opts Options) *Report {
 	if want[CheckVolume] {
 		checkVolume(frames, acc)
 	}
+	if want[CheckUI] {
+		checkUI(d, frames, acc)
+	}
 
 	// Pixel checks run over whatever the scope selects.
 	type target struct {
@@ -249,6 +253,112 @@ func Run(d *doc.Dump, opts Options) *Report {
 	}
 
 	return acc.report(d, scope, opts.Strict)
+}
+
+// ---------------------------------------------------------------------------
+// UI assets
+// ---------------------------------------------------------------------------
+
+// Limits for a UI asset. A panel, an icon or a button that breaks one of these
+// is usually a mistake rather than a style.
+const (
+	uiCanvasLimit = 1024
+	uiColourSoft  = 16
+	uiColourHard  = 32
+)
+
+// checkUI judges the sprite as a piece of interface art: strays and volume are
+// character checks and flag a correct notched panel.
+func checkUI(d *doc.Dump, frames []*image.NRGBA, acc *accumulator) {
+	w, h := d.Sprite.Width, d.Sprite.Height
+	if w > uiCanvasLimit || h > uiCanvasLimit {
+		acc.add(Finding{Check: CheckUI, Severity: Warning,
+			Message: fmt.Sprintf("the canvas is %dx%d; a UI asset is usually under %d px", w, h, uiCanvasLimit)})
+	}
+
+	colours := map[craft.RGB]int{}
+	half := 0
+	for _, img := range frames {
+		b := img.Bounds()
+		for y := b.Min.Y; y < b.Max.Y; y++ {
+			for x := b.Min.X; x < b.Max.X; x++ {
+				c := img.NRGBAAt(x, y)
+				if c.A == 0 {
+					continue
+				}
+				if c.A != 255 {
+					half++
+				}
+				colours[craft.RGB{R: c.R, G: c.G, B: c.B, A: c.A}]++
+			}
+		}
+	}
+
+	if half > 0 {
+		acc.add(Finding{Check: CheckUI, Severity: Error, Count: half,
+			Message: fmt.Sprintf("%d semi-transparent pixel(s); a pixel is either there or not, and a half one reads as blur", half)})
+	}
+	switch n := len(colours); {
+	case n > uiColourHard:
+		acc.add(Finding{Check: CheckUI, Severity: Error, Count: n,
+			Message: fmt.Sprintf("%d colours; a UI asset at this size is usually under %d", n, uiColourSoft)})
+	case n > uiColourSoft:
+		acc.add(Finding{Check: CheckUI, Severity: Warning, Count: n,
+			Message: fmt.Sprintf("%d colours; check that every one earns its place", n)})
+	}
+
+	for i, img := range frames {
+		if !cornersAgree(img) {
+			acc.add(Finding{Check: CheckUI, Severity: Warning, Frame: i + 1,
+				Message: "the four canvas corners do not agree; a frame usually treats all four the same"})
+		}
+	}
+
+	for _, s := range d.Slices {
+		if s.X < 0 || s.Y < 0 || s.X+s.Width > w || s.Y+s.Height > h {
+			acc.add(Finding{Check: CheckUI, Severity: Error,
+				Message: fmt.Sprintf("slice %q does not fit the %dx%d canvas", s.Name, w, h),
+				Rect:    &Rect{X: s.X, Y: s.Y, Width: s.Width, Height: s.Height}})
+		}
+		if c := s.Center; c != nil && (c.X < 0 || c.Y < 0 || c.X+c.Width > s.Width || c.Y+c.Height > s.Height) {
+			acc.add(Finding{Check: CheckUI, Severity: Error,
+				Message: fmt.Sprintf("slice %q has a 9-patch centre that does not fit inside the slice", s.Name)})
+		}
+	}
+
+	if len(frames) == 0 {
+		return
+	}
+	ink, hasInk := doc.Bounds(frames[0])
+	if !hasInk {
+		acc.add(Finding{Check: CheckUI, Severity: Error, Message: "frame 1 has no opaque pixels"})
+		return
+	}
+	left, top := ink.Min.X, ink.Min.Y
+	right, bottom := w-ink.Max.X, h-ink.Max.Y
+	if left != right || top != bottom {
+		acc.add(Finding{Check: CheckUI, Severity: Warning,
+			Message: fmt.Sprintf("the art leaves %d/%d px left/right and %d/%d top/bottom; a panel that stretches or tiles needs even margins",
+				left, right, top, bottom)})
+	}
+}
+
+// cornersAgree reports whether the four corner pixels have the same alpha. A
+// notched or rounded frame has four transparent corners; a full-bleed panel has
+// four opaque ones. A mix is usually an unfinished edge.
+func cornersAgree(img *image.NRGBA) bool {
+	b := img.Bounds()
+	corners := [][2]int{
+		{b.Min.X, b.Min.Y}, {b.Max.X - 1, b.Min.Y},
+		{b.Min.X, b.Max.Y - 1}, {b.Max.X - 1, b.Max.Y - 1},
+	}
+	first := img.NRGBAAt(corners[0][0], corners[0][1]).A
+	for _, c := range corners[1:] {
+		if img.NRGBAAt(c[0], c[1]).A != first {
+			return false
+		}
+	}
+	return true
 }
 
 // ---------------------------------------------------------------------------
