@@ -15,6 +15,7 @@ Read these in order:
 | [protocol.md](./protocol.md) | the exact bytes between the app and Aseprite |
 | [skills.md](./skills.md) | the text that teaches an agent to use the tools |
 | [testing.md](./testing.md) | how to run the tests, including against a real Aseprite |
+| [removed-command-line.md](./removed-command-line.md) | what the CLI was, why it is gone, and why the eval harness stayed |
 
 ## The short version
 
