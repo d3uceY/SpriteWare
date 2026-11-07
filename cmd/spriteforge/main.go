@@ -24,6 +24,11 @@ import (
 
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/mcp"
+
+	"github.com/d3uceY/spriteware/internal/config"
+	"github.com/d3uceY/spriteware/internal/link"
+	"github.com/d3uceY/spriteware/internal/mcpserver"
+	"github.com/d3uceY/spriteware/internal/tools"
 )
 
 // art is one sprite: character grids left to right, plus what each character
@@ -320,7 +325,6 @@ var mascotBlink = []string{
 }
 
 func main() {
-	command := flag.String("mcp", "go", "command that runs the SpriteWare MCP server")
 	srcDir := flag.String("src", filepath.Join("assets", "sprites"), "where the .aseprite files are written")
 	pngDir := flag.String("png", filepath.Join("frontend", "public", "sprites"), "where the PNGs are written")
 	scale := flag.Int("scale", 1, "PNG pixels per art pixel")
@@ -332,7 +336,7 @@ func main() {
 		}
 	}
 
-	session, err := dial(*command)
+	session, err := dial()
 	if err != nil {
 		fail("%v", err)
 	}
@@ -351,39 +355,65 @@ func main() {
 
 type session struct {
 	client *client.Client
+	links  *link.Selector
 	ctx    context.Context
 }
 
-// dial starts the server and completes the MCP handshake.
-func dial(command string) (*session, error) {
+// dial builds the server in this process and completes the MCP handshake.
+//
+// In-process beats a child process here: it is the same tool surface the app
+// serves, and there is no separate CLI binary to point at.
+func dial() (*session, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	_ = cancel // the process owns the deadline; the link closes on exit
 
-	// The app serves stdio when asked; it resolves from the repository root.
-	c, err := client.NewStdioMCPClient(command, os.Environ(), "run", ".", "mcp", "--stdio")
+	store, err := config.Load()
 	if err != nil {
+		return nil, fmt.Errorf("load the configuration: %w", err)
+	}
+	current := store.Get()
+	links := link.NewSelector(link.Options{
+		AsepritePath: current.AsepritePath,
+		Mode:         current.Mode,
+		BridgePort:   current.BridgePort,
+		AllowLua:     current.AllowLua,
+	})
+
+	srv := mcpserver.New(tools.New(store, links), serverVersion)
+
+	c, err := client.NewInProcessClient(srv)
+	if err != nil {
+		_ = links.Close()
 		return nil, fmt.Errorf("start the MCP server: %w", err)
 	}
 	if err := c.Start(ctx); err != nil {
 		_ = c.Close()
+		_ = links.Close()
 		return nil, fmt.Errorf("start the MCP transport: %w", err)
 	}
 
 	init := mcp.InitializeRequest{}
 	init.Params.ProtocolVersion = mcp.LATEST_PROTOCOL_VERSION
-	init.Params.ClientInfo = mcp.Implementation{Name: "spriteforge", Version: "0.3.0"}
+	init.Params.ClientInfo = mcp.Implementation{Name: "spriteforge", Version: serverVersion}
 
 	hello, err := c.Initialize(ctx, init)
 	if err != nil {
 		_ = c.Close()
+		_ = links.Close()
 		return nil, fmt.Errorf("handshake: %w", err)
 	}
 	fmt.Printf("connected to %s %s\n", hello.ServerInfo.Name, hello.ServerInfo.Version)
 
-	return &session{client: c, ctx: ctx}, nil
+	return &session{client: c, links: links, ctx: ctx}, nil
 }
 
-func (s *session) close() { _ = s.client.Close() }
+// serverVersion stamps what this harness reports; the server only echoes it.
+const serverVersion = "0.3.0"
+
+func (s *session) close() {
+	_ = s.client.Close()
+	_ = s.links.Close()
+}
 
 // draw is one sprite end to end, through the public tools only.
 func (s *session) draw(a art, srcDir, pngDir string, scale int) error {
