@@ -1,0 +1,238 @@
+---
+name: SpriteWare
+description: A quiet pixel-art control panel for the MCP server that lets an AI assistant draw in Aseprite.
+colors:
+  window-beige: "#d3cbbe"
+  window-hot: "#faf0e6"
+  workspace-slate: "#7d929e"
+  slate-highlight: "#99b3c2"
+  key-grey: "#c6c6c6"
+  key-grey-lo: "#8e8e8e"
+  well-white: "#ffffff"
+  outline-black: "#000000"
+  ink: "#101417"
+  lamp-red: "#ff5555"
+  lamp-red-deep: "#c23838"
+  link-blue: "#2c4c91"
+  hover-cream: "#ffebb6"
+  lamp-green: "#64c864"
+  text-muted: "#4f473b"
+  text-ok: "#1a5a1a"
+  text-error: "#a11d1d"
+typography:
+  display:
+    fontFamily: "Pixelify Sans Variable, ui-monospace, monospace"
+    fontSize: "20px"
+    fontWeight: 600
+    lineHeight: 1.2
+  title:
+    fontFamily: "Drawn glyph sheet (glyphs.png, 7x8 cells)"
+    fontSize: "32px"
+    lineHeight: 1
+  body:
+    fontFamily: "Albert Sans Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 500
+    lineHeight: 1.5
+  label:
+    fontFamily: "Pixelify Sans Variable, ui-monospace, monospace"
+    fontSize: "13px"
+    fontWeight: 600
+    letterSpacing: "0.1em"
+  data:
+    fontFamily: "IBM Plex Mono, ui-monospace, Consolas, monospace"
+    fontSize: "13px"
+    fontWeight: 500
+    lineHeight: 1.65
+rounded:
+  none: "0px"
+spacing:
+  xs: "4px"
+  sm: "8px"
+  md: "12px"
+  lg: "16px"
+  xl: "24px"
+  xxl: "32px"
+components:
+  button-primary:
+    backgroundColor: "{colors.lamp-red}"
+    textColor: "{colors.outline-black}"
+    typography: "{typography.display}"
+    rounded: "{rounded.none}"
+    height: "42px"
+    padding: "0 12px"
+  button-primary-hover:
+    backgroundColor: "{colors.lamp-red}"
+  button-secondary:
+    backgroundColor: "{colors.key-grey}"
+    textColor: "{colors.outline-black}"
+    typography: "{typography.display}"
+    rounded: "{rounded.none}"
+    height: "42px"
+    padding: "0 12px"
+  button-link:
+    backgroundColor: "transparent"
+    textColor: "{colors.link-blue}"
+    typography: "{typography.display}"
+    height: "28px"
+    padding: "0 6px"
+  button-link-hover:
+    backgroundColor: "{colors.hover-cream}"
+  card:
+    backgroundColor: "{colors.window-beige}"
+    textColor: "{colors.outline-black}"
+    rounded: "{rounded.none}"
+    padding: "4px 8px 8px"
+  well:
+    backgroundColor: "{colors.well-white}"
+    textColor: "{colors.outline-black}"
+    typography: "{typography.data}"
+    rounded: "{rounded.none}"
+  tab:
+    backgroundColor: "{colors.key-grey}"
+    textColor: "{colors.outline-black}"
+    typography: "{typography.display}"
+    height: "40px"
+  tab-active:
+    backgroundColor: "{colors.workspace-slate}"
+    textColor: "{colors.outline-black}"
+    height: "46px"
+---
+
+# Design System: SpriteWare
+
+## Overview
+
+**Creative North Star: "The Tool Window"**
+
+SpriteWare is a control panel for Aseprite's own MCP server, so it dresses as Aseprite: a beige window, a slate workspace, grey keys with black outlines, and a handful of drawn sprites. It borrows the host program's light theme on purpose. A person who opens it next to Aseprite should feel it belongs to the same toolbox, and should never have to learn a second visual language to read a status or press a button.
+
+The product is Operate-mode: a person starts a server, copies a config, and leaves. The interface therefore does one thing per screen, names it in a drawn title, and gets out of the way. Pixel art carries the personality (the mascot, the title face, the frames, the icons) and every other surface is flat, matte and legible. Nothing glows, shimmers or decorates. An earlier dark, starfield version was rejected because the effects cost readability.
+
+**Key Characteristics:**
+- Aseprite's light theme, translated: beige window, slate workspace, white wells.
+- Pixel art at one scale: every frame is two screen pixels per art pixel, so edges stay crisp.
+- Square, bevelled, outlined. Corners are stepped notches drawn in the art, never radii.
+- One red key per screen. Everything else is grey, beige or white.
+- Motion is stepped and short: sprites animate, surfaces do not.
+
+## Colors
+
+The palette is Aseprite's light theme (`aseprite-theme-light.xml`) with two additions: dark text tones for hints, and a lamp green for "live".
+
+### Primary
+- **Lamp Red** (#ff5555): the single action key on a screen, the selected list row, the "needs attention" lamp, text selection. Aseprite's own selection colour, so it already means "this one".
+
+### Neutral
+- **Window Beige** (#d3cbbe): the window, the tab strip and every card. Text on it is black.
+- **Window Hot** (#faf0e6): card highlight edge, dialog fill, the mascot's body.
+- **Workspace Slate** (#7d929e): the stage behind the cards, and the open tab, so the tab reads as the page it opens.
+- **Key Grey** (#c6c6c6): secondary keys, closed tabs, the open segment of a segmented control.
+- **Key Grey Low** (#8e8e8e): the bottom-right bevel of every grey key.
+- **Well White** (#ffffff): anything you read or type: addresses, paths, snippets, the tool list, menus.
+- **Outline Black** (#000000): every outline and every label on a key.
+- **Ink** (#101417): text set directly on the slate (page lead, drawn title).
+- **Muted Brown** (#4f473b): hints on beige. 5.4:1 on Window Beige.
+
+### Accents
+- **Link Blue** (#2c4c91): copy links and small section labels. Aseprite's separator-label colour.
+- **Hover Cream** (#ffebb6): hover fill for rows, links and menu items. Aseprite's hot-item colour.
+- **Lamp Green** (#64c864): the server is listening; the address well tints green (#e6f7e3).
+
+### Named Rules
+**The One Red Key Rule.** Lamp Red appears on one filled key per screen, plus the selected row in an open list. If a second red key is wanted, one of them is not the primary action.
+
+**The Ink On Slate Rule.** Text set on the slate is Ink, never white and never plum. White on the slate is 3.3:1 and fails; the theme's own plum is worse.
+
+## Typography
+
+**Display Font:** Pixelify Sans (variable) for titles inside cards, keys, tabs and labels.
+**Body Font:** Albert Sans (variable) for sentences.
+**Data Font:** IBM Plex Mono for paths, addresses, config text and tool names.
+**Title Face:** a 41-cell drawn glyph sheet (`glyphs.png`, A to Z, 0 to 9, space . : / -), 5x7 letters in 7x8 cells, set at 4 screen pixels per art pixel. It is the only drawn text, and it is only ever the page title and the wordmark.
+
+**Character:** a pixel face for anything you press or navigate, a humanist sans for anything you read, a mono for anything you copy. Three voices, each tied to one job.
+
+### Hierarchy
+- **Title** (drawn glyphs, 32px tall): the page name. One per screen.
+- **Display** (Pixelify 600, 20px, 1.2): card titles and the status word.
+- **Key / Tab** (Pixelify 600, 15 to 17px): labels on keys and tabs.
+- **Body** (Albert Sans 500, 14px, 1.5): sentences. Lead line is 15px, capped at 56ch.
+- **Label** (Pixelify 600, 13px, 0.1em, uppercase, Link Blue): the small heading over a field.
+- **Data** (Plex Mono 500, 12.5 to 14px, 1.65 in blocks): everything copyable.
+
+### Named Rules
+**The Drawn Title Rule.** The page title is set from the glyph sheet, never from a font, and nothing else is. Body copy, labels and keys stay real text so they select, scale and translate.
+
+## Layout
+
+One window, one column. A beige chrome strip holds the mark and the connection state, a tab strip below it names the three screens, and the slate stage under that holds a single column of cards, 720px at most, centred.
+
+Spacing is a short scale: 4, 8, 12, 16, 24, 32. Cards stack at 16. Inside a card, groups sit 12 apart. The page head is the drawn title, a line of intent, and nothing else; there are no breadcrumbs, numerals or rules.
+
+Tabs are a real tablist. The open tab is slate and 6px taller, and it covers the 2px black rail under the strip so it joins the stage. At 760px and below the page loses side padding and the title steps down to 3px per art pixel; at 560px the wordmark gives way to the mascot alone.
+
+### Named Rules
+**The One Column Rule.** There is no sidebar, grid of cards or second column. If a screen needs more, it is a longer column.
+
+## Elevation & Depth
+
+Depth is drawn, not blurred. Every key and card has a bevel baked into its frame (light top-left, dark bottom-right) and a hard 2px black lip under it. Wells are the inverse: dark top-left, so they read as recessed.
+
+### Shadow Vocabulary
+- **Lip** (`filter: drop-shadow(0 2px 0 #000)`): under keys and cards. A drop-shadow, not a box-shadow, so it follows the notched corners instead of squaring them.
+- **Press** (`transform: translateY(2px)` with the lip removed): a key goes down by exactly its lip.
+- **Dialog Lip** (`drop-shadow(0 4px 0 #000)`): the dialog sits one step higher than a card.
+
+### Named Rules
+**The Hard Lip Rule.** No blur, no spread, no translucent shadow. A shadow is a solid black row or it is not there.
+
+## Shapes
+
+Nothing is rounded. Every corner is a stepped notch drawn into the sprite: two pixels cut on keys, wells and cards, three on the dialog. Frames are PNGs sliced with `border-image` at two screen pixels per art pixel, so one asset draws a box of any size with its corners intact. Dots are squares. The only circles are the lamps, which are drawn.
+
+## Components
+
+### Buttons
+- **Primary** (`.btn`): the red 12x12 key, 42px high, black Pixelify label. Hover brightens 8%; press moves it down 2px.
+- **Secondary** (`.btn--ghost`): the grey key, same size and behaviour.
+- **Link** (`.btn--link`): Link Blue Pixelify, no frame. Hover fills Hover Cream and underlines.
+- **Icon keys** carry a 16px drawn icon (play, stop, search, folder) at one screen pixel per art pixel.
+
+### Cards
+Beige window frame, black outline, Window Hot highlight edge, 2px lip. A card has an optional Display title and one line beneath it. No nested cards.
+
+### Wells
+White, black outline, recessed bevel. Used for the address (green-tinted while listening), paths, config snippets, the path field, segmented controls, menus, the tool list, and the state plate in the chrome. Error notes use a pink well with a red edge.
+
+### Navigation
+Three tabs: Server, Aseprite, Tools. Closed tabs are grey chips on the beige strip; the open tab is slate with a lit icon (the two-frame nav sprite plays while open or hovered). Labels are black in both states. While Aseprite is not yet found, the other two tabs are disabled.
+
+### Assistant Picker
+A grey key that opens a white list. Hover is Hover Cream; the chosen row is Lamp Red. The list flips upward when there is no room below.
+
+### Dialog
+A double-edged cream window (black, white, grey, black), over a 45% black scrim. It names a path the app guessed and asks for confirmation. Focus is trapped inside; Escape declines.
+
+### Signature: The Mascot
+A cream blob with an antenna, 16x16, three frames: eyes open, blinking, looking aside. It sits in the chrome and in the dialog. It blinks on a 5.2s loop, stepped.
+
+### Signature: Lamps
+Eight-pixel gems: green and pulsing while the server listens, grey when stopped, blinking red when Aseprite is missing.
+
+## Do's and Don'ts
+
+### Do:
+- **Do** keep text on the slate Ink (#101417) and text on beige or white black.
+- **Do** put one Lamp Red key on each screen and let everything else be grey.
+- **Do** draw new frames and icons through SpriteWare's own MCP tools, 2 screen pixels per art pixel, with a black outline and a 1px bevel.
+- **Do** step animation (`steps()`), and keep it to sprites, the page reveal and the scan band.
+- **Do** keep hover states as a flat fill change (Hover Cream or a 8% brighten), never a colour fade.
+
+### Don't:
+- **Don't** add glow, starfields, gradients, translucent panels, blur or any ornament that is not content. (Confirmed rejection: the dark "glitter" version.)
+- **Don't** use a dark theme or a second accent colour.
+- **Don't** round a corner. Notch it in the art.
+- **Don't** set body copy, labels or keys in the drawn glyph face.
+- **Don't** use white text on slate, or the theme's plum on slate.
+- **Don't** introduce a native `<select>`, checkbox or scrollbar styling that breaks the frame language.
