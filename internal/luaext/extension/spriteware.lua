@@ -13,7 +13,7 @@
 --------------------------------------------------------------------------------
 
 local PROTOCOL_VERSION = 1
-local EXTENSION_VERSION = "0.1.0"
+local EXTENSION_VERSION = "0.2.0"
 
 -- What this build can do. The server checks these before an op, so an old copy
 -- fails loudly.
@@ -21,6 +21,7 @@ local FEATURES = {
   "dump", "draw_batch", "cel_batch", "frame_batch", "tag_batch",
   "cel_reset", "frame_normalise", "palette_dump", "doc_duplicate",
   "layer_group", "layer_merge", "palette_snap", "select_mask", "slice",
+  "doc_targets", "draw_region", "draw_remap", "draw_frame", "draw_shift",
 }
 
 local SPRITEWARE = {}
@@ -139,6 +140,21 @@ end
 -- leaves it nil so the user's open sprite wins.
 local current = nil
 
+-- Unsaved documents have no filename, so a name has to be remembered here. The
+-- table is weak: closing a document drops its entry with the sprite.
+local unsavedNames = setmetatable({}, { __mode = "k" })
+
+-- same_path compares two absolute paths the way a user reads them: one separator
+-- and one case. Aseprite hands back backslashes on Windows and the callers send
+-- forward slashes, and a mismatch here is a silent wrong-document bug.
+local function same_path(a, b)
+  if not a or not b then return false end
+  local function norm(p)
+    return (tostring(p):gsub("\\", "/")):lower()
+  end
+  return norm(a) == norm(b)
+end
+
 local function asprite(args)
   if args and args.sprite and args.sprite ~= "" then
     local want = tostring(args.sprite)
@@ -147,7 +163,10 @@ local function asprite(args)
     if app.activeSprite then candidates[#candidates + 1] = app.activeSprite end
     for _, spr in ipairs(app.sprites) do candidates[#candidates + 1] = spr end
     for _, spr in ipairs(candidates) do
-      if spr.filename == want or tostring(spr.id) == want then return spr end
+      if same_path(spr.filename, want) or tostring(spr.id) == want
+        or ("unsaved:" .. tostring(spr.id)) == want then
+        return spr
+      end
     end
     fail("not_found", "No open sprite matches '" .. want .. "'.", { open = open_paths() })
   end
@@ -166,21 +185,45 @@ local function open_paths()
   return out
 end
 
+-- is_saved is not `filename ~= ""`: Aseprite names a brand new document
+-- "Sprite", so a non-empty filename proves nothing. A real file has a separator
+-- or an extension.
+local function is_saved(spr)
+  local f = spr.filename
+  if f == nil or f == "" then return false end
+  if f:find("[/\\]") then return true end
+  return f:find("%.[%w]+$") ~= nil
+end
+
 local function sprite_summary(spr)
+  local named = unsavedNames[spr]
+  local saved = is_saved(spr)
   return {
-    id = spr.filename ~= "" and spr.filename or ("unsaved:" .. tostring(spr.id)),
-    name = spr.filename ~= "" and splitext_basename(spr.filename) or "Untitled",
-    path = spr.filename or "",
+    id = saved and spr.filename or (named or ("unsaved:" .. tostring(spr.id))),
+    name = saved and splitext_basename(spr.filename) or (named or spr.filename or "Untitled"),
+    path = saved and spr.filename or "",
     width = spr.width,
     height = spr.height,
     colorMode = tostring(spr.colorMode):gsub("^ColorMode%.", ""):lower(),
-    saved = spr.filename ~= nil and spr.filename ~= "",
+    saved = saved,
   }
 end
 
 function splitext_basename(path)
   local name = path:gsub("^.*[/\\]", "")
   return (name:gsub("%.aseprite$", ""):gsub("%.ase$", ""))
+end
+
+-- target_ref names the document a reply acted on. Without it, acting on the
+-- wrong document and acting on the right one return the same shape.
+local function target_ref(spr)
+  if not spr then return nil end
+  local summary = sprite_summary(spr)
+  local active = false
+  local ok, live = pcall(function() return app.activeSprite end)
+  if ok and live == spr then active = true end
+  if current == spr then active = true end
+  return { id = summary.id, path = summary.path, name = summary.name, active = active }
 end
 
 -- find_layer walks groups breadth-first, full name first so a shallower layer
@@ -529,17 +572,37 @@ H["doc.new"] = function(args)
   if w < 1 or h < 1 or w > 4096 or h > 4096 then
     fail("invalid_args", "Canvas must be between 1x1 and 4096x4096.")
   end
+  local frames = math.floor(tonumber(args.frames) or 1)
+  if frames < 1 or frames > 512 then
+    fail("invalid_args", "frames must be between 1 and 512.", { frames = frames })
+  end
   local mode = ColorMode.RGB
   local spr = Sprite(w, h, mode)
   if #spr.layers == 0 or spr.layers[1] == nil then spr:newLayer() end
   spr.layers[1].name = "Layer 1"
+  for i = 2, frames do spr:newEmptyFrame(i) end
+  local name = tostring(args.name or "")
+  if name ~= "" then unsavedNames[spr] = name end
   current = spr
-  return { sprite = sprite_summary(spr) }
+  app.activeSprite = spr
+  return { sprite = sprite_summary(spr), frames = #spr.frames }
 end
 
 H["doc.open"] = function(args)
   local path = tostring(args.path or "")
   if path == "" then fail("invalid_args", "doc.open needs a path.") end
+
+  -- Opening a path that is already open is a switch, not a second copy. Aseprite
+  -- loads a new document here, which is how a caller ends up drawing into one
+  -- copy while exporting the other.
+  for _, spr in ipairs(app.sprites) do
+    if same_path(spr.filename, path) then
+      current = spr
+      app.activeSprite = spr
+      return { sprite = sprite_summary(spr), alreadyOpen = true, active = true }
+    end
+  end
+
   local spr = app.open(path)
   if not spr then
     local exists = app.fs.fileExists(path)
@@ -549,16 +612,17 @@ H["doc.open"] = function(args)
     fail("open_failed", "Aseprite refused to open the file.", { path = path })
   end
   current = spr
-  return { sprite = sprite_summary(spr) }
+  app.activeSprite = spr
+  return { sprite = sprite_summary(spr), alreadyOpen = false, active = true }
 end
 
 H["doc.activate"] = function(args)
   local path = tostring(args.path or args.sprite or "")
   for _, spr in ipairs(app.sprites) do
-    if spr.filename == path then
+    if same_path(spr.filename, path) then
       current = spr
       app.activeSprite = spr
-      return { sprite = sprite_summary(spr) }
+      return { sprite = sprite_summary(spr), active = true }
     end
   end
   fail("not_found", "That document is not open.", { path = path, open = open_paths() })
@@ -566,7 +630,7 @@ end
 
 H["doc.save"] = function(args)
   local spr = asprite(args)
-  if spr.filename == nil or spr.filename == "" then
+  if not is_saved(spr) then
     fail("invalid_args", "This sprite has never been saved. Use sprite op=save_as with a path.")
   end
   spr:saveAs(spr.filename)
@@ -591,12 +655,30 @@ end
 
 H["doc.close"] = function(args)
   local spr = asprite(args)
-  if spr.filename == nil or spr.filename == "" then
+  if not is_saved(spr) then
     fail("invalid_args", "Refusing to close a document that was never saved; it would be lost.")
   end
   spr:close()
   if current == spr then current = nil end
   return { closed = true }
+end
+
+-- doc.closeAll clears a long session. It refuses to drop unsaved work unless the
+-- caller says force, so a sweep cannot silently lose a document.
+H["doc.closeAll"] = function(args)
+  local list = {}
+  local unsaved = arr()
+  for _, spr in ipairs(app.sprites) do
+    list[#list + 1] = spr
+    if not is_saved(spr) then unsaved[#unsaved + 1] = sprite_summary(spr).name end
+  end
+  if #unsaved > 0 and args.force ~= true then
+    fail("conflict", "Refusing to close documents that were never saved.",
+      { unsaved = unsaved, hint = "save them, or pass force=true to discard them" })
+  end
+  for _, spr in ipairs(list) do spr:close() end
+  current = nil
+  return { closed = #list }
 end
 
 H["doc.resize"] = function(args)
@@ -1664,6 +1746,32 @@ end
 
 -- Drawing ---------------------------------------------------------------
 
+-- region_of reads the rectangle an op is limited to: x/y/width/height, or the
+-- x0/y0/x1/y1 corners. nil means the whole cel. Silent acceptance of a region
+-- an op never reads is how a replace recolours more than it was asked to.
+local function region_of(op)
+  local x0, y0 = tonumber(op.x0), tonumber(op.y0)
+  local x1, y1 = tonumber(op.x1), tonumber(op.y1)
+  if x0 and y0 and x1 and y1 then
+    return {
+      x = math.min(x0, x1), y = math.min(y0, y1),
+      w = math.abs(x1 - x0) + 1, h = math.abs(y1 - y0) + 1,
+    }
+  end
+  local x, y = tonumber(op.x), tonumber(op.y)
+  local w, h = tonumber(op.width), tonumber(op.height)
+  if x and y and w and h and w > 0 and h > 0 then
+    return { x = x, y = y, w = w, h = h }
+  end
+  return nil
+end
+
+local function in_region(region, x, y)
+  if region == nil then return true end
+  return x >= region.x and y >= region.y
+    and x < region.x + region.w and y < region.y + region.h
+end
+
 H["draw.apply"] = function(args)
   local spr = asprite(args)
   local ops = args.ops or {}
@@ -1677,11 +1785,18 @@ H["draw.apply"] = function(args)
   local selection = nil
   if args.ignoreSelection ~= true then selection = usable_selection(spr) end
   local inside = mask_test(selection)
-  -- Shadows the plain pset above for the rest of this handler, so every kind
-  -- that writes one pixel respects the mask without an `if` at each call site.
-  local function pset(img, x, y, colour)
-    if x >= 0 and y >= 0 and x < img.width and y < img.height and inside(x, y) then
+
+  -- write is the one place a pixel is counted. `pixelsChanged` is the pixels
+  -- whose value actually differed, which is what proves an edit landed;
+  -- `pixelsWritten` counts the in-bounds writes the mask allowed.
+  local written, changed = 0, 0
+  local function write(img, x, y, colour)
+    if x < 0 or y < 0 or x >= img.width or y >= img.height then return end
+    if not inside(x, y) then return end
+    written = written + 1
+    if img:getPixel(x, y) ~= colour then
       img:putPixel(x, y, colour)
+      changed = changed + 1
     end
   end
 
@@ -1695,7 +1810,6 @@ H["draw.apply"] = function(args)
     targets[i] = normalize_cel(spr, layer, spr.frames[n], true)
   end
 
-  local changed = 0
   for i, op in ipairs(ops) do
     local cel = targets[i]
     local img = cel.image
@@ -1706,12 +1820,7 @@ H["draw.apply"] = function(args)
       local w, h = tonumber(op.width) or 0, tonumber(op.height) or 0
       for py = y, y + h - 1 do
         for px = x, x + w - 1 do
-          if px >= 0 and py >= 0 and px < img.width and py < img.height and inside(px, py) then
-            if app.pixelColor.rgbaA(img:getPixel(px, py)) > 0 then
-              img:putPixel(px, py, app.pixelColor.rgba(0, 0, 0, 0))
-              changed = changed + 1
-            end
-          end
+          write(img, px, py, app.pixelColor.rgba(0, 0, 0, 0))
         end
       end
 
@@ -1720,8 +1829,7 @@ H["draw.apply"] = function(args)
       for _, p in ipairs(op.points or {}) do
         local x, y = tonumber(p[1]), tonumber(p[2])
         if x and y then
-          pset(img, x, y, colour)
-          changed = changed + 1
+          write(img, x, y, colour)
         end
       end
 
@@ -1734,8 +1842,7 @@ H["draw.apply"] = function(args)
         for px = x, x + w - 1 do
           local edge = (px == x or py == y or px == x + w - 1 or py == y + h - 1)
           if filled or edge then
-            pset(img, px, py, colour)
-            changed = changed + 1
+            write(img, px, py, colour)
           end
         end
       end
@@ -1749,8 +1856,7 @@ H["draw.apply"] = function(args)
       local sy = y0 < y1 and 1 or -1
       local err = dx - dy
       while true do
-        pset(img, x0, y0, colour)
-        changed = changed + 1
+        write(img, x0, y0, colour)
         if x0 == x1 and y0 == y1 then break end
         local e2 = 2 * err
         if e2 > -dy then err = err - dy; x0 = x0 + sx end
@@ -1767,19 +1873,17 @@ H["draw.apply"] = function(args)
         for px = cx - rx, cx + rx do
           local nx = (px - cx) / math.max(rx, 1)
           local ny = (py - cy) / math.max(ry, 1)
-          local inside = nx * nx + ny * ny <= 1.0
-          if op.fill ~= false and inside then
-            pset(img, px, py, colour)
-            changed = changed + 1
-          elseif op.fill == false and inside then
+          local in_shape = nx * nx + ny * ny <= 1.0
+          if op.fill ~= false and in_shape then
+            write(img, px, py, colour)
+          elseif op.fill == false and in_shape then
             local outsideNeighbour =
               ((px + 1 - cx) / math.max(rx, 1)) ^ 2 + ((py - cy) / math.max(ry, 1)) ^ 2 > 1.0 or
               ((px - 1 - cx) / math.max(rx, 1)) ^ 2 + ((py - cy) / math.max(ry, 1)) ^ 2 > 1.0 or
               ((px - cx) / math.max(rx, 1)) ^ 2 + ((py + 1 - cy) / math.max(ry, 1)) ^ 2 > 1.0 or
               ((px - cx) / math.max(rx, 1)) ^ 2 + ((py - 1 - cy) / math.max(ry, 1)) ^ 2 > 1.0
             if outsideNeighbour then
-              pset(img, px, py, colour)
-              changed = changed + 1
+              write(img, px, py, colour)
             end
           end
         end
@@ -1788,11 +1892,95 @@ H["draw.apply"] = function(args)
     elseif kind == "replace" then
       local from = color_value(spr, op.from)
       local to = color_value(spr, op.to)
+      local region = region_of(op)
       for py = 0, img.height - 1 do
         for px = 0, img.width - 1 do
-          if img:getPixel(px, py) == from and inside(px, py) then
-            img:putPixel(px, py, to)
-            changed = changed + 1
+          if img:getPixel(px, py) == from and in_region(region, px, py) and inside(px, py) then
+            write(img, px, py, to)
+          end
+        end
+      end
+
+    elseif kind == "remap" then
+      -- Recolouring a theme is a map, not a chain of replaces: a target that is
+      -- also a source would otherwise be replaced again by the next op.
+      local map = op.map or {}
+      local swaps = {}
+      local count = 0
+      for fromHex, toHex in pairs(map) do
+        swaps[color_value(spr, fromHex)] = color_value(spr, toHex)
+        count = count + 1
+      end
+      if count == 0 then
+        fail("invalid_args", "remap needs a `map` of from-colour to to-colour, for example {\"#ff0000\": \"#00ff00\"}.",
+          { opIndex = i })
+      end
+      local region = region_of(op)
+      for py = 0, img.height - 1 do
+        for px = 0, img.width - 1 do
+          local to = swaps[img:getPixel(px, py)]
+          if to ~= nil and in_region(region, px, py) and inside(px, py) then
+            write(img, px, py, to)
+          end
+        end
+      end
+
+    elseif kind == "frame" then
+      -- The bevelled box seven of the app's sprites share: notched corners, an
+      -- outline, a lit top-left face and a shaded bottom-right one.
+      local fx, fy = tonumber(op.x) or 0, tonumber(op.y) or 0
+      local fw, fh = tonumber(op.width) or 0, tonumber(op.height) or 0
+      if fw < 3 or fh < 3 then
+        fail("invalid_args", "frame needs a width and height of at least 3.",
+          { opIndex = i, width = fw, height = fh })
+      end
+      local cut = math.floor(tonumber(op.cut) or 1)
+      cut = math.max(0, math.min(cut, math.floor(math.min(fw, fh) / 2)))
+      local openBottom = op.openBottom == true
+      local outline = color_value(spr, op.outline or "#000000")
+      local hi = op.hi and color_value(spr, op.hi) or nil
+      local lo = op.lo and color_value(spr, op.lo) or nil
+      local body = op.body and color_value(spr, op.body) or nil
+
+      local function shape(px, py)
+        if px < 0 or py < 0 or px >= fw or py >= fh then return false end
+        if cut > 0 then
+          if px + py < cut then return false end
+          if (fw - 1 - px) + py < cut then return false end
+          if px + (fh - 1 - py) < cut then return false end
+          if (fw - 1 - px) + (fh - 1 - py) < cut then return false end
+        end
+        return true
+      end
+
+      -- openBottom drops the last row from what is painted, but not from the
+      -- shape: dropping it from both would just move the bottom edge one row up.
+      local function paintable(px, py)
+        if not shape(px, py) then return false end
+        if openBottom and py == fh - 1 then return false end
+        return true
+      end
+
+      local function edge_at(px, py)
+        if not shape(px, py) then return false end
+        return not shape(px - 1, py) or not shape(px + 1, py)
+          or not shape(px, py - 1) or not shape(px, py + 1)
+      end
+
+      for py = 0, fh - 1 do
+        for px = 0, fw - 1 do
+          if paintable(px, py) then
+            local colour
+            if edge_at(px, py) then
+              colour = outline
+            elseif hi and (edge_at(px - 1, py) or edge_at(px, py - 1)) then
+              colour = hi
+            elseif lo and (edge_at(px + 1, py) or edge_at(px, py + 1)) then
+              colour = lo
+            else
+              colour = body
+            end
+            if colour ~= nil then write(img, fx + px, fy + py, colour) end
           end
         end
       end
@@ -1829,9 +2017,9 @@ H["draw.apply"] = function(args)
           end
           if edge then
             if side == "inside" then
-              if here then pset(img, x, y, colour); changed = changed + 1 end
+              if here then write(img, x, y, colour) end
             else
-              if not here then pset(img, x, y, colour); changed = changed + 1 end
+              if not here then write(img, x, y, colour) end
             end
           end
         end
@@ -1882,15 +2070,12 @@ H["draw.apply"] = function(args)
         return out
       end
 
+      local region = region_of(op)
       for py = 0, img.height - 1 do
         for px = 0, img.width - 1 do
           local p = img:getPixel(px, py)
-          if app.pixelColor.rgbaA(p) > 0 and inside(px, py) then
-            local out = shifted(p)
-            if out ~= p then
-              img:putPixel(px, py, out)
-              changed = changed + 1
-            end
+          if app.pixelColor.rgbaA(p) > 0 and in_region(region, px, py) and inside(px, py) then
+            write(img, px, py, shifted(p))
           end
         end
       end
@@ -1925,8 +2110,38 @@ H["draw.apply"] = function(args)
           if px >= 0 and py >= 0 and px < src.width and py < src.height then
             local p = src:getPixel(px, py)
             if app.pixelColor.rgbaA(p) > 0 then
-              pset(img, dx + bx, dy + by, p)
-              changed = changed + 1
+              write(img, dx + bx, dy + by, p)
+            end
+          end
+        end
+      end
+
+    elseif kind == "shift" then
+      -- Copy the cel onto itself, moved. With onlyTransparent it paints behind
+      -- the art, which is a drop shadow in one call instead of a second layer.
+      local dx = math.floor(tonumber(op.dx) or 0)
+      local dy = math.floor(tonumber(op.dy) or 0)
+      if dx == 0 and dy == 0 then
+        fail("invalid_args", "shift needs a non-zero dx or dy.", { opIndex = i })
+      end
+      local onlyTransparent = op.onlyTransparent ~= false
+      local colour = nil
+      if op.color ~= nil then colour = color_value(spr, op.color) end
+
+      local src = Image(img.width, img.height, spr.colorMode)
+      src:drawImage(img, Point(0, 0))
+
+      for py = 0, src.height - 1 do
+        for px = 0, src.width - 1 do
+          local p = src:getPixel(px, py)
+          if app.pixelColor.rgbaA(p) > 0 then
+            local tx, ty = px + dx, py + dy
+            local blocked = false
+            if onlyTransparent and tx >= 0 and ty >= 0 and tx < img.width and ty < img.height then
+              blocked = app.pixelColor.rgbaA(img:getPixel(tx, ty)) > 0
+            end
+            if not blocked then
+              write(img, tx, ty, colour or p)
             end
           end
         end
@@ -1962,8 +2177,7 @@ H["draw.apply"] = function(args)
         if not seen[key] and x >= 0 and y >= 0 and x < img.width and y < img.height then
           seen[key] = true
           if near(img:getPixel(x, y)) then
-            pset(img, x, y, colour)
-            changed = changed + 1
+            write(img, x, y, colour)
             stack[#stack + 1] = { x + 1, y }
             stack[#stack + 1] = { x - 1, y }
             stack[#stack + 1] = { x, y + 1 }
@@ -1988,16 +2202,14 @@ H["draw.apply"] = function(args)
             local err = dx - dy
             local cx, cy = x0, y0
             while true do
-              pset(img, cx, cy, colour)
-              changed = changed + 1
+              write(img, cx, cy, colour)
               if cx == x and cy == y then break end
               local e2 = 2 * err
               if e2 > -dy then err = err - dy; cx = cx + stepX end
               if e2 < dx then err = err + dx; cy = cy + stepY end
             end
           else
-            pset(img, x, y, colour)
-            changed = changed + 1
+            write(img, x, y, colour)
           end
           prev = { x, y }
         end
@@ -2027,8 +2239,7 @@ H["draw.apply"] = function(args)
           else
             takeB = ((x + y) % 2) == 0
           end
-          pset(img, x, y, takeB and b or a)
-          changed = changed + 1
+          write(img, x, y, takeB and b or a)
         end
       end
 
@@ -2062,8 +2273,7 @@ H["draw.apply"] = function(args)
             lerp_channel(app.pixelColor.rgbaG(a), app.pixelColor.rgbaG(b), t),
             lerp_channel(app.pixelColor.rgbaB(a), app.pixelColor.rgbaB(b), t),
             255)
-          pset(img, x, y, colour)
-          changed = changed + 1
+          write(img, x, y, colour)
         end
       end
 
@@ -2074,10 +2284,11 @@ H["draw.apply"] = function(args)
         fail("unsupported", "hue_shift needs an RGB document.", { opIndex = i })
       end
       local cache = {}
+      local region = region_of(op)
       for py = 0, img.height - 1 do
         for px = 0, img.width - 1 do
           local p = img:getPixel(px, py)
-          if app.pixelColor.rgbaA(p) > 0 and inside(px, py) then
+          if app.pixelColor.rgbaA(p) > 0 and in_region(region, px, py) and inside(px, py) then
             local out = cache[p]
             if out == nil then
               local r, g, b = app.pixelColor.rgbaR(p), app.pixelColor.rgbaG(p), app.pixelColor.rgbaB(p)
@@ -2113,8 +2324,7 @@ H["draw.apply"] = function(args)
                 app.pixelColor.rgbaA(p))
               cache[p] = out
             end
-            img:putPixel(px, py, out)
-            changed = changed + 1
+            write(img, px, py, out)
           end
         end
       end
@@ -2127,10 +2337,11 @@ H["draw.apply"] = function(args)
         fail("unsupported", "desaturate needs an RGB document.", { opIndex = i })
       end
       local cache = {}
+      local region = region_of(op)
       for py = 0, img.height - 1 do
         for px = 0, img.width - 1 do
           local p = img:getPixel(px, py)
-          if app.pixelColor.rgbaA(p) > 0 and inside(px, py) then
+          if app.pixelColor.rgbaA(p) > 0 and in_region(region, px, py) and inside(px, py) then
             local out = cache[p]
             if out == nil then
               local r, g, b = app.pixelColor.rgbaR(p), app.pixelColor.rgbaG(p), app.pixelColor.rgbaB(p)
@@ -2144,8 +2355,7 @@ H["draw.apply"] = function(args)
               out = app.pixelColor.rgba(mix(r), mix(g), mix(b), app.pixelColor.rgbaA(p))
               cache[p] = out
             end
-            img:putPixel(px, py, out)
-            changed = changed + 1
+            write(img, px, py, out)
           end
         end
       end
@@ -2155,7 +2365,7 @@ H["draw.apply"] = function(args)
     end
   end
 
-  return { pixelsChanged = changed, opsApplied = #ops }
+  return { pixelsChanged = changed, pixelsWritten = written, opsApplied = #ops }
 end
 
 -- Palette ---------------------------------------------------------------
@@ -2311,7 +2521,18 @@ local function handle_command(frame)
     }
   end
 
-  return { id = frame.id, ok = true, data = result or {} }
+  local payload = result or {}
+  -- Arrays (doc.list, layer.list) have no named document to report, and a field
+  -- on an array breaks its decode on the far side.
+  if type(payload) == "table" and not is_array(payload) then
+    local target = current
+    if target == nil then
+      local ok, active = pcall(function() return app.activeSprite end)
+      if ok then target = active end
+    end
+    payload.target = target_ref(target)
+  end
+  return { id = frame.id, ok = true, data = payload }
 end
 
 SPRITEWARE.protocol = PROTOCOL_VERSION
