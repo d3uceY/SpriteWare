@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/d3uceY/spriteware/internal/mcpserver"
 	"github.com/d3uceY/spriteware/internal/skill"
 )
 
@@ -69,30 +70,28 @@ type InstallResult struct {
 // server is running right now: showing the address it will use is more useful
 // than showing nothing.
 func (s *MCPService) publicURL() string {
-	s.mu.Lock()
-	port := s.port
-	transport := s.transport
-	s.mu.Unlock()
-
+	state := s.host.State()
+	port := state.Port
+	transport := state.Transport
 	if port <= 0 {
 		cfg := s.cfg.Get()
 		port = cfg.Port
 		transport = cfg.Transport
 	}
-	return fmt.Sprintf("http://127.0.0.1:%d%s", port, endpointPath(transport))
+	return fmt.Sprintf("http://127.0.0.1:%d%s", port, mcpserver.EndpointPath(transport))
 }
 
 // ListClients returns the agents this build knows how to set up.
 func (s *MCPService) ListClients() []ClientSpec {
-	s.mu.Lock()
-	transport := s.transport
-	s.mu.Unlock()
+	transport := s.host.State().Transport
 	if transport == "" {
 		transport = s.cfg.Get().Transport
 	}
 
 	url := s.publicURL()
-	projectDir := s.projectDir()
+	// An unchosen project is "", not the launch folder: a path the user never
+	// picked is a path the cards should not print.
+	projectDir := s.chosenProjectDir()
 	out := make([]ClientSpec, 0, len(clientIDs))
 	for _, id := range clientIDs {
 		out = append(out, describeClient(id, url, string(transport), projectDir))
@@ -144,6 +143,13 @@ func describeClient(id, url, transport, projectDir string) ClientSpec {
 	spec.Target.Path = entry.path
 	spec.Target.Detected = exists(entry.path)
 	spec.Install.Can = true
+	if entry.needsProject && projectDir == "" {
+		spec.Target.Path = shortPath(entry.path)
+		spec.Target.Detected = false
+		spec.Install.Can = false
+		spec.Install.Why = "Choose the project folder first. This file lives inside the workspace."
+		return spec
+	}
 	switch entry.format {
 	case formatJSONC:
 		spec.Install.Why = "Only writes a file with no comments."
@@ -170,16 +176,17 @@ const (
 )
 
 type clientEntry struct {
-	label     string
-	where     string
-	note      string
-	snippet   string
-	format    string
-	path      string
-	cli       string
-	cliHuman  string
-	rootKey   string
-	serverObj map[string]any
+	label        string
+	where        string
+	note         string
+	snippet      string
+	format       string
+	path         string
+	cli          string
+	cliHuman     string
+	rootKey      string
+	serverObj    map[string]any
+	needsProject bool
 }
 
 // entryFor is the single description of each agent. The snippet and the written
@@ -228,10 +235,11 @@ func entryFor(id, url, transport, projectDir string) clientEntry {
 			snippet: prettyJSON(map[string]any{"servers": map[string]any{
 				"spriteware": map[string]any{"type": transport, "url": url},
 			}}),
-			format:    formatJSON,
-			path:      filepath.Join(projectDir, ".vscode", "mcp.json"),
-			rootKey:   "servers",
-			serverObj: map[string]any{"type": transport, "url": url},
+			format:       formatJSON,
+			path:         filepath.Join(projectDir, ".vscode", "mcp.json"),
+			rootKey:      "servers",
+			serverObj:    map[string]any{"type": transport, "url": url},
+			needsProject: true,
 		}
 
 	case "claude-code":
@@ -354,16 +362,20 @@ func clineTransport(http bool) string {
 // what it did. Anything it cannot do becomes a message with the reason, so the
 // user can fall back to the copy button without guessing.
 func (s *MCPService) InstallClient(id string) InstallResult {
-	s.mu.Lock()
-	transport := s.transport
-	s.mu.Unlock()
+	transport := s.host.State().Transport
 	if transport == "" {
 		transport = s.cfg.Get().Transport
 	}
 
-	entry := entryFor(id, s.publicURL(), string(transport), s.projectDir())
+	entry := entryFor(id, s.publicURL(), string(transport), s.chosenProjectDir())
 	if entry.label == id && entry.rootKey == "" {
 		return InstallResult{Message: "No setup for " + id + "."}
+	}
+
+	if entry.needsProject && s.chosenProjectDir() == "" {
+		return InstallResult{
+			Message: "Choose the project folder first. This config lives inside the workspace.",
+		}
 	}
 
 	if entry.format == formatCLI {
@@ -622,8 +634,14 @@ func stringOf(v any) string {
 // ---------------------------------------------------------------------------
 
 // describeSkill resolves where this agent looks for skills, at both scopes.
+//
+// With no folder chosen the project path stays relative, so the card says where
+// the skill goes instead of claiming a folder the user never picked.
 func describeSkill(id, projectDir string) ClientSkill {
-	project := skill.ProjectRoot(projectDir)
+	project := ""
+	if projectDir != "" {
+		project = skill.ProjectRoot(projectDir)
+	}
 
 	at, ok := skill.DirFor(id, skill.ScopeProject, project)
 	if !ok {
@@ -657,7 +675,16 @@ func (s *MCPService) InstallSkill(agent, scope string) InstallResult {
 		chosen = skill.ScopeGlobal
 	}
 
-	project := skill.ProjectRoot(s.projectDir())
+	project := s.chosenProjectDir()
+	if chosen == skill.ScopeProject {
+		if project == "" {
+			return InstallResult{
+				Message: "Choose the project folder first. A skill written beside the app is one no agent reads.",
+			}
+		}
+		project = skill.ProjectRoot(project)
+	}
+
 	at, ok := skill.DirFor(agent, chosen, project)
 	if !ok {
 		return InstallResult{
@@ -674,9 +701,18 @@ func (s *MCPService) InstallSkill(agent, scope string) InstallResult {
 	if chosen == skill.ScopeGlobal {
 		where = "every project"
 	}
-	message := "Installed in " + shortPath(path) + " for " + where + ". " + restartHint(agent)
-	if at.Note != "" {
-		message += " " + at.Note
+
+	// One instruction, not three: the restart hint is the action that makes the
+	// skill appear, so the directory's caveat repeats it for most agents (Gemini
+	// says "run /skills reload" in both). Where an agent has no restart step -
+	// Kiro - the caveat is the only thing worth saying.
+	advice := restartHint(agent)
+	if advice == "" {
+		advice = at.Note
+	}
+	message := "Installed in " + shortPath(path) + " for " + where + "."
+	if advice != "" {
+		message += " " + advice
 	}
 	return InstallResult{OK: true, Message: message, Path: path}
 }
