@@ -106,6 +106,10 @@ type Dump struct {
 
 // Filter narrows what a dump contains. The zero value means everything.
 type Filter struct {
+	// Sprite is the document to read, by absolute path. Empty means the active
+	// one. It is not part of the filter the Lua side sees; it travels beside it
+	// as `sprite`, which is how every other command names a document.
+	Sprite string `json:"-"`
 	// Layers are layer names to include. Empty means all.
 	Layers []string `json:"layers,omitempty"`
 	// Frames are 1-based frames to include. Empty means all.

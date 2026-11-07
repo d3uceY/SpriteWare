@@ -29,17 +29,17 @@ const drawSchema = `{
       "items": {
         "type": "object",
         "properties": {
-          "kind": {"type": "string", "enum": ["pixels", "rect", "line", "polyline", "ellipse", "clear", "replace", "grid", "text", "outline", "shade", "blit", "fill", "dither", "gradient", "hue_shift", "desaturate"]},
+          "kind": {"type": "string", "enum": ["pixels", "rect", "line", "polyline", "ellipse", "clear", "replace", "remap", "frame", "grid", "text", "outline", "shade", "blit", "shift", "fill", "dither", "gradient", "hue_shift", "desaturate"]},
           "target": {"type": "object", "properties": {
             "layer": {"type": "string"},
             "frame": {"type": "integer", "minimum": 1}
           }, "additionalProperties": false},
           "color": {"type": "string", "description": "#rrggbb or #rrggbbaa"},
-          "x": {"type": "integer"},
-          "y": {"type": "integer"},
-          "width": {"type": "integer"},
+          "x": {"type": "integer", "description": "Left edge. For replace/shade/hue_shift/desaturate it starts the region the change is limited to; for a region, give width and height too."},
+          "y": {"type": "integer", "description": "Top edge. See x."},
+          "width": {"type": "integer", "description": "Region width for replace/shade/hue_shift/desaturate, or the shape width for rect/dither/gradient/clear."},
           "height": {"type": "integer"},
-          "x0": {"type": "integer"},
+          "x0": {"type": "integer", "description": "Corner form of a region: x0,y0 to x1,y1 inclusive. Use this or x/y/width/height, not both."},
           "y0": {"type": "integer"},
           "x1": {"type": "integer"},
           "y1": {"type": "integer"},
@@ -61,6 +61,16 @@ const drawSchema = `{
           "direction": {"type": "string", "enum": ["vertical", "horizontal"], "description": "gradient only."},
           "steps": {"type": "integer", "description": "gradient only: how many bands. Fewer is better; default one per pixel."},
           "source": {"type": "object", "description": "blit only: where to copy from.", "properties": {"layer": {"type": "string"}, "frame": {"type": "integer", "minimum": 1}, "x": {"type": "integer"}, "y": {"type": "integer"}, "width": {"type": "integer"}, "height": {"type": "integer"}}, "additionalProperties": false},
+          "map": {"type": "object", "description": "remap only: from-colour to to-colour, for example {\"#ff0000\": \"#00ff00\"}. Applied in one pass, so a target that is also a source cannot chain.", "additionalProperties": {"type": "string"}},
+          "dx": {"type": "integer", "description": "shift only: pixels to move right."},
+          "dy": {"type": "integer", "description": "shift only: pixels to move down."},
+          "onlyTransparent": {"type": "boolean", "description": "shift only: paint only where the cel is empty, default true. That is what makes a drop shadow sit behind the art instead of over it."},
+          "cut": {"type": "integer", "description": "frame only: notch size in pixels at each corner, default 1."},
+          "outline": {"type": "string", "description": "frame only: outline colour, #rrggbb."},
+          "hi": {"type": "string", "description": "frame only: the lit face along the top and left."},
+          "lo": {"type": "string", "description": "frame only: the shaded face along the bottom and right."},
+          "body": {"type": "string", "description": "frame only: the fill colour. Omit to leave the inside untouched."},
+          "openBottom": {"type": "boolean", "description": "frame only: drop the bottom edge, for a tab."},
           "transparent": {"type": "string", "enum": ["erase", "skip"], "description": "grid only. erase (default) clears the rectangle first so it ends up exactly as written."}
         },
         "required": ["kind"],
@@ -78,7 +88,7 @@ func (s *Service) registerDraw(srv *server.MCPServer) {
 			"Draw pixels. All ops in one call are applied as one transaction, so the user's Ctrl+Z "+
 				"undoes the whole edit rather than one pixel of it.\n"+
 				coordinateNote+"\n"+
-				"Kinds: pixels, rect, line, polyline, ellipse, clear, replace, grid, text, outline, shade, blit, fill, dither, gradient, hue_shift, desaturate.\n"+
+				"Kinds: pixels, rect, line, polyline, ellipse, clear, replace, remap, frame, grid, text, outline, shade, blit, shift, fill, dither, gradient, hue_shift, desaturate.\n"+
 				"`grid` is the readable one: one character per pixel with a legend mapping character to "+
 				"colour, exactly the shape `look` op=ascii returns, so you can read a layer, edit the "+
 				"rows and send them straight back. A ragged row or a character missing from the legend "+
@@ -88,7 +98,13 @@ func (s *Service) registerDraw(srv *server.MCPServer) {
 				"silhouette by one pixel; `shade` lightens or darkens with a hue shift, so shadows cool and "+
 				"highlights warm; `blit` copies a rectangle from another cel.\n"+
 				"`fill` floods a region from one point, `polyline` draws many segments in one op, and "+
-				"`hue_shift`/`desaturate` recolour a whole cel with the hue and value kept separate."),
+				"`hue_shift`/`desaturate` recolour a whole cel with the hue and value kept separate.\n"+
+				"`replace`, `shade`, `hue_shift` and `desaturate` accept a region (`x`,`y`,`width`,`height` "+
+				"or `x0`,`y0`,`x1`,`y1`) and change nothing outside it. An argument a kind does not read is "+
+				"refused with the name of the argument, not ignored.\n"+"`remap` recolours from a whole `map` in one pass; `frame` draws a bevelled notched box "+
+				"(`cut`, `outline`, `hi`, `lo`, `body`, `openBottom`); `shift` copies the cel moved by "+
+				"`dx`/`dy`, painting behind the art by default so a shadow is one call.\n"+"The result's `pixelsChanged` counts pixels whose value differed, so a no-op draw reports 0; "+
+				"`pixelsWritten` counts the in-bounds pixels the selection allowed."),
 		mcp.WithRawInputSchema([]byte(drawSchema)),
 	)
 
@@ -97,6 +113,9 @@ func (s *Service) registerDraw(srv *server.MCPServer) {
 		list, isList := raw.([]any)
 		if !isList || len(list) == 0 {
 			return fail(protocol.New(protocol.CodeInvalidArgs, "draw needs a non-empty `ops` array")), nil
+		}
+		if err := validateDrawOps(list); err != nil {
+			return fail(err), nil
 		}
 
 		compiled := make([]map[string]any, 0, len(list))
@@ -130,7 +149,11 @@ func (s *Service) registerDraw(srv *server.MCPServer) {
 			args["label"] = label
 		}
 		if sp := strings.TrimSpace(req.GetString("sprite", "")); sp != "" {
-			args["sprite"] = sp
+			resolved, err := resolveTarget(sp)
+			if err != nil {
+				return fail(err), nil
+			}
+			args["sprite"] = resolved
 		}
 		if req.GetBool("ignoreSelection", false) {
 			args["ignoreSelection"] = true
@@ -141,7 +164,20 @@ func (s *Service) registerDraw(srv *server.MCPServer) {
 			return fail(err), nil
 		}
 		changed := toInt(out["pixelsChanged"])
-		summary := fmt.Sprintf("%d pixel(s) changed from %d op(s)"+undoLabelSuffix(args), changed, len(compiled))
+		written := toInt(out["pixelsWritten"])
+
+		// Echo the distinct colours the batch asked for. A legend that maps two
+		// characters to one colour, or misses one, is otherwise invisible until
+		// the picture looks wrong.
+		names := paintColours(compiled)
+		out["colours"] = names
+
+		summary := fmt.Sprintf("%d pixel(s) changed from %d op(s) in %d colour(s)"+undoLabelSuffix(args),
+			changed, len(compiled), len(names))
+		if changed == 0 && written > 0 {
+			summary = fmt.Sprintf("nothing changed: %d pixel(s) were already that colour%s",
+				written, undoLabelSuffix(args))
+		}
 		out["summary"] = summary
 		return ok(out, summary), nil
 	})
@@ -152,6 +188,26 @@ func undoLabelSuffix(args map[string]any) string {
 		return " (undo step: " + label + ")"
 	}
 	return ""
+}
+
+// paintColours is the distinct colours a compiled batch names. Each kind spells
+// its paint colour differently, so the echo reads all of them; a legend that
+// collapsed two characters onto one colour shows up here.
+func paintColours(compiled []map[string]any) []string {
+	colours := map[string]bool{}
+	for _, op := range compiled {
+		for _, key := range []string{"color", "to", "outline", "hi", "lo", "body"} {
+			if c, isString := op[key].(string); isString && c != "" {
+				colours[c] = true
+			}
+		}
+	}
+	names := make([]string, 0, len(colours))
+	for c := range colours {
+		names = append(names, c)
+	}
+	sort.Strings(names)
+	return names
 }
 
 // compileGrid turns a character grid into a clear rect plus one pixels op per
@@ -449,13 +505,17 @@ func (s *Service) registerPalette(srv *server.MCPServer) {
 	})
 }
 
-// dump reads the current document into memory.
+// dump reads the current document into memory, or the one the request names.
 func (s *Service) dump(ctx context.Context, req mcp.CallToolRequest) (*doc.Dump, error) {
 	l, err := s.linkFor()
 	if err != nil {
 		return nil, err
 	}
-	d, err := l.Dump(ctx, nil)
+	sprite, err := resolveTarget(req.GetString("sprite", ""))
+	if err != nil {
+		return nil, err
+	}
+	d, err := l.Dump(ctx, &doc.Filter{Sprite: sprite})
 	if err != nil {
 		return nil, err
 	}

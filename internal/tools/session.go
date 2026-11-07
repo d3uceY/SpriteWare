@@ -184,13 +184,16 @@ func (s *Service) registerSprite(srv *server.MCPServer) {
 				"`info` returns the document as data — dimensions, layers with nesting, frames with "+
 				"durations, tags, palette, and a one-line `summary` for humans. There is no prose-only path."),
 		mcp.WithString("op",
-			mcp.Description("list | info | new | open | activate | save | save_as | duplicate | close | resize"),
+			mcp.Description("list | info | new | open | activate | save | save_as | duplicate | close | close_all | resize"),
 			mcp.Required(),
-			mcp.Enum("list", "info", "new", "open", "activate", "save", "save_as", "duplicate", "close", "resize"),
+			mcp.Enum("list", "info", "new", "open", "activate", "save", "save_as", "duplicate", "close", "close_all", "resize"),
 		),
 		mcp.WithString("path", mcp.Description("Absolute file path, for open/save_as/duplicate.")),
+		mcp.WithString("name", mcp.Description("For new: the name an unsaved document answers to. Without one every new document is called Untitled.")),
 		mcp.WithNumber("width", mcp.Description("Canvas width for op=new or resize.")),
 		mcp.WithNumber("height", mcp.Description("Canvas height for op=new or resize.")),
+		mcp.WithNumber("frames", mcp.Description("For new: how many animation frames to create, default 1.")),
+		mcp.WithBoolean("force", mcp.Description("For close_all: discard documents that were never saved. Without it, close_all refuses rather than losing work.")),
 		mcp.WithString("sprite", mcp.Description("Target sprite by absolute path. Omit to use the active one.")),
 	)
 
@@ -214,6 +217,12 @@ func (s *Service) registerSprite(srv *server.MCPServer) {
 
 		case "new":
 			args := map[string]any{"width": req.GetInt("width", 32), "height": req.GetInt("height", 32)}
+			if name := strings.TrimSpace(req.GetString("name", "")); name != "" {
+				args["name"] = name
+			}
+			if frames := req.GetInt("frames", 1); frames > 1 {
+				args["frames"] = frames
+			}
 			var out map[string]any
 			if err := s.call(ctx, "doc.new", args, &out); err != nil {
 				return fail(err), nil
@@ -232,6 +241,9 @@ func (s *Service) registerSprite(srv *server.MCPServer) {
 			var out map[string]any
 			if err := s.call(ctx, cmd, map[string]any{"path": path}, &out); err != nil {
 				return fail(err), nil
+			}
+			if already, _ := out["alreadyOpen"].(bool); already {
+				return ok(out, "activated "+path+", which was already open"), nil
 			}
 			return ok(out, "opened "+path), nil
 
@@ -266,6 +278,17 @@ func (s *Service) registerSprite(srv *server.MCPServer) {
 			}
 			return ok(out, "closed"), nil
 
+		case "close_all":
+			args := map[string]any{}
+			if req.GetBool("force", false) {
+				args["force"] = true
+			}
+			var out map[string]any
+			if err := s.call(ctx, "doc.closeAll", args, &out); err != nil {
+				return fail(err), nil
+			}
+			return ok(out, "closed "+strconv.Itoa(toInt(out["closed"]))+" document(s)"), nil
+
 		case "resize":
 			args := spriteArgs(req)
 			args["width"] = req.GetInt("width", 0)
@@ -277,7 +300,7 @@ func (s *Service) registerSprite(srv *server.MCPServer) {
 			return ok(out, "resized"), nil
 		}
 		return fail(unknownOp("sprite", opName,
-			"list", "info", "new", "open", "activate", "save", "save_as", "duplicate", "close", "resize")), nil
+			"list", "info", "new", "open", "activate", "save", "save_as", "duplicate", "close", "close_all", "resize")), nil
 	})
 }
 

@@ -197,7 +197,7 @@ func (h *Headless) Dump(ctx context.Context, filter *doc.Filter) (*doc.Dump, err
 		return nil, protocol.AsError(err)
 	}
 	var out dumpResult
-	if err := h.Call(ctx, "doc.dump", dumpArgs{Filter: filter, Dir: dir}, &out); err != nil {
+	if err := h.Call(ctx, "doc.dump", dumpArgs{Filter: filter, Sprite: spriteOf(filter), Dir: dir}, &out); err != nil {
 		return nil, err
 	}
 	return out.toDump()
@@ -530,7 +530,17 @@ func wireToError(reply *protocol.Reply) error {
 
 type dumpArgs struct {
 	Filter *doc.Filter `json:"filter,omitempty"`
+	Sprite string      `json:"sprite,omitempty"`
 	Dir    string      `json:"dir"`
+}
+
+// spriteOf reads the target document out of a filter, which is the one place a
+// caller names it.
+func spriteOf(filter *doc.Filter) string {
+	if filter == nil {
+		return ""
+	}
+	return filter.Sprite
 }
 
 // dumpResult mirrors what Lua sends: metadata plus a scratch directory of cel

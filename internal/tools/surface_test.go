@@ -44,6 +44,17 @@ func TestDrawPublishesTheTextKind(t *testing.T) {
 	}
 }
 
+// The kinds added for the UI-art workflow must be reachable: a handler branch
+// the schema does not publish cannot be called.
+func TestDrawPublishesTheNewKinds(t *testing.T) {
+	set := publishedEnums(t)["draw.ops.items.kind"]
+	for _, kind := range []string{"remap", "frame", "shift"} {
+		if !set[kind] {
+			t.Errorf("draw kind enum does not include %q", kind)
+		}
+	}
+}
+
 // draw closes its schema with additionalProperties:false, so an argument its
 // description offers but its schema omits is rejected by the host before any
 // Lua runs. Every top-level argument the tool supports has to be declared.

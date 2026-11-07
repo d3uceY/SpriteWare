@@ -90,7 +90,7 @@ type ToolInfo struct {
 // Catalog is the surface in registration order.
 var Catalog = []ToolInfo{
 	{"doctor", "Reports the connection and says what to fix."},
-	{"sprite", "Open, create, save and inspect documents."},
+	{"sprite", "Open, create, save, close and inspect documents."},
 	{"layer", "Create, rename, reorder, group and merge layers."},
 	{"cel", "The pixels one layer holds on one frame."},
 	{"frame", "Add, duplicate, retime and reset animation frames."},
@@ -99,7 +99,7 @@ var Catalog = []ToolInfo{
 	{"draw", "Pixels, shapes and readable character grids."},
 	{"select", "Clip the next edits to one rectangle."},
 	{"transform", "Flip, rotate, scale, translate and crop whole cels."},
-	{"look", "See the work: preview, grid, filmstrip, diff, onion, compare."},
+	{"look", "See the work: preview, ascii, filmstrip, diff, onion, compare."},
 	{"validate", "Lint for palette drift, stray pixels and broken rigs."},
 	{"palette", "Ramps, analysis, snapping to the palette, adopting the art's colours."},
 	{"export", "PNG, frame sequences, SVG, GIF, packed sheets and tilesets."},
@@ -203,6 +203,16 @@ func resolveOutput(p string) (string, error) {
 		return "", protocol.New(protocol.CodeInvalidArgs, "could not resolve %q: %v", p, err)
 	}
 	return abs, nil
+}
+
+// resolveTarget makes an optional sprite path absolute. Empty stays empty,
+// meaning the active document.
+func resolveTarget(p string) (string, error) {
+	p = strings.TrimSpace(p)
+	if p == "" {
+		return "", nil
+	}
+	return resolveOutput(p)
 }
 
 // scratchDir creates a per-request directory for dump files.

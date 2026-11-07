@@ -534,7 +534,7 @@ func (l *Live) Call(ctx context.Context, cmd string, args any, out any) error {
 // Dump reads the sprite through the window.
 func (l *Live) Dump(ctx context.Context, filter *doc.Filter) (*doc.Dump, error) {
 	var out dumpResult
-	if err := l.Call(ctx, "doc.dump", dumpArgs{Filter: filter}, &out); err != nil {
+	if err := l.Call(ctx, "doc.dump", dumpArgs{Filter: filter, Sprite: spriteOf(filter)}, &out); err != nil {
 		return nil, err
 	}
 	return out.toDump()
