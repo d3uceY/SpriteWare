@@ -14,12 +14,10 @@ import (
 	"embed"
 	"log"
 	"log/slog"
-	"os"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"github.com/d3uceY/spriteware/backend"
-	"github.com/d3uceY/spriteware/internal/cli"
 	"github.com/d3uceY/spriteware/internal/config"
 	"github.com/d3uceY/spriteware/internal/link"
 )
@@ -32,10 +30,9 @@ import (
 var assets embed.FS
 
 func main() {
-	if len(os.Args) > 1 {
-		os.Exit(cli.Run(backend.Version, os.Args[1:]))
-	}
-
+	// This exe only ever draws the window. It is a GUI-subsystem binary, so a
+	// double-click never flashes a console; the terminal program is
+	// cmd/spriteware, a console exe that does the waiting.
 	runGUI()
 }
 

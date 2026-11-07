@@ -57,6 +57,11 @@ tasks:
       - cmd: rm -f *.syso
         platforms: [linux, darwin]
     vars:
+      # -H windowsgui on purpose: a console-subsystem exe flashes a console window
+      # when it is double-clicked, and no runtime call can prevent that (Windows
+      # creates it before main runs). The cost is that a shell never waits for a
+      # GUI-subsystem child, so the installer ships bin\spriteware.cmd, which runs
+      # the exe through `start /wait` and propagates its exit code.
       BUILD_FLAGS: '{{if eq .DEV "true"}}{{if or .EXTRA_TAGS (eq .OBFUSCATED "true")}}-tags {{if eq .OBFUSCATED "true"}}wails_obfuscated{{if .EXTRA_TAGS}},{{end}}{{end}}{{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l"{{else}}-tags production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s -H windowsgui"{{end}}'
     env:
       GOOS: windows

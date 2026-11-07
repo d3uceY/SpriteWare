@@ -35,6 +35,11 @@ Unicode true
 ####
 !include "wails_tools.nsh"
 
+####
+## The Wails macros below use ${If}, which comes from LogicLib.
+####
+!include "LogicLib.nsh"
+
 # The version information for this two must consist of 4 parts
 VIProductVersion "${INFO_PRODUCTVERSION}.0"
 VIFileVersion    "${INFO_PRODUCTVERSION}.0"
