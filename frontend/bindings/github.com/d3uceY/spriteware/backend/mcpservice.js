@@ -27,17 +27,6 @@ import * as tools$0 from "../internal/tools/models.js";
 import * as $models from "./models.js";
 
 /**
- * AddToPath is the button: it makes a new terminal find the command, and
- * tolerates being pressed twice.
- * @returns {$CancellablePromise<$models.PathStatus>}
- */
-export function AddToPath() {
-    return $Call.ByID(57991277).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType0($result);
-    }));
-}
-
-/**
  * BrowseAsepritePath opens the platform's file picker on the Aseprite binary.
  * 
  * Picking the file is already the agreement, so this one confirms immediately;
@@ -47,7 +36,7 @@ export function AddToPath() {
  */
 export function BrowseAsepritePath() {
     return $Call.ByID(1778808682).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType1($result);
+        return $$createType0($result);
     }));
 }
 
@@ -81,7 +70,7 @@ export function ClearProjectFolder() {
  */
 export function ConfirmAsepritePath(path) {
     return $Call.ByID(552360968, path).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType1($result);
+        return $$createType0($result);
     }));
 }
 
@@ -92,7 +81,7 @@ export function ConfirmAsepritePath(path) {
  */
 export function DetectAseprite() {
     return $Call.ByID(516691900).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType1($result);
+        return $$createType0($result);
     }));
 }
 
@@ -106,7 +95,7 @@ export function DetectAseprite() {
  */
 export function ForgetAsepritePath() {
     return $Call.ByID(1394129613).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType1($result);
+        return $$createType0($result);
     }));
 }
 
@@ -116,18 +105,7 @@ export function ForgetAsepritePath() {
  */
 export function GetMCPStatus() {
     return $Call.ByID(892124858).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType2($result);
-    }));
-}
-
-/**
- * GetPathStatus reports whether typing `spriteware` works, without changing
- * anything.
- * @returns {$CancellablePromise<$models.PathStatus>}
- */
-export function GetPathStatus() {
-    return $Call.ByID(2618189413).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType0($result);
+        return $$createType1($result);
     }));
 }
 
@@ -137,7 +115,7 @@ export function GetPathStatus() {
  */
 export function GetSettings() {
     return $Call.ByID(2846292681).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType3($result);
+        return $$createType2($result);
     }));
 }
 
@@ -147,7 +125,7 @@ export function GetSettings() {
  */
 export function GetSetupState() {
     return $Call.ByID(3953617218).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType1($result);
+        return $$createType0($result);
     }));
 }
 
@@ -160,7 +138,7 @@ export function GetSetupState() {
  */
 export function InstallClient(id) {
     return $Call.ByID(2934112492, id).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType4($result);
+        return $$createType3($result);
     }));
 }
 
@@ -176,7 +154,7 @@ export function InstallClient(id) {
  */
 export function InstallSkill(agent, scope) {
     return $Call.ByID(1705394344, agent, scope).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType4($result);
+        return $$createType3($result);
     }));
 }
 
@@ -186,7 +164,7 @@ export function InstallSkill(agent, scope) {
  */
 export function ListClients() {
     return $Call.ByID(1815253812).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType6($result);
+        return $$createType5($result);
     }));
 }
 
@@ -196,7 +174,7 @@ export function ListClients() {
  */
 export function ListTools() {
     return $Call.ByID(1056767275).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType8($result);
+        return $$createType7($result);
     }));
 }
 
@@ -215,23 +193,13 @@ export function ProjectFolder() {
 }
 
 /**
- * RemoveFromPath is the same button, backwards.
- * @returns {$CancellablePromise<$models.PathStatus>}
- */
-export function RemoveFromPath() {
-    return $Call.ByID(2183124887).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType0($result);
-    }));
-}
-
-/**
  * SaveSettings validates, persists, then applies what can change while running.
  * @param {config$0.Config} next
  * @returns {$CancellablePromise<config$0.Config>}
  */
 export function SaveSettings(next) {
     return $Call.ByID(1856413688, next).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType3($result);
+        return $$createType2($result);
     }));
 }
 
@@ -291,17 +259,16 @@ export function StopServer() {
  */
 export function SwitchMode(mode) {
     return $Call.ByID(2897476583, mode).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType2($result);
+        return $$createType1($result);
     }));
 }
 
 // Private type creation functions
-const $$createType0 = $models.PathStatus.createFrom;
-const $$createType1 = $models.SetupState.createFrom;
-const $$createType2 = $models.MCPStatus.createFrom;
-const $$createType3 = config$0.Config.createFrom;
-const $$createType4 = $models.InstallResult.createFrom;
-const $$createType5 = $models.ClientSpec.createFrom;
-const $$createType6 = $Create.Array($$createType5);
-const $$createType7 = tools$0.ToolInfo.createFrom;
-const $$createType8 = $Create.Array($$createType7);
+const $$createType0 = $models.SetupState.createFrom;
+const $$createType1 = $models.MCPStatus.createFrom;
+const $$createType2 = config$0.Config.createFrom;
+const $$createType3 = $models.InstallResult.createFrom;
+const $$createType4 = $models.ClientSpec.createFrom;
+const $$createType5 = $Create.Array($$createType4);
+const $$createType6 = tools$0.ToolInfo.createFrom;
+const $$createType7 = $Create.Array($$createType6);

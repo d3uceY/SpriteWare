@@ -14,6 +14,5 @@ export {
     ClientTarget,
     InstallResult,
     MCPStatus,
-    PathStatus,
     SetupState
 } from "./models.js";
