@@ -2,9 +2,10 @@
 //
 // Layers, one job each:
 //
+//	main.go        dispatch: arguments mean the CLI, none means the window
 //	backend/       Go services - every exported method becomes a JS binding
+//	internal/cli/  the terminal commands (cobra)
 //	internal/      the MCP server, the checker and the colour maths
-//	main.go        window and wiring (this file)
 //	src/main.js    ports <-> bindings, the only file that knows both worlds
 //	elm/src        state, view, subscriptions
 package main
@@ -13,10 +14,12 @@ import (
 	"embed"
 	"log"
 	"log/slog"
+	"os"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"github.com/d3uceY/spriteware/backend"
+	"github.com/d3uceY/spriteware/internal/cli"
 	"github.com/d3uceY/spriteware/internal/config"
 	"github.com/d3uceY/spriteware/internal/link"
 )
@@ -29,6 +32,14 @@ import (
 var assets embed.FS
 
 func main() {
+	if len(os.Args) > 1 {
+		os.Exit(cli.Run(backend.Version, os.Args[1:]))
+	}
+
+	runGUI()
+}
+
+func runGUI() {
 	// A config problem must never stop the app starting: missing means defaults.
 	cfg, err := config.Load()
 	if err != nil {

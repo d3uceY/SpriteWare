@@ -1,10 +1,8 @@
-// Command spriteware is the command-line half of the toolkit: the eval harness
-// that runs practice tasks and records what came of them.
-//
-// It is deliberately separate from the MCP server. The server gives a model
-// hands and eyes; this measures what the hands produced, and it writes plain
-// files a person can read, diff and review.
-package main
+// The eval tree: practice tasks, runs and the review form. It is deliberately
+// separate from the MCP server. The server gives a model hands and eyes; this
+// measures what the hands produced, and it writes plain files a person can read,
+// diff and review.
+package cli
 
 import (
 	"context"
@@ -16,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/d3uceY/spriteware/internal/analyze"
 	"github.com/d3uceY/spriteware/internal/config"
 	"github.com/d3uceY/spriteware/internal/doc"
@@ -23,30 +23,9 @@ import (
 	"github.com/d3uceY/spriteware/internal/link"
 )
 
-func main() {
-	if len(os.Args) < 2 {
-		usage()
-		os.Exit(2)
-	}
-	var err error
-	switch os.Args[1] {
-	case "eval":
-		err = evalCmd(os.Args[2:])
-	case "help", "-h", "--help":
-		usage()
-	default:
-		fmt.Fprintf(os.Stderr, "unknown command %q\n\n", os.Args[1])
-		usage()
-		os.Exit(2)
-	}
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error: "+err.Error())
-		os.Exit(1)
-	}
-}
-
-func usage() {
-	fmt.Fprint(os.Stdout, `spriteware - the eval harness
+// evalHelp is the tree's own manual. The subcommands keep parsing their flags
+// with the standard flag package: they work today and a rewrite buys nothing.
+const evalHelp = `spriteware eval - the benchmark harness
 
   spriteware eval list                     the benchmarks and how much each asks
   spriteware eval new  --benchmark <slug>  start a run folder for one benchmark
@@ -63,12 +42,28 @@ Scoring is: open the run's review.yaml, fill in the verdict, the five scores,
 the defect ticks and the human criteria, save it, then run eval score <run>.
 It reads the form back, refuses a score that is not on the scale, and prints
 what the harness and the person each decided.
-`)
+`
+
+// newEvalCmd hands everything after "eval" to evalCmd untouched.
+func newEvalCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:                "eval",
+		Short:              "Run and score the practice benchmarks",
+		Long:               strings.TrimSpace(evalHelp),
+		DisableFlagParsing: true,
+		Args:               cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 || args[0] == "-h" || args[0] == "--help" {
+				return cmd.Help()
+			}
+			return evalCmd(args)
+		},
+	}
 }
 
 func evalCmd(args []string) error {
 	if len(args) == 0 {
-		usage()
+		fmt.Fprint(os.Stdout, evalHelp)
 		return errors.New("eval needs one of: list, new, brief, check, score, table")
 	}
 	switch args[0] {
