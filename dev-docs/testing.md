@@ -29,9 +29,15 @@ brushes and extensions are never touched. The whole set takes about five
 seconds.
 
 What this covers: drawing (outline, shade, fill, blit, dither, gradient, hue
-shift, desaturate), cels (copy, tween, oscillate), transforms (flip, rotate,
-scale, crop), tag updates, and the strictness around all of them (a 45° rotate
-is refused, a tween past the last frame is refused).
+shift, desaturate, remap, frame, shift), cels (copy, tween, oscillate),
+transforms (flip, rotate, scale, crop), tag updates, and the strictness around
+all of them (a 45° rotate is refused, a tween past the last frame is refused).
+
+`real_bugs_test.go` is the regression set for `dev-docs/mcp-improvements.md`: a
+dump by path reads that document, opening an open file activates it instead of
+copying it, a replace region is honoured, an identical redraw reports zero
+changes, a new document takes frames and a name, and `closeAll` refuses unsaved
+work. Each one was red before its fix.
 
 Add a test here for anything that runs inside Aseprite. A Lua handler that only
 runs in Aseprite is untested until it runs in Aseprite.

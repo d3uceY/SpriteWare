@@ -64,6 +64,8 @@ the answer. The work happens in one of two places:
 
 That is why `look` and `validate` read a dump (`internal/doc`) instead of asking
 Aseprite per pixel: one round trip, then all the analysis is local and testable.
+The dump takes a `Sprite` name (`doc.Filter.Sprite`), so every reader acts on the
+document the caller named rather than whichever one is active.
 
 ## Reading a tool
 
@@ -71,6 +73,9 @@ Take `draw` in `internal/tools/drawing.go`.
 
 - `drawSchema` is the JSON Schema an agent sees. Hand-written, because the ops
   are an object array.
+- `drawargs.go` lists the arguments each kind reads. The schema is one union of
+  every kind's fields, so the table is what makes `rect` with a `tolerance` a
+  refusal instead of a silent no-op.
 - `compileGrid` and `compileText` turn readable input (character rows, a string)
   into plain `pixels` ops before anything reaches Aseprite. All the strictness
   lives here: a ragged row or an unknown glyph fails before a pixel is written.

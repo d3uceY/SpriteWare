@@ -21,6 +21,7 @@ and keeps the report readable while you iterate.
 | `animation` | a multi-frame sprite with no tag; uniform frame durations | `tag op=create`, then `frame op=set_duration` per pose |
 | `export_readiness` | a document that was never saved | `sprite op=save_as` |
 | `volume` | the art's height drifting across a cycle | redraw drifted frames from their neighbours rather than by eye |
+| `ui` | an interface asset judged as one: canvas size, colour count, hard alpha, matching canvas corners, slices that fit, even margins | fix the geometry; the character checks flag a correct notched panel, so ask for `ui` explicitly |
 | `compliance` | violation of the agent's own plan | fix the art or the plan, whichever was wrong |
 
 Severity: `error` means the art will look wrong; `warning` means it is

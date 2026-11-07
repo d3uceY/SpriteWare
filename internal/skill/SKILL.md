@@ -101,14 +101,26 @@ padding turns a visible mistake into wrong art.
 current pixels, edit the characters, and send them straight back.
 
 Other kinds: `pixels` (explicit point list), `rect`, `line`, `ellipse`, `clear`,
-`replace` (swap one colour for another across the layer), `text` (a built-in
-5x7 bitmap font at `x`,`y` — capitals, digits and common punctuation).
+`replace` and `remap` (swap colours; `remap` applies a whole map in one pass,
+so a target that is also a source cannot chain), `text` (a built-in 5x7 bitmap
+font at `x`,`y` — capitals, digits and common punctuation), `frame` (a bevelled
+notched box with `cut`, `outline`, `hi`, `lo`, `body`), `shift` (copy the cel
+moved by `dx`/`dy`, painting behind the art by default).
+
+`replace`, `remap`, `shade`, `hue_shift` and `desaturate` take a region —
+`x`,`y`,`width`,`height` or `x0`,`y0`,`x1`,`y1` — and change nothing outside it.
+An argument a kind does not read is refused by name, not ignored.
+
+`pixelsChanged` in the reply counts pixels whose value actually differed, so a
+draw that changed nothing reports 0 even when it repainted the same colour.
 
 ## Seeing your own work
 
 - `look op=preview` — one frame as an image, over a checkerboard so
   transparency is visible. **Look at this before you report success.**
-- `look op=ascii` — the frame as characters and a legend.
+- `look op=ascii` — the frame as characters and a legend. Add `x`,`y`,`width`,
+  `height` to read one region, or `path=<file.png>` to read an exported file
+  without opening a document.
 - `look op=filmstrip` — every frame in one strip, for animation.
 - `look op=onion` — the current frame over ghosted neighbours, for judging an
   in-between.

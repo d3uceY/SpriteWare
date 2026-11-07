@@ -54,8 +54,14 @@ exactly that case.
 |---|---|---|
 | hello | Lua, once per connection | `protocol`, `extensionVersion`, `asepriteVersion`, `headless`, `features` |
 | command | app | `id`, `cmd`, `args` |
-| reply | Lua | `id`, `ok`, `data` or `error` |
+| reply | Lua | `id`, `ok`, `data` or `error`, and `target` on an object result |
 | bridge_state | bridge | `connected`, `version`, `aseprite`, `clients` |
+
+Every successful reply whose data is an object also carries `target`: the
+document the command acted on, as `id`, `path`, `name` and `active`. Acting on
+the wrong document and acting on the right one used to return the same shape,
+which is how four exports came out as the wrong sprite. Array results
+(`doc.list`) have no target, because a field on an array breaks its decode.
 
 ## Errors
 

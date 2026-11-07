@@ -4,6 +4,22 @@ Notes from using the SpriteWare MCP tools directly to remake every sprite for th
 
 Everything here was observed in headless mode against Aseprite 1.3.18.6-dev. Where I am guessing at a cause, it says "suspect".
 
+## Status, 2026-11-08
+
+Fixed, each with a real-Aseprite test in `internal/link/real_bugs_test.go`:
+
+- 1: `open` now activates an already-open path and reports `alreadyOpen`; every reply carries `target {id, path, active}`; `doc.new` takes `name` and `frames`.
+  **The export symptom was Go-side**: `Service.dump` called `link.Dump(ctx, nil)` and dropped the request's `sprite`, so look, validate and export read the active document. `doc.Filter` now carries `Sprite`.
+- 2: `replace` honours a region (`x/y/width/height` or `x0/y0/x1/y1`), as do `shade`, `hue_shift` and `desaturate`; a per-kind argument table refuses anything a kind does not read.
+- 3: **not reproduced as a mask bug.** Selection clips `pixels`, `rect` and the `text` ops compiled from it; the observed failure matches the wrong-document problem above. A test now pins clipping.
+- 4: `pixelsChanged` counts differences; `pixelsWritten` counts in-bounds writes.
+- 5: off-palette glyphs are ordered by hex, so two reads of one picture agree. `look` takes a region and `preview` a `scale`.
+- 6: `sprite op=new frames=N`; `draw` grid respects `target.frame`; `export spritesheet padding=0` is documented as the CSS strip, and the atlas carries `backgroundPosition` per frame.
+- 7, 8, 9: `draw` gained `frame` (bevelled notched box), `remap` (one-pass colour map) and `shift` (moved copy, behind the art by default).
+- 10: every export reports `written` with width, height, opaque pixels and colours; `look ascii path=<png>` reads an exported file with no document open.
+- 11: `validate checks=["ui"]` judges size, colour count, hard alpha, canvas corners, slice geometry and margins.
+- Smaller: `sprite op=close_all` (refuses unsaved work unless `force`), and `draw` echoes the colours it was asked for.
+
 ## What worked well
 
 - `draw` `kind=grid` is the right primitive. Readable, round-trips with `look op=ascii`, and rejects ragged rows with a row number. Nearly every sprite was one grid call.
