@@ -448,11 +448,6 @@ export class SetupState {
     }
 }
 
-/**
- * UpdateInfo is the answer to one version check, in the shape the window
- * renders. Being offline is not something the user can act on, so a failed
- * check is reported in Error instead of as an exception.
- */
 export class UpdateInfo {
     /**
      * Creates a new UpdateInfo instance.
