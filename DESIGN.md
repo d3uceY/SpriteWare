@@ -79,7 +79,7 @@ components:
   button-link-hover:
     backgroundColor: "{colors.hover-cream}"
   card:
-    backgroundColor: "{colors.window-beige}"
+    backgroundColor: "{colors.window-hot}"
     textColor: "{colors.outline-black}"
     rounded: "{rounded.none}"
     padding: "4px 8px 8px"
@@ -96,7 +96,7 @@ components:
   tab-active:
     backgroundColor: "{colors.workspace-slate}"
     textColor: "{colors.outline-black}"
-    height: "46px"
+    height: "40px"
 ---
 
 # Design System: SpriteWare
