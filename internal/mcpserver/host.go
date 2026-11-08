@@ -85,7 +85,13 @@ func (h *Host) Start(o Options) (string, error) {
 	// Fail fast and name the problem, rather than dying in the background.
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", o.Port))
 	if err != nil {
-		return "", fmt.Errorf("port %d is in use: %w", o.Port, err)
+		err = fmt.Errorf("port %d is in use: %w", o.Port, err)
+		// Kept so the window can say why nothing is listening: a start at
+		// launch has no caller left to report to.
+		h.mu.Lock()
+		h.lastErr = err.Error()
+		h.mu.Unlock()
+		return "", err
 	}
 	_ = ln.Close()
 

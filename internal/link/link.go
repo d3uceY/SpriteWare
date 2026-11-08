@@ -104,6 +104,20 @@ func (s *Selector) SetAsepritePath(path string) {
 	}
 }
 
+// SetBridgePort repoints the live link and drops the one built for the old port,
+// which would otherwise keep dialling a listener that has moved.
+func (s *Selector) SetBridgePort(port int) {
+	s.mu.Lock()
+	s.opts.BridgePort = port
+	live := s.live
+	s.live = nil
+	s.mu.Unlock()
+
+	if live != nil {
+		_ = live.Close()
+	}
+}
+
 // Current returns the link for the current mode, starting it if needed.
 func (s *Selector) Current() (Link, error) {
 	s.mu.Lock()

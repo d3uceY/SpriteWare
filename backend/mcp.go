@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"sync"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -42,8 +43,11 @@ type MCPService struct {
 	links *link.Selector
 	tools *tools.Service
 
-	mu     sync.Mutex
-	host   mcpserver.Host
+	mu sync.Mutex
+	// host is replaced, not reconfigured, when the port moves: a listener
+	// cannot change address in place, and the old one has to keep serving until
+	// the new one has bound.
+	host   *mcpserver.Host
 	bridge *link.Bridge
 
 	// candidate is a detected Aseprite the user has not agreed to yet.
@@ -59,6 +63,7 @@ func NewMCPService(cfg *config.Store, links *link.Selector) *MCPService {
 	s := &MCPService{
 		cfg:   cfg,
 		links: links,
+		host:  &mcpserver.Host{},
 		tools: tools.New(cfg, links),
 	}
 	// The bridge lives here, so doctor asks this service.
@@ -106,9 +111,12 @@ func (s *MCPService) StartServer(port int, transport string) (string, error) {
 		t = config.TransportStreamableHTTP
 	}
 
-	if state := s.host.State(); state.Running {
+	if state := s.hostRef().State(); state.Running {
 		if state.Transport != t {
 			return "", fmt.Errorf("MCP server is already running on the %s transport; stop it first", state.Transport)
+		}
+		if state.Port != port {
+			return "", fmt.Errorf("MCP server is already running on port %d; stop it before moving to %d", state.Port, port)
 		}
 		return state.URL, nil
 	}
@@ -118,7 +126,7 @@ func (s *MCPService) StartServer(port int, transport string) (string, error) {
 		slog.Warn("bridge did not start", "err", err)
 	}
 
-	url, err := s.host.Start(mcpserver.Options{
+	url, err := s.hostRef().Start(mcpserver.Options{
 		Port:      port,
 		Transport: t,
 		Tools:     s.tools,
@@ -143,7 +151,7 @@ func (s *MCPService) StartServer(port int, transport string) (string, error) {
 
 // StopServer shuts down the running transport and the bridge.
 func (s *MCPService) StopServer() error {
-	if err := s.host.Stop(); err != nil {
+	if err := s.hostRef().Stop(); err != nil {
 		slog.Error("MCP shutdown error", "err", err)
 	}
 	if err := s.StopBridge(); err != nil {
@@ -205,6 +213,14 @@ func (s *MCPService) GetMCPStatus() MCPStatus {
 	return s.statusLocked()
 }
 
+// hostRef is the current listener. It is read once and used without the lock, so
+// a swap cannot leave a caller holding a field that moved under it.
+func (s *MCPService) hostRef() *mcpserver.Host {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.host
+}
+
 func (s *MCPService) statusLocked() MCPStatus {
 	cfg := s.cfg.Get()
 	state := s.host.State()
@@ -219,9 +235,14 @@ func (s *MCPService) statusLocked() MCPStatus {
 		LastError:  state.LastError,
 	}
 	// Stopped there is no live port; the configured one is the number the user
-	// would type.
+	// would type. The transport falls back the same way: a start that failed has
+	// no listener to report, and the card must not claim streamable-http while
+	// the file says sse.
 	if st.Port <= 0 {
 		st.Port = cfg.Port
+	}
+	if st.Transport == "" {
+		st.Transport = string(cfg.Transport)
 	}
 	if s.bridge != nil {
 		st.BridgeConnected = s.bridge.State().Connected
@@ -257,11 +278,78 @@ func (s *MCPService) GetSettings() config.Config { return s.cfg.Get() }
 // SaveSettings validates, persists, then applies what can change while running.
 func (s *MCPService) SaveSettings(next config.Config) (config.Config, error) {
 	previous := s.cfg.Get()
-	saved, err := s.cfg.Save(next)
+
+	// Validate what was typed, then work with what would be written: an empty
+	// transport or an unset port is legal and takes its default.
+	if err := next.Validate(); err != nil {
+		return previous, err
+	}
+	effective := next.Normalize()
+
+	state := s.hostRef().State()
+	moves := state.Running && (effective.Port != state.Port || effective.Transport != state.Transport)
+	samePort := state.Running && effective.Port == state.Port
+
+	// Bind the replacement before anything is written. A port that turns out to
+	// be taken then costs nothing: the running listener is untouched.
+	var replacement *mcpserver.Host
+	if moves {
+		h := &mcpserver.Host{}
+		start := func(transport config.Transport) error {
+			_, err := h.Start(mcpserver.Options{
+				Port:      effective.Port,
+				Transport: transport,
+				Tools:     s.tools,
+				Version:   Version,
+			})
+			return err
+		}
+
+		err := start(effective.Transport)
+		if err != nil && samePort {
+			// A transport change cannot bind beside the listener it replaces:
+			// close that one, then take the port again.
+			_ = s.hostRef().Stop()
+			err = start(effective.Transport)
+			if err != nil {
+				// Nothing is listening now, so put the old transport back rather
+				// than leave the app with neither.
+				_ = start(state.Transport)
+			}
+		}
+		if err != nil {
+			s.pushStatus()
+			return previous, err
+		}
+		replacement = h
+	}
+
+	// A stopped server cannot discover a taken port, so ask the OS now rather
+	// than let the next Start fail with the same sentence.
+	if !state.Running && effective.Port != previous.Port {
+		if err := probePort(effective.Port); err != nil {
+			return previous, err
+		}
+	}
+
+	saved, err := s.cfg.Save(effective)
 	if err != nil {
+		if replacement != nil {
+			_ = replacement.Stop()
+		}
 		return saved, err
 	}
 	s.links.Use(saved.Mode)
+
+	if replacement != nil {
+		s.mu.Lock()
+		old := s.host
+		s.host = replacement
+		s.mu.Unlock()
+		if err := old.Stop(); err != nil {
+			slog.Warn("the previous MCP listener did not close cleanly", "err", err)
+		}
+	}
 
 	// A listener cannot move ports and the extension has the old one baked in,
 	// so both change together.
@@ -269,6 +357,7 @@ func (s *MCPService) SaveSettings(next config.Config) (config.Config, error) {
 		if err := s.StopBridge(); err != nil {
 			slog.Warn("could not stop the bridge to move its port", "err", err)
 		}
+		s.links.SetBridgePort(saved.BridgePort)
 	}
 	// Live without a listener fails every call, so bring the bridge up.
 	if saved.Mode == config.ModeLive || saved.BridgePort != previous.BridgePort {
@@ -279,6 +368,16 @@ func (s *MCPService) SaveSettings(next config.Config) (config.Config, error) {
 
 	s.pushStatus()
 	return saved, nil
+}
+
+// probePort asks the OS whether a loopback port is free. The message matches
+// Host.Start, so a save and a failed start explain a taken port the same way.
+func probePort(port int) error {
+	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		return fmt.Errorf("port %d is in use: %w", port, err)
+	}
+	return ln.Close()
 }
 
 // pushStatus emits the current state so the panel stays live without polling.
