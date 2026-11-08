@@ -71,6 +71,35 @@ What this covers: the tool list a real client sees, the served resources, that
 connected. This is the layer that found `doctor` reporting an always-zero bridge,
 and the BOM problem above.
 
+## 4. A throwaway instance for drawing art
+
+The same recipe, kept running while the app under test is rebuilt: a second
+build on its own ports, its own settings file and its own extension folder.
+
+```powershell
+$dir = "$env:TEMP\spriteware-assets"
+New-Item -ItemType Directory -Force -Path $dir | Out-Null
+$body = '{"mode":"headless","port":9953,"bridgePort":9954,"startMcpOnLaunch":true,' +
+        '"asepritePathConfirmed":true,"asepritePath":"<path to aseprite.exe>"}'
+[System.IO.File]::WriteAllText("$dir\config.json", $body,
+  (New-Object System.Text.UTF8Encoding($false)))
+
+go build -o bin\spriteware-assets.exe .
+$env:SPRITEWARE_CONFIG = "$dir\config.json"
+$env:SPRITEWARE_EXTENSIONS_DIR = "$dir\extensions"
+.\bin\spriteware-assets.exe
+```
+
+Its MCP endpoint is `http://127.0.0.1:9953/mcp`. Register that URL in
+`.vscode/mcp.json` (gitignored, per-machine) and the sprite tools act on the
+long-lived instance: open documents and undo history survive every rebuild of
+the app you are working on.
+
+**A test that starts the bridge rewrites the extension** with the bridge port it
+was given. `newTestService` therefore sets `SPRITEWARE_EXTENSIONS_DIR` to a temp
+folder; without it a suite run leaves the user's real
+`%APPDATA%\Aseprite\extensions\spriteware\spriteware.lua` dialling a test port.
+
 ## Watching the app
 
 Build and run `bin\spriteware.exe` yourself (`task build`, then the exe). It

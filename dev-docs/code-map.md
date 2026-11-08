@@ -39,6 +39,8 @@ cmd/                        small dev tools, not part of the app
 | You want to | Edit |
 |---|---|
 | add a setting | the field in `internal/config` |
+| change what a setting refuses | `internal/config`, method `Validate` |
+| change how a setting is applied while the app runs | `backend/mcp.go`, `SaveSettings` |
 | add a tool | a new file in `internal/tools`, register it in `tools.Register`, and add a line to `tools.Catalog` |
 | add a draw behaviour | a `kind` in `internal/tools/drawing.go` (schema) and `luaext/extension/spriteware.lua` |
 | change what a tool returns | the tool's `AddTool` handler |
