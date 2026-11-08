@@ -88,11 +88,11 @@ func findingsFor(r *Report, check string) []Finding {
 }
 
 // ---------------------------------------------------------------------------
-// The two defects the field report says actually shipped.
+// Defects seen in the field
 // ---------------------------------------------------------------------------
 
-// A floating arm passes every check either reference project has. Only "this
-// frame is more than one connected shape" catches it.
+// A floating arm passes every other check; only the components check catches
+// it.
 func TestDetachedLimbIsReported(t *testing.T) {
 	d := newDump(32, 32, "body", "arm")
 	body := cel(t, d, 0, 1)
@@ -120,7 +120,6 @@ func TestDetachedLimbIsReported(t *testing.T) {
 }
 
 // Art on the canvas edge is either a deliberate bleed or a clipped move.
-// Neither reference project checks it.
 func TestClippedAtCanvasEdgeIsReported(t *testing.T) {
 	d := newDump(32, 32, "body")
 	body := cel(t, d, 0, 1)
@@ -142,8 +141,8 @@ func TestClippedAtCanvasEdgeIsReported(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 // The false positive that turned a correct rig into warnings: alone, the body's
-// edge is dotted with fill where the arm covers it; as a picture, the arm covers
-// those pixels and the edge is uniformly outlined.
+// edge is dotted with fill where the arm covers it; as a composite the edge is
+// uniformly outlined.
 func TestRiggedSpritePassesCompositeButNotLayerScope(t *testing.T) {
 	d := newDump(40, 40, "body", "arm")
 	grey := craft.MustHex("#7a7a7a")

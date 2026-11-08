@@ -149,9 +149,8 @@ func (s *Service) registerDraw(srv *server.MCPServer) {
 			args["label"] = label
 		}
 		if sp := strings.TrimSpace(req.GetString("sprite", "")); sp != "" {
-			// Passed through like every other tool's sprite argument. Resolving it
-			// here turned the id or name a reply handed back into a path no
-			// document answers to.
+			// Passed through like every other sprite argument: resolving it here
+			// turned an id or name into a path no document answers to.
 			args["sprite"] = sp
 		}
 		if req.GetBool("ignoreSelection", false) {
@@ -190,8 +189,8 @@ func undoLabelSuffix(args map[string]any) string {
 }
 
 // paintColours is the distinct colours a compiled batch names. Each kind spells
-// its paint colour differently, so the echo reads all of them; a legend that
-// collapsed two characters onto one colour shows up here.
+// its paint colour differently, so a legend that collapsed two characters onto
+// one colour shows up here.
 func paintColours(compiled []map[string]any) []string {
 	colours := map[string]bool{}
 	for _, op := range compiled {
@@ -210,9 +209,7 @@ func paintColours(compiled []map[string]any) []string {
 }
 
 // compileGrid turns a character grid into a clear rect plus one pixels op per
-// colour.
-//
-// The input is the output of `look` op=ascii, so a caller can read, edit and
+// colour. The input is `look` op=ascii output, so a caller can read, edit and
 // send it back. Strict on purpose: padding a short row turns a visible mistake
 // into silent wrong art.
 func compileGrid(entry map[string]any, index int) ([]map[string]any, error) {

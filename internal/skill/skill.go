@@ -1,9 +1,8 @@
 // Package skill carries the Agent Skill folder that teaches an assistant how to
 // drive SpriteWare, and knows where each assistant looks for skills.
 //
-// A skill is not a config file: it is a folder holding a SKILL.md, and
-// installing it means putting that folder in the right directory. That makes
-// installation a copy, not a merge — no JSON, no TOML, nothing to corrupt.
+// A skill is a folder holding a SKILL.md, so installing is a copy, not a merge:
+// no JSON, no TOML, nothing to corrupt.
 package skill
 
 import (
@@ -20,9 +19,9 @@ import (
 // Skills require the two to match, in strict kebab-case.
 const Name = "spriteware"
 
-// The whole tree is embedded, not just the entry document: every workflow links
-// to a reference chapter, and a link to a file that was never copied is a dead
-// end the agent only discovers halfway through the job.
+// The whole tree is embedded, not just SKILL.md: every workflow links to a
+// reference chapter, and a dead link is a dead end discovered halfway through a
+// job.
 //
 //go:embed SKILL.md new draw shade palette rig animate tileset fix review export references
 var tree embed.FS
@@ -87,10 +86,9 @@ type Target struct {
 
 // DirFor returns the skills directory for one agent at one scope.
 //
-// The table is deliberately per-agent rather than "write to every directory":
-// .agents/skills is read by Codex, Cursor, Gemini, Copilot, Windsurf and
-// OpenCode, but each of those also has a native folder, and writing the native
-// one is the choice that keeps working when an agent changes its fallbacks.
+// Per-agent rather than "write everywhere": .agents/skills is read by Codex,
+// Cursor, Gemini, Copilot, Windsurf and OpenCode, but each also has a native
+// folder, and writing that is what survives a change of fallbacks.
 func DirFor(agent string, scope Scope, projectRoot string) (Target, bool) {
 	home, _ := os.UserHomeDir()
 	base := projectRoot
@@ -164,8 +162,8 @@ func DirFor(agent string, scope Scope, projectRoot string) (Target, bool) {
 
 // Install writes the whole skill folder into dir and returns that folder.
 //
-// It overwrites its own folder every time: the skill ships with the app, so an
-// old copy is a stale copy, and there is nothing of the user's inside it.
+// It overwrites its own folder: the skill ships with the app, so an old copy is
+// stale, and nothing of the user's is inside.
 func Install(dir string) (string, error) {
 	root := filepath.Join(dir, Name)
 	if err := os.MkdirAll(root, 0o755); err != nil {

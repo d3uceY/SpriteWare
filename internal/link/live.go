@@ -18,9 +18,8 @@ import (
 )
 
 // The bridge speaks WebSocket on 127.0.0.1. Aseprite's Lua has no LuaSocket
-// (`require("socket")` fails in every build), but it does expose a WebSocket
-// class, so the extension dials in over that and the tools use the same
-// transport.
+// (`require("socket")` fails in every build) but does expose a WebSocket class,
+// so the extension dials in over that.
 //
 // Two routes, one per role:
 //
@@ -39,9 +38,8 @@ type BridgeState struct {
 }
 
 // Bridge holds the line open between the tools and the user's Aseprite window.
-//
-// Separate from the MCP server on purpose: an agent host may restart the server,
-// and a socket there would drop the window every time.
+// It is separate from the MCP server on purpose: a server restart would drop
+// the window.
 type Bridge struct {
 	mu      sync.Mutex
 	ln      net.Listener
@@ -51,8 +49,7 @@ type Bridge struct {
 	next    int
 	state   BridgeState
 	// onState runs after any attachment change, so a UI can repaint without
-	// polling. Called outside the lock; it must not call back into the bridge
-	// from the same goroutine's critical section.
+	// polling. It is called outside the lock and must not re-enter it.
 	onState func(BridgeState)
 }
 
@@ -72,9 +69,7 @@ func NewBridge() *Bridge {
 // acceptOptions upgrades every request.
 //
 // The origin check is off because the listener is already bound to 127.0.0.1,
-// which is the boundary that matters, and the extension sends no Origin header
-// at all. Aseprite's WebSocket client is not a browser and cannot be made to
-// add one.
+// and Aseprite's WebSocket client is not a browser and sends no Origin header.
 var acceptOptions = &websocket.AcceptOptions{InsecureSkipVerify: true}
 
 // Start listens on 127.0.0.1:port and upgrades both routes to WebSocket.
@@ -165,8 +160,8 @@ func (b *Bridge) serveExtension(w http.ResponseWriter, r *http.Request) {
 	go b.keepAlive(p)
 	b.readPeer(p, b.fromExtension)
 
-	// A replaced window's cleanup used to report the new one as gone, so only
-	// the peer that is still current clears the state.
+	// Only the peer that is still current clears the state, or a replaced
+	// window's cleanup would report the new one as gone.
 	b.mu.Lock()
 	wasCurrent := b.ext == p
 	if wasCurrent {
@@ -215,10 +210,9 @@ func (b *Bridge) readPeer(p *peer, handle func(*peer, []byte)) {
 	}
 }
 
-// keepAlive pings the window and drops it when the pong stops.
-//
-// A killed app leaves the socket looking open on the far side, so without this
-// the plate says "connected" for minutes after Aseprite or the app is gone.
+// keepAlive pings the window and drops it when the pong stops. A killed app
+// leaves the socket looking open on the far side, so without this the plate says
+// "connected" long after Aseprite is gone.
 func (b *Bridge) keepAlive(p *peer) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
@@ -538,10 +532,9 @@ func (l *Live) Call(ctx context.Context, cmd string, args any, out any) error {
 
 // Dump reads the sprite through the window.
 func (l *Live) Dump(ctx context.Context, filter *doc.Filter) (*doc.Dump, error) {
-	// One directory per call, removed once it is read back. A cached folder per
-	// link meant two dumps in flight wrote the same dump.json and cel_N_M.png
-	// names, so a concurrent look/validate/export read a half-written file:
-	// "decode dump: unexpected end of JSON input".
+	// One directory per call: a shared scratch dir let two concurrent dumps
+	// write the same dump.json and cel names, so one read the other's
+	// half-written file.
 	dir, err := os.MkdirTemp("", "spriteware-live-")
 	if err != nil {
 		return nil, protocol.AsError(err)

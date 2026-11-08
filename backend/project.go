@@ -11,10 +11,9 @@ import (
 // ProjectFolder is the folder "This project" means, and whether the user chose
 // one.
 //
-// An unchosen project is "", never the working directory. From a shortcut the
-// working directory is the install folder (or System32), and printing that is
-// the app claiming a folder nobody picked: a skill written there is one no
-// agent reads, and the screen would look like the choice had been made.
+// An unchosen project is "", never the working directory: from a shortcut that
+// is the install folder or System32, and printing it would claim a folder
+// nobody picked.
 func (s *MCPService) ProjectFolder() (string, bool) {
 	if chosen := s.chosenProjectDir(); chosen != "" {
 		return chosen, true
@@ -23,9 +22,8 @@ func (s *MCPService) ProjectFolder() (string, bool) {
 }
 
 // chosenProjectDir is the folder the user picked, or "" when they have not.
-//
 // Everything that shows or writes a project path uses this one, so the card and
-// the installer can never disagree about which folder is in play.
+// the installer agree.
 func (s *MCPService) chosenProjectDir() string {
 	return strings.TrimSpace(s.cfg.Get().ProjectPath)
 }
@@ -44,10 +42,6 @@ func (s *MCPService) pickerStart() string {
 }
 
 // ChooseProjectFolder asks for the folder "This project" means, and remembers it.
-//
-// Without this it is the launch folder, which from a shortcut is the install
-// directory (or System32), where a skill lands where no agent reads and nothing
-// says so.
 func (s *MCPService) ChooseProjectFolder() (string, error) {
 	s.mu.Lock()
 	app := s.app

@@ -111,10 +111,9 @@ func (s *Service) dispatch(
 	return ok(map[string]any{"results": results, "failed": failures, "summary": summary}, summary), nil
 }
 
-// summaryOf is the one-line text beside a structured result.
-//
-// A bare "done" tells a caller that reads only text nothing about what happened,
-// so a named result says which name and how many things it holds.
+// summaryOf is the one-line text beside a structured result. A bare "done" tells
+// a caller that reads only text nothing, so a named result says which name and
+// how many things it holds.
 func summaryOf(opName string, r opResult) string {
 	if !r.OK {
 		return opName + " failed: " + r.Error
@@ -133,10 +132,9 @@ func summaryOf(opName string, r opResult) string {
 	return opName + " " + name
 }
 
-// extractOps reads either the flat argument map or an `ops` array.
-//
-// Batches exist because the reference project made an agent issue twelve calls
-// to move four layers across three frames.
+// extractOps reads either the flat argument map or an `ops` array. A batch
+// replaces the twelve calls the reference project needed to move four layers
+// across three frames.
 func extractOps(req mcp.CallToolRequest) ([]map[string]any, bool) {
 	args := req.GetArguments()
 

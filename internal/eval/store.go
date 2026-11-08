@@ -11,8 +11,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Folder names inside the repository. The data lives beside the code because a
-// benchmark whose runs are somewhere else is a benchmark nobody can check.
+// Folder names inside the repository. Data lives beside the code: a benchmark
+// whose runs are elsewhere is one nobody can check.
 const (
 	BenchmarkFile = "benchmark.yaml"
 	RunFile       = "run.yaml"
@@ -103,8 +103,8 @@ const (
 	RoleOther     = "other"
 )
 
-// Roles is the closed list, in the order the help text reads. A role nobody
-// defined is a file a reader cannot place, so the CLI refuses one.
+// Roles is the closed list, in help-text order. An undefined role is a file a
+// reader cannot place, so it is refused.
 var Roles = []string{
 	RoleSource, RoleCover, RolePreview, RoleFilmstrip,
 	RoleAnimation, RoleSheet, RoleValidate, RoleAscii, RoleOther,
@@ -126,9 +126,8 @@ type File struct {
 	Role string `yaml:"role" json:"role"`
 }
 
-// Cost is what the attempt took. Only minutes is recorded: tool calls and token
-// spend belong to the harness's session log, and a field nothing fills is a
-// field a reader learns to ignore.
+// Cost is what the attempt took. Only minutes: tool calls and token spend
+// belong to the harness log, and a field nothing fills gets ignored.
 type Cost struct {
 	Minutes float64 `yaml:"minutes,omitempty" json:"minutes,omitempty"`
 }
@@ -149,9 +148,8 @@ type Ref struct {
 	Revision int    `yaml:"revision" json:"revision"`
 }
 
-// Run is one attempt: the prompts verbatim, the files it produced, and how the
-// criteria came out. The technique is deliberately absent: it lives in
-// TechniqueFile so a score can be given without knowing it.
+// Run is one attempt: prompts verbatim, files produced, criteria outcome. The
+// technique stays in TechniqueFile so a score can be given blind.
 type Run struct {
 	ID        string           `yaml:"-" json:"id"`
 	Title     string           `yaml:"title" json:"title"`
@@ -179,9 +177,8 @@ type Scores struct {
 // Review is the human half: the verdict, the craft scores, the answers to the
 // criteria no tool can answer, and what is wrong.
 type Review struct {
-	// Run is the id the form belongs to. It is written into the file so a form
-	// copied between folders cannot be scored against the wrong attempt, and it
-	// is reloaded rather than dropped, or saving a score would erase the header.
+	// Run is the id the form belongs to, written into the file so a form copied
+	// between folders cannot be scored against the wrong attempt.
 	Run       string   `yaml:"run,omitempty" json:"run,omitempty"`
 	Verdict   string   `yaml:"verdict" json:"verdict"`
 	Scores    Scores   `yaml:"scores" json:"scores"`
@@ -189,15 +186,13 @@ type Review struct {
 	TopDefect string   `yaml:"top_defect,omitempty" json:"top_defect,omitempty"`
 	Note      string   `yaml:"note,omitempty" json:"note,omitempty"`
 	Reviewer  string   `yaml:"reviewer,omitempty" json:"reviewer,omitempty"`
-	// Criteria holds the answers to the benchmark's human criteria. The
-	// automatic ones are answered by the harness and live in the run.
+	// Criteria holds the benchmark's human criteria; the automatic ones live in
+	// the run.
 	Criteria []Result `yaml:"criteria,omitempty" json:"criteria,omitempty"`
 }
 
-// ValidateScores checks the half of a review that has nothing to do with a
-// verdict: the axes and the defect ticks. A form is checked with this while the
-// reviewer is still deciding, so a typo in a tick is reported before the verdict
-// is written rather than after.
+// ValidateScores checks the axes and defect ticks, so a typo is reported while
+// the reviewer is still deciding.
 func (r *Review) ValidateScores() error {
 	for name, got := range map[string]int{
 		"read": r.Scores.Read, "form": r.Scores.Form,
@@ -263,12 +258,11 @@ func NewRun(root string, b *Benchmark, date, technique, agent, model string) (*R
 	return run, dir, nil
 }
 
-// freeRunID picks `<date>-<slug>`, or `<date>-<slug>-2` when that is taken.
+// freeRunID picks `<date>-<slug>`, or `<date>-<slug>-2` when taken.
 //
-// The technique is deliberately not part of it. The folder name is the run's
-// identity and appears in the table, so a name that says "T4" tells the reviewer
-// what to expect before they look at the picture, and a blind score stops being
-// blind. The label lives only in TechniqueFile.
+// The technique is not part of it: the folder name appears in the table, so a
+// label like "T4" would tell the reviewer what to expect and blind scoring would
+// stop being blind.
 func freeRunID(root, date, slug string) (string, string) {
 	base := date + "-" + slug
 	for n := 1; ; n++ {
@@ -393,10 +387,9 @@ func VerifyReview(b *Benchmark, review *Review) error {
 		}
 		seen[r.Criterion] = true
 	}
-	// Motion is judged only where there is motion to judge. An unscored form is
-	// allowed to leave it out; once a verdict is claimed, the axis has to match
-	// the benchmark, or "I looked at the loop" and "I looked at frame one" score
-	// the same.
+	// Motion is judged only where there is motion. An unscored form may leave it
+	// out; once a verdict is claimed the axis has to match the benchmark, or "I
+	// looked at the loop" and "I looked at frame one" score the same.
 	if review.Verdict != "" {
 		if animated(b) && review.Scores.Motion == nil {
 			return fmt.Errorf("%s animates, so score its motion", b.Slug)
@@ -455,9 +448,8 @@ func Table(root string) ([]Row, error) {
 			Minutes:   run.Cost.Minutes,
 		}
 		for _, r := range run.Criteria {
-			// Human criteria sit in the run as unanswered placeholders; their
-			// answers live in the review, so counting them here would count them
-			// twice the moment somebody filled the form in.
+			// Human criteria sit here as unanswered placeholders; their answers
+			// live in the review, so counting both would double-count.
 			if r.Human {
 				continue
 			}
@@ -466,8 +458,8 @@ func Table(root string) ([]Row, error) {
 				row.Passed++
 			}
 		}
-		// Human criteria are only counted once a reviewer has answered them, so
-		// an unfilled form reads as less complete rather than as passing.
+		// Human criteria count only once answered, so an unfilled form reads as
+		// less complete rather than as passing.
 		for _, r := range review.Criteria {
 			row.Total++
 			row.Human++

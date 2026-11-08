@@ -1,8 +1,7 @@
 // Command spriteforge draws SpriteWare's own artwork the way an assistant would:
 // an MCP client of SpriteWare itself.
 //
-// It launches the app in "mcp --stdio" mode, creates a document, draws each
-// sprite with the
+// It builds a server in-process, creates a document, draws each sprite with the
 // `draw` grid op, saves the .aseprite and exports the PNG. Nothing reaches into
 // the internals: if a step fails, it fails for an assistant too.
 //
@@ -39,8 +38,6 @@ type art struct {
 	legend map[string]string
 }
 
-// The art is the only colour besides the green accent, so it takes the loud end:
-// teal, coral, violet, amber.
 const (
 	tealDeep  = "#0E5C6B"
 	teal      = "#2EC4B6"
@@ -126,9 +123,8 @@ var cardRows = func() []string {
 // open 2s, shut 90ms.
 var mascotFrames = [][]string{mascotOpen, mascotBlink}
 
-// A magnifier, for the button that searches for Aseprite by itself. It sits on
-// the accent green, so the rim is paper rather than ink: a dark outline
-// disappears into the fill, and the lens is amber so the glass still reads.
+// A magnifier. It sits on the accent green, so the rim is paper rather than ink
+// and the lens is amber so the glass still reads.
 var searchRows = []string{
 	"................",
 	"....WWWWWW......",
@@ -169,8 +165,8 @@ var folderRows = []string{
 }
 
 // The confirm dialog is a 24x24 plate the CSS slices 6px in from each edge. Two
-// ink edges with a paper pixel between them: no card in the app is drawn with a
-// double edge, which is what makes a dialog read as a different kind of object.
+// ink edges with a paper pixel between: no card in the app has a double edge,
+// which is what makes a dialog read as a different kind of object.
 var dialogRows = []string{
 	"..KKKKKKKKKKKKKKKKKKKK..",
 	".KWWWWWWWWWWWWWWWWWWWWK.",
@@ -361,8 +357,8 @@ type session struct {
 
 // dial builds the server in this process and completes the MCP handshake.
 //
-// In-process beats a child process here: it is the same tool surface the app
-// serves, and there is no separate CLI binary to point at.
+// In-process beats a child process: same tool surface as the app, and no separate
+// binary to point at.
 func dial() (*session, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	_ = cancel // the process owns the deadline; the link closes on exit

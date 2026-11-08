@@ -11,11 +11,8 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// The running binary must accept a batch with no top-level `op`.
-//
-// The four op-table tools advertise `ops` and used to mark `op` required, so a
-// host refused the batch before any handler ran. A package-level test proves the
-// schema; this one proves the *shipped* server, which is what a client meets.
+// The running binary must accept a batch with no top-level `op`. The four op-table
+// tools advertise `ops`, and a host refuses the batch if `op` is required.
 func TestE2EBatchWithNoTopLevelOp(t *testing.T) {
 	c := e2eClient(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

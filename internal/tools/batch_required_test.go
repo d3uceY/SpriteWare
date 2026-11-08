@@ -7,12 +7,9 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-// A tool that advertises `ops` must not also demand `op`.
-//
-// Four tools describe themselves as "Batches as `ops`" and publish an `ops`
-// array, but marked `op` required, so a host refused the batch before any
-// handler ran: "must have required property 'op'". extractOps already accepts
-// either shape, so the schema was the only thing standing in the way.
+// A tool that advertises `ops` must not also demand `op`: a host refuses the
+// batch before any handler runs with "must have required property 'op'".
+// extractOps accepts either shape, so the schema was the only obstacle.
 func TestBatchToolsDoNotRequireOp(t *testing.T) {
 	srv := server.NewMCPServer("test", "0")
 	Register(srv, newTestService(t))

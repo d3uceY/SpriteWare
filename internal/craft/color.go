@@ -1,5 +1,5 @@
-// Package craft holds the colour maths the MCP server, CLI and app share, so a
-// palette snap can never disagree with a palette report.
+// Package craft holds the colour maths shared by the MCP server and the app, so
+// a palette snap can never disagree with a palette report.
 package craft
 
 import (
@@ -373,10 +373,9 @@ type Ramp struct {
 	Base   int // index of the colour closest to the one the ramp was built from
 }
 
-// GenerateRamp builds a shading ramp from one base colour.
-//
-// Real shadows drift cool and highlights warm; a ramp that only changes
-// brightness reads as plastic. The result is verified before it is returned.
+// GenerateRamp builds a shading ramp from one base colour. Real shadows drift
+// cool and highlights warm; a ramp that only changes brightness reads as
+// plastic. The result is verified before it is returned.
 func GenerateRamp(base RGB, opts RampOptions) (Ramp, error) {
 	o := opts.withDefaults()
 	if o.Steps < 2 || o.Steps > 64 {

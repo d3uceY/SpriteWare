@@ -3,7 +3,7 @@
 //
 // It is the boundary between Aseprite and everything else: the Lua script writes
 // it, and every check, renderer and exporter reads it, so a broken sprite can be
-// a plain dump with no art program installed.
+// analysed with no art program installed.
 package doc
 
 import (
@@ -107,8 +107,7 @@ type Dump struct {
 // Filter narrows what a dump contains. The zero value means everything.
 type Filter struct {
 	// Sprite is the document to read, by absolute path. Empty means the active
-	// one. It is not part of the filter the Lua side sees; it travels beside it
-	// as `sprite`, which is how every other command names a document.
+	// one. The Lua side never sees it; it travels beside the filter as `sprite`.
 	Sprite string `json:"-"`
 	// Layers are layer names to include. Empty means all.
 	Layers []string `json:"layers,omitempty"`

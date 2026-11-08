@@ -15,11 +15,10 @@ import (
 
 // This file installs the MCP server into the config file of each assistant.
 //
-// Every agent names the same server the same way and then wraps it differently:
-// four different top-level keys, three different ways to spell a remote URL,
-// one TOML file and one JSONC file. The snippet a user copies and the object
-// this file writes are built from one description, so the card can never show
-// one thing and install another.
+// Every agent names the same server differently: four top-level keys, three
+// spellings for a remote URL, one TOML file, one JSONC file. The snippet and
+// the written object both come from one description, so the card and the
+// install can never disagree.
 
 // ClientTarget says where an agent keeps its config and whether we found it.
 type ClientTarget struct {
@@ -33,8 +32,8 @@ type ClientInstall struct {
 	Why string `json:"why"`
 }
 
-// ClientSpec is one assistant: what it is called, where the config goes, the
-// exact text to copy, and whether the install button can do it.
+// ClientSpec is one assistant: label, config location, copy text and whether
+// the install button can do it.
 type ClientSpec struct {
 	ID      string        `json:"id"`
 	Label   string        `json:"label"`
@@ -46,10 +45,9 @@ type ClientSpec struct {
 	Skill   ClientSkill   `json:"skill"`
 }
 
-// ClientSkill is where this assistant looks for Agent Skills, at both scopes.
-// An assistant without a skills directory has Available false and keeps only the
-// MCP entry. The notes are per scope because some caveats only apply to one:
-// Claude Code's personal skills are skipped by Cowork and cloud sessions.
+// ClientSkill is where this assistant looks for Agent Skills. Available false
+// means no skills folder. Notes are per scope because some caveats only apply
+// to one: Claude Code's personal skills are skipped by Cowork and cloud.
 type ClientSkill struct {
 	Available  bool   `json:"available"`
 	Project    string `json:"project"`
@@ -58,17 +56,16 @@ type ClientSkill struct {
 	GlobalNote string `json:"globalNote"`
 }
 
-// InstallResult is the outcome of pressing Install. It is always a message,
-// never an error: a failed install is something to show, not something to throw.
+// InstallResult is the outcome of Install. Always a message, never an error: a
+// failed install is shown, not thrown.
 type InstallResult struct {
 	OK      bool   `json:"ok"`
 	Message string `json:"message"`
 	Path    string `json:"path"`
 }
 
-// publicURL is the address an assistant should connect to, whether or not the
-// server is running right now: showing the address it will use is more useful
-// than showing nothing.
+// publicURL is the address an assistant should connect to, running or not:
+// showing the address it will use beats showing nothing.
 func (s *MCPService) publicURL() string {
 	state := s.host.State()
 	port := state.Port
@@ -89,8 +86,8 @@ func (s *MCPService) ListClients() []ClientSpec {
 	}
 
 	url := s.publicURL()
-	// An unchosen project is "", not the launch folder: a path the user never
-	// picked is a path the cards should not print.
+	// Unchosen project is "", not the launch folder: a card should not print a
+	// path the user never picked.
 	projectDir := s.chosenProjectDir()
 	out := make([]ClientSpec, 0, len(clientIDs))
 	for _, id := range clientIDs {
@@ -358,9 +355,9 @@ func clineTransport(http bool) string {
 // Installing
 // ---------------------------------------------------------------------------
 
-// InstallClient writes the server into one agent's config and reports exactly
-// what it did. Anything it cannot do becomes a message with the reason, so the
-// user can fall back to the copy button without guessing.
+// InstallClient writes the server into one agent's config and reports what it
+// did. Anything it cannot do becomes a message with the reason, so the user can
+// fall back to the copy button.
 func (s *MCPService) InstallClient(id string) InstallResult {
 	transport := s.host.State().Transport
 	if transport == "" {
@@ -393,7 +390,7 @@ func (s *MCPService) InstallClient(id string) InstallResult {
 }
 
 // runCLI uses the agent's own command where it has one, because those files
-// hold state that a hand-written merge should not touch.
+// hold state a hand-written merge should not touch.
 func runCLI(entry clientEntry) InstallResult {
 	if _, err := exec.LookPath(entry.cli); err != nil {
 		return InstallResult{
@@ -430,8 +427,8 @@ func runCLI(entry clientEntry) InstallResult {
 	return InstallResult{OK: true, Message: text}
 }
 
-// mergeConfig reads the file, sets one key, and writes it back atomically. The
-// previous version is kept as .bak the first time so nothing is lost.
+// mergeConfig sets one key and writes atomically, keeping a .bak of the first
+// version so nothing is lost.
 func mergeConfig(entry clientEntry) error {
 	dir := filepath.Dir(entry.path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -457,8 +454,7 @@ func mergeConfig(entry clientEntry) error {
 			return err
 		}
 	case os.IsNotExist(err):
-		// A fresh file is the normal case for a client that has never been
-		// configured.
+		// A fresh file is normal for an unconfigured client.
 	default:
 		return fmt.Errorf("could not read %s: %w", shortPath(entry.path), err)
 	}
@@ -477,9 +473,8 @@ func mergeConfig(entry clientEntry) error {
 	return writeAtomic(entry.path, append(body, '\n'))
 }
 
-// appendTOML adds one table. TOML has no parser in the standard library and a
-// full rewrite would drop comments, so the entry is appended only when the
-// table is not already there.
+// appendTOML appends one table. Stdlib has no TOML parser and a rewrite would
+// drop comments, so append only when the table is absent.
 func appendTOML(entry clientEntry, raw []byte) error {
 	header := "[mcp_servers.spriteware]"
 	if strings.Contains(string(raw), header) {
@@ -512,8 +507,8 @@ func backup(path string, raw []byte) error {
 	return os.WriteFile(bak, raw, 0o644)
 }
 
-// writeAtomic writes beside the target and renames, so a crash cannot leave a
-// half-written config behind.
+// writeAtomic writes beside the target and renames, so a crash leaves no
+// half-written config.
 func writeAtomic(path string, body []byte) error {
 	tmp, err := os.CreateTemp(filepath.Dir(path), ".spriteware-*.tmp")
 	if err != nil {
@@ -560,8 +555,7 @@ func configDir() string {
 	return filepath.Join(homeDir(), ".config")
 }
 
-// workspaceDir is the folder the app was started from, which is the workspace
-// an editor would open.
+// workspaceDir is the folder the app was started from.
 func workspaceDir() string {
 	if wd, err := os.Getwd(); err == nil {
 		return wd
@@ -576,9 +570,8 @@ func zedSettings() string {
 	return filepath.Join(homeDir(), ".config", "zed", "settings.json")
 }
 
-// clineSettings finds the VS Code extension's storage. The install variant
-// (Stable, Insiders, portable) changes nothing here because the folder name
-// comes from APPDATA, which the editor set.
+// clineSettings finds the VS Code extension's storage. Stable, Insiders and
+// portable all resolve through APPDATA.
 func clineSettings() string {
 	if runtime.GOOS == "darwin" {
 		return filepath.Join(homeDir(), "Library", "Application Support", "Code", "User",
@@ -633,10 +626,9 @@ func stringOf(v any) string {
 // The skill
 // ---------------------------------------------------------------------------
 
-// describeSkill resolves where this agent looks for skills, at both scopes.
-//
-// With no folder chosen the project path stays relative, so the card says where
-// the skill goes instead of claiming a folder the user never picked.
+// describeSkill resolves where this agent looks for skills. With no folder
+// chosen the path stays relative, so the card says where the skill goes without
+// claiming a folder the user never picked.
 func describeSkill(id, projectDir string) ClientSkill {
 	project := ""
 	if projectDir != "" {
@@ -664,11 +656,9 @@ func describeSkill(id, projectDir string) ClientSkill {
 // give when an agent's directory is somewhere this app cannot write.
 func (s *MCPService) SkillText() string { return skill.Text() }
 
-// InstallSkill drops the skill folder into one agent's skills directory.
-//
-// A skill is a folder with a SKILL.md, so installing is a copy — there is no
-// config to merge and nothing of the user's to preserve, which is why this one
-// overwrites its own folder without asking.
+// InstallSkill drops the skill folder into one agent's skills directory. A
+// skill is just a folder with a SKILL.md, so installing is a copy: nothing of
+// the user's to preserve, which is why it overwrites its own folder.
 func (s *MCPService) InstallSkill(agent, scope string) InstallResult {
 	chosen := skill.ScopeProject
 	if scope == "global" {
@@ -702,10 +692,9 @@ func (s *MCPService) InstallSkill(agent, scope string) InstallResult {
 		where = "every project"
 	}
 
-	// One instruction, not three: the restart hint is the action that makes the
-	// skill appear, so the directory's caveat repeats it for most agents (Gemini
-	// says "run /skills reload" in both). Where an agent has no restart step -
-	// Kiro - the caveat is the only thing worth saying.
+	// One instruction, not three: the restart hint is what makes the skill appear,
+	// so the directory's note usually repeats it (Gemini says "run /skills reload"
+	// in both). Kiro has no restart step, so its note is the only advice.
 	advice := restartHint(agent)
 	if advice == "" {
 		advice = at.Note

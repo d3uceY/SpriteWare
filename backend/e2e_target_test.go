@@ -10,12 +10,9 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// The `target` in a reply must name the document the command acted on.
-//
-// It was attached from the active document, so aiming `draw` at one file with
-// `sprite` still reported the *other* file as the target — the one field a
-// caller has for answering "did this touch the right document" was wrong, and
-// wrong in the direction that looks fine (it names a real, open document).
+// The `target` in a reply must name the document the command acted on, not the
+// active one: that field is how a caller answers "did this touch the right
+// document".
 func TestE2ETargetNamesTheDocumentThatWasActedOn(t *testing.T) {
 	c := e2eClient(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)

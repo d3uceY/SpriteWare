@@ -78,7 +78,7 @@ func (s *Selector) Mode() Mode {
 	return s.mode
 }
 
-// Use switches the connection. Both links are created on demand, so a switch is
+// Use switches the connection. Links are created on demand, so a switch is
 // cheap and lossless. It never happens automatically.
 func (s *Selector) Use(mode Mode) Mode {
 	if mode != ModeLive {

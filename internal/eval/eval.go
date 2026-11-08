@@ -1,12 +1,9 @@
 // Package eval is the practice-task harness: it loads a benchmark, records one
-// attempt at it, and scores that attempt against the criteria the benchmark
-// declares.
+// attempt, and scores it against the criteria the benchmark declares.
 //
-// Three things stay apart on purpose, because they answer different questions.
-// A benchmark says what the task is. A run says what happened. A review says
-// whether it was any good. A criterion is either something a tool can answer or
-// explicitly marked `human: true`, so "did it follow the brief" never dissolves
-// into opinion, and "is it good" never hides inside a pass/fail.
+// A benchmark says what the task is, a run says what happened, a review says
+// whether it was any good. A criterion is either tool-answerable or marked
+// `human: true`, so "did it follow the brief" never dissolves into opinion.
 package eval
 
 import (
@@ -17,9 +14,9 @@ import (
 	"github.com/d3uceY/spriteware/internal/analyze"
 )
 
-// Check kinds. The vocabulary is closed: a benchmark cannot script a check, it
-// can only pick one of these and give it arguments. A check nobody implements
-// is a criterion that silently passes, which is worse than no check at all.
+// Check kinds. The vocabulary is closed: a benchmark picks one of these and
+// gives it arguments. A check nobody implements is a criterion that silently
+// passes, which is worse than no check at all.
 const (
 	CheckValidate   = "validate"
 	CheckSilhouette = "silhouette"
@@ -59,11 +56,10 @@ func VerdictScore(verdict string) int {
 	}
 }
 
-// Defects are the tick list from the rubric, plus layer-order: a layer stack
-// that hides part of the art is a defect a person can see and no automatic
-// check reports, and it is the one that ruins an animation made from a good
-// still. Each one names an automatic check where one exists, so a tick the
-// checker missed is a bug report.
+// Defects are the rubric's tick list, plus layer-order: a layer stack that
+// hides part of the art is one a person can see and no automatic check reports,
+// and it ruins an animation made from a good still. Each names an automatic
+// check where one exists, so a tick the checker missed is a bug report.
 var Defects = []string{
 	"detached", "clipped", "strays", "banding",
 	"palette-drift", "antialiasing", "unreadable",
@@ -102,9 +98,8 @@ type Check struct {
 	// validate: which analyze check to run (palette, gaps, strays, ...).
 	Check string `yaml:"check,omitempty" json:"check,omitempty"`
 	// validate: the worst severity that still passes. Default "error", so a
-	// check that only ever warns would pass forever unless the author says what
-	// counts. Palette drift is a warning, and a benchmark that cares about it
-	// says `failOn: warning`.
+	// check that only ever warns would pass forever. A benchmark that cares about
+	// palette drift says `failOn: warning`.
 	FailOn string `yaml:"failOn,omitempty" json:"failOn,omitempty"`
 
 	// canvas
@@ -239,8 +234,8 @@ func (b *Benchmark) Human() int {
 func (b *Benchmark) Automatic() int { return len(b.Criteria) - b.Human() }
 
 // Validate rejects a benchmark that would score something other than what it
-// says it scores. Every rule here is one an author could get wrong in a way
-// that only shows up as a criterion that always passes.
+// says it scores. Every rule here is something an author could get wrong in a
+// way that only shows up as a criterion that always passes.
 func (b *Benchmark) Validate() error {
 	if !slugPattern.MatchString(b.Slug) {
 		return fmt.Errorf("slug %q must be lowercase words joined by single hyphens", b.Slug)

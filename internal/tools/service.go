@@ -1,12 +1,12 @@
-// Package tools is the agent-facing surface: eleven grouped tools, each
-// with an op enum, and a batch array wherever a caller would otherwise loop.
+// Package tools is the agent-facing surface: grouped tools with an op enum,
+// and a batch array wherever a caller would otherwise loop.
 //
-// Two rules run through every handler here:
+// Two rules run through every handler:
 //
-//  1. Failures are tool *results*, never protocol errors. The model has to see
-//     the message to recover from it.
-//  2. Every result carries data. A one-line human summary is an extra field,
-//     never a replacement for the structure.
+//  1. Failures are tool results, never protocol errors. The model has to see
+//     the message to recover.
+//  2. Every result carries data. A summary is an extra field, never a
+//     replacement for the structure.
 package tools
 
 import (
@@ -34,8 +34,8 @@ type Service struct {
 	// scratchRoot is where dump directories are created. Empty means the OS temp
 	// directory.
 	scratchRoot string
-	// bridge reports the app's bridge state. It lives in the app, not here, so
-	// doctor asks rather than carrying a field that was always zero.
+	// bridge reports the app's bridge state; it lives in the app, so doctor asks
+	// rather than carrying a field that was always zero.
 	bridge func() (link.BridgeState, bool)
 }
 
@@ -126,10 +126,8 @@ func ok(structured any, summary string) *mcp.CallToolResult {
 	return mcp.NewToolResultStructured(structured, summary)
 }
 
-// fail turns any error into a tool result the model can read and act on.
-//
-// The code comes first so a client can branch on it, and the remediation is
-// always present: "not connected" with no next step is a dead end.
+// fail turns any error into a tool result the model can read and act on. The
+// code comes first so a client can branch on it; remediation must be present.
 func fail(err error) *mcp.CallToolResult {
 	e := protocol.AsError(err)
 	return mcp.NewToolResultError(e.Render())
@@ -168,9 +166,8 @@ func decodeArg(req mcp.CallToolRequest, key string, target any) error {
 
 // linkFor returns the connection the tools should use, starting it if needed.
 //
-// The reference project's most expensive defect: a separate "connect" tool that
-// could become unreachable and take every other tool with it. Here each tool
-// connects itself and reports failure only after trying.
+// No separate "connect" tool: it could become unreachable and take every other
+// tool with it, so each tool connects itself and reports failure after trying.
 func (s *Service) linkFor() (link.Link, error) { return s.links.Current() }
 
 // call runs one Lua command against the current link.
@@ -225,9 +222,6 @@ const coordinateNote = "Coordinates are 0-based and sprite-absolute: (0,0) is th
 const indexNote = "Layer indexes are 0-based with 0 at the bottom, and the same value is reported back. Frames are 1-based."
 
 // spriteNote lists every way a caller can name a document.
-//
-// The `id` that `sprite op=new` returns is one of them: it used to be accepted
-// by no other tool, so the round trip the reply invites was a dead end.
 const spriteNote = "Target sprite by absolute path, by the `id` a reply gave it, or by the name passed to `sprite op=new`. Omit to use the active one."
 
 // unknownOp lists what was expected.

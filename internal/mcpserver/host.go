@@ -54,8 +54,8 @@ type State struct {
 }
 
 // Host owns one HTTP listener: the loopback port it took, the transport behind
-// it, and a stop that is safe to call twice. The window and the CLI both serve
-// through it, so there is one lifecycle to get right.
+// it, and a stop that is safe to call twice. The window serves through it, so
+// there is one lifecycle to get right.
 type Host struct {
 	mu        sync.Mutex
 	srv       transportServer
@@ -120,9 +120,8 @@ func (h *Host) Start(o Options) (string, error) {
 	}()
 
 	// Start hands the address to a goroutine, so returning here would promise a
-	// URL before the socket accepts. A client that connects the instant this
-	// returns would get a refusal, which is what makes the difference between a
-	// test that passes by luck and one that does not flake.
+	// URL before the socket accepts; a client connecting instantly would get a
+	// refusal.
 	if err := waitForPort(addr, 2*time.Second); err != nil {
 		_ = h.Stop()
 		return "", err
@@ -130,8 +129,8 @@ func (h *Host) Start(o Options) (string, error) {
 	return url, nil
 }
 
-// waitForPort polls until something accepts on addr, so callers can treat a
-// successful Start as "a client can connect now".
+// waitForPort polls until something accepts on addr, so a successful Start means
+// a client can connect now.
 func waitForPort(addr string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for {

@@ -13,8 +13,7 @@ import (
 
 // SetupState is everything the first-run screen needs in one call.
 //
-// A detected path is a *suggestion*: nothing is written until the user agrees.
-// That separates "found Aseprite" from "will run this file".
+// A detected path is a suggestion: nothing is written until the user agrees.
 type SetupState struct {
 	Confirmed bool     `json:"confirmed"`
 	Path      string   `json:"path"`
@@ -50,17 +49,16 @@ func (s *MCPService) GetSetupState() SetupState {
 func (s *MCPService) DetectAseprite() SetupState {
 	s.mu.Lock()
 	if s.searching {
-		// A walk is already running - the one at launch, or an earlier press.
-		// A second one would fight it for the same folders and could clear its
-		// result when it finishes first.
+		// A walk is already running; a second would fight it for the same folders
+		// and could clear its result.
 		s.mu.Unlock()
 		return s.GetSetupState()
 	}
 	s.searching = true
 	s.mu.Unlock()
 
-	// Tell the window the walk has started before it starts: the scan has to be
-	// on screen while it is true, not arrive with the answer.
+	// Tell the window the walk started before it does: the scan belongs on
+	// screen while it is true, not arriving with the answer.
 	s.pushStatus()
 
 	found, searched := config.SearchAsepriteDeep(config.WalkBudget())
@@ -77,9 +75,8 @@ func (s *MCPService) DetectAseprite() SetupState {
 
 // BrowseAsepritePath opens the platform's file picker on the Aseprite binary.
 //
-// Picking the file is already the agreement, so this one confirms immediately;
-// only a path the app *found* has to be confirmed in a dialog, because that is
-// a guess the user never made. A cancelled picker returns the state unchanged.
+// A picked file is already the agreement, so it confirms immediately; only a
+// path the app found needs a dialog. A cancelled picker changes nothing.
 func (s *MCPService) BrowseAsepritePath() (SetupState, error) {
 	s.mu.Lock()
 	app := s.app
@@ -95,13 +92,13 @@ func (s *MCPService) BrowseAsepritePath() (SetupState, error) {
 		SetButtonText("Use this").
 		CanChooseFiles(true).
 		CanChooseDirectories(false).
-		// A source build or a portable copy is often not named *.exe, so the
-		// filter guides without locking anybody out of their own binary.
+		// A source build or portable copy is often not named *.exe, so the filter
+		// guides without locking anyone out of their own binary.
 		AddFilter(label, pattern).
 		AllowsOtherFileTypes(true)
 
-	// Open where the current program is, so a user replacing it starts in the
-	// folder they are replacing from.
+	// Open where the current program is, so a replacement starts in the folder
+	// it is replacing.
 	if dir := filepath.Dir(strings.TrimSpace(s.cfg.Get().AsepritePath)); dir != "" && dir != "." {
 		dialog = dialog.SetDirectory(dir)
 	}
@@ -109,8 +106,7 @@ func (s *MCPService) BrowseAsepritePath() (SetupState, error) {
 	chosen, err := dialog.PromptForSingleSelection()
 	if err != nil {
 		// Escape is not a failure. Wails reports a dismissal as an error, and
-		// showing it would put "cancelled by user" on a screen where the user
-		// already knows what they did.
+		// showing it would surface "cancelled by user" to a user who knows.
 		if isCancelled(err) {
 			return s.GetSetupState(), nil
 		}
@@ -127,8 +123,7 @@ func isCancelled(err error) bool {
 	return err != nil && strings.Contains(strings.ToLower(err.Error()), "cancel")
 }
 
-// asepriteFilter is the dialog's file filter: the program's own name on each
-// platform rather than a guessed folder.
+// asepriteFilter is the dialog's file filter: the program's name per platform.
 func asepriteFilter() (string, string) {
 	if runtime.GOOS == "windows" {
 		return "Aseprite", "*.exe"
@@ -138,7 +133,7 @@ func asepriteFilter() (string, string) {
 
 // ConfirmAsepritePath is the user saying "yes, that is the one".
 //
-// The path is checked, not trusted: a folder or a typo fails somewhere else
+// The path is checked, not trusted: a folder or typo would fail elsewhere
 // looking like a bug.
 func (s *MCPService) ConfirmAsepritePath(path string) (SetupState, error) {
 	path = strings.TrimSpace(path)
@@ -174,9 +169,8 @@ func (s *MCPService) ConfirmAsepritePath(path string) (SetupState, error) {
 
 // ForgetAsepritePath sends the user back to the setup screen.
 //
-// The candidate goes with it: someone changing the program is not looking for
-// the one they just rejected, and leaving it would pop the same suggestion over
-// the screen they asked for.
+// The candidate goes too: someone changing the program is not looking for the
+// one they just rejected.
 func (s *MCPService) ForgetAsepritePath() (SetupState, error) {
 	if _, err := s.cfg.Update(func(c *config.Config) {
 		c.AsepritePath = ""
@@ -201,7 +195,7 @@ func (s *MCPService) ListTools() []tools.ToolInfo {
 }
 
 // startupDetection looks in the usual places, then walks in the background only
-// if that found nothing. Launch never waits, and nothing is written.
+// if that found nothing. Launch never waits and nothing is written.
 func (s *MCPService) startupDetection() {
 	if s.cfg.Get().AsepritePathConfirmed {
 		return

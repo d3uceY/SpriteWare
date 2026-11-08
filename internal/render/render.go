@@ -67,10 +67,9 @@ type ASCIIOptions struct {
 
 // ASCII renders an image one character per pixel.
 //
-// Glyphs bind to palette entries, not to colours in this picture, so B is the
-// same colour on every frame. Off-palette colours are ordered by hex rather than
-// by first appearance, so an unchanged picture always renders the same
-// characters and two grids can be compared line by line.
+// Glyphs bind to palette entries, not to colours in this image, so B is the same
+// colour on every frame. Off-palette colours are ordered by hex, so an unchanged
+// picture renders identically and two grids compare line by line.
 func ASCII(img *image.NRGBA, palette []craft.RGB, opts ASCIIOptions) (Grid, error) {
 	b := img.Bounds()
 	if !opts.Region.Empty() {
@@ -319,10 +318,9 @@ func over(src, dst color.NRGBA) color.NRGBA {
 	return color.NRGBA{R: mix(src.R, dst.R), G: mix(src.G, dst.G), B: mix(src.B, dst.B), A: 255}
 }
 
-// Filmstrip lays frames side by side with a one-pixel separator.
-//
-// A grid is not a filmstrip: a cycle that wraps onto a second row cannot be
-// judged, and a vision model reads only a GIF's first frame.
+// Filmstrip lays frames side by side with a one-pixel separator. A grid of frames
+// cannot show a cycle that wraps onto a second row, and a vision model reads only
+// a GIF's first frame.
 func Filmstrip(frames []*image.NRGBA, gap int) *image.NRGBA {
 	if len(frames) == 0 {
 		return image.NewNRGBA(image.Rect(0, 0, 1, 1))

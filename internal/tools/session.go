@@ -15,10 +15,9 @@ import (
 	"github.com/d3uceY/spriteware/internal/protocol"
 )
 
-// doctorProbeTimeout is how long doctor waits for its ping.
-//
-// An attached but unresponsive extension used to stall the report for the full
-// call timeout, which made "why is this broken" another thing to wait on.
+// doctorProbeTimeout is how long doctor waits for its ping. An attached but
+// unresponsive extension would otherwise stall the report for the whole call
+// timeout.
 const doctorProbeTimeout = 3 * time.Second
 
 // DoctorReport answers "why is this not working" without leaving the tools.
@@ -108,9 +107,7 @@ func (s *Service) registerDoctor(srv *server.MCPServer) {
 				report.Features = hello.Features
 			}
 			// Live mode has no Hello on the link; the script version arrives over
-			// the bridge instead. Without this the summary read "live (script )",
-			// so there was no way to see which script was running — and a stale
-			// one is what a session spent an hour chasing.
+			// the bridge instead, so the summary can name the script in use.
 			if report.ExtensionVersion == "" && report.Bridge.Connected {
 				report.ExtensionVersion = report.Bridge.Version
 				report.AsepriteVersion = report.Bridge.Aseprite
@@ -146,10 +143,9 @@ func doctorDirective(r DoctorReport) string {
 	return "Call doctor again after changing the settings."
 }
 
-// doctorRemediation writes the next step for the mode the caller is in.
-//
-// The reference project told headless users to "open Aseprite with the
-// extension installed", advice that cannot work in that mode.
+// doctorRemediation writes the next step for the mode the caller is in. Headless
+// advice must not say "open Aseprite with the extension": that cannot work in
+// that mode.
 func doctorRemediation(mode string, err error, found bool) string {
 	e := protocol.AsError(err)
 	switch e.Code {
@@ -238,10 +234,9 @@ func (s *Service) registerSprite(srv *server.MCPServer) {
 			return ok(out, "created a new document"), nil
 
 		case "open", "activate":
-			// activate also accepts the id or name a reply gave a document, and
-			// resolveOutput would turn that into a path no document answers to.
-			// The resolved path goes as `path`, what the caller typed goes as
-			// `sprite`, and the Lua tries both.
+			// activate also accepts an id or name, which resolveOutput would turn
+			// into a path no document answers to. The resolved path goes as `path`,
+			// what the caller typed as `sprite`, and the Lua tries both.
 			typed := strings.TrimSpace(req.GetString("path", ""))
 			if typed == "" {
 				typed = strings.TrimSpace(req.GetString("sprite", ""))

@@ -31,14 +31,9 @@ type MCPStatus struct {
 	LastError       string `json:"lastError,omitempty"`
 }
 
-// transportServer is gone from here: the socket lives in mcpserver.Host, which
-// the CLI uses too. This service keeps the bookkeeping the window needs.
-
-// MCPService exposes the in-process MCP server and settings to the frontend. It
-// binds to 127.0.0.1, so only local clients reach it.
-//
-// Method names carry a Server or Settings suffix so they never collide with the
-// Wails lifecycle hooks.
+// MCPService exposes the in-process MCP server and settings to the frontend,
+// bound to 127.0.0.1. Method names carry a Server or Settings suffix so they
+// never collide with the Wails lifecycle hooks.
 type MCPService struct {
 	cfg   *config.Store
 	links *link.Selector
@@ -83,8 +78,8 @@ func (s *MCPService) ServiceStartup(_ context.Context, _ application.ServiceOpti
 	s.app = application.Get()
 	s.mu.Unlock()
 
-	// Look for Aseprite now, so the first screen has an answer. The result is
-	// only a suggestion until the user agrees.
+	// Look for Aseprite now so the first screen has an answer; it stays a
+	// suggestion until the user agrees.
 	s.startupDetection()
 	return nil
 }
@@ -115,8 +110,7 @@ func (s *MCPService) StartServer(port int, transport string) (string, error) {
 		return state.URL, nil
 	}
 
-	// Live mode needs the bridge listening before the first call. Starting it
-	// here makes "app running" and "extension can connect" one statement.
+	// Live mode needs the bridge before the first call.
 	if err := s.StartBridge(); err != nil {
 		slog.Warn("bridge did not start", "err", err)
 	}
@@ -156,10 +150,8 @@ func (s *MCPService) StopServer() error {
 	return nil
 }
 
-// StartBridge listens for the Aseprite extension and for MCP clients.
-//
-// A failure is reported, not fatal: a taken port means another copy's bridge is
-// up.
+// StartBridge listens for the Aseprite extension and MCP clients. A failure is
+// reported, not fatal: a taken port means another copy's bridge is up.
 func (s *MCPService) StartBridge() error {
 	s.mu.Lock()
 	if s.bridge != nil {
@@ -168,8 +160,8 @@ func (s *MCPService) StartBridge() error {
 	}
 	port := s.cfg.Get().BridgePort
 	b := link.NewBridge()
-	// Aseprite coming or going is the one thing the panel cannot learn from a
-	// button press, so the bridge reports it.
+	// Aseprite connecting or disconnecting cannot come from a button press, so
+	// the bridge reports it.
 	b.OnStateChange(func(link.BridgeState) { s.pushStatus() })
 	s.bridge = b
 	s.mu.Unlock()
@@ -181,9 +173,8 @@ func (s *MCPService) StartBridge() error {
 		return err
 	}
 
-	// The bridge port is baked into the installed script, so both are written
-	// together: a port that moves without the script is a live mode that goes
-	// quiet with no error.
+	// The port is baked into the installed script, so both are written together:
+	// a moved port without the script goes quiet with no error.
 	if result, err := aseprite.Install(port); err != nil {
 		slog.Warn("could not install the Aseprite extension", "err", err)
 	} else {
@@ -224,8 +215,8 @@ func (s *MCPService) statusLocked() MCPStatus {
 		ToolCount:  mcpserver.ToolCount(),
 		LastError:  state.LastError,
 	}
-	// Stopped there is no live port, but the configured one beats 0: it is the
-	// number the user would type.
+	// Stopped there is no live port; the configured one is the number the user
+	// would type.
 	if st.Port <= 0 {
 		st.Port = cfg.Port
 	}
@@ -236,7 +227,7 @@ func (s *MCPService) statusLocked() MCPStatus {
 }
 
 // SwitchMode changes the connection and remembers it, so a restart opens in the
-// mode the user picked. Both links stay alive, so nothing is lost.
+// chosen mode. Both links stay alive.
 func (s *MCPService) SwitchMode(mode string) MCPStatus {
 	next := config.Config{Mode: config.Mode(mode)}.Normalize().Mode
 	s.links.Use(next)

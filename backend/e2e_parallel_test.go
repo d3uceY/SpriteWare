@@ -9,16 +9,8 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// Two dumps in flight must not read each other's manifest.
-//
-// The live and headless links cached ONE scratch directory per link, so parallel
-// look/validate/export calls wrote the same dump.json and cel_N_M.png names and
-// read back a half-written file:
-//
-//	internal: decode dump: unexpected end of JSON input
-//
-// A single request hides it, which is why it survived until two were issued at
-// once.
+// Two dumps in flight must not read each other's manifest. One request hides the
+// bug, which is why it survived until two were issued at once.
 func TestE2EParallelReadsDoNotCorruptTheDump(t *testing.T) {
 	c := e2eClient(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)

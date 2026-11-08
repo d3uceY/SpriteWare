@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-// The short list misses portable copies, Steam libraries on other drives and
-// hand-made folders, so the search walks where programs live and looks for the
-// binary beside its companions.
+// The short list misses portable copies and Steam libraries on other drives, so
+// the search walks where programs live and identifies a folder by the files
+// beside the binary.
 const (
 	// maxDepth keeps a walk off a user's whole drive. Three levels covers
 	// Program Files/Vendor/App and .app/Contents.
@@ -216,9 +216,8 @@ func searchRoots() []string {
 			filepath.Join(os.Getenv("ProgramData"), "chocolatey", "lib"),
 		}
 		roots = append(roots, steamLibraryRoots()...)
-		// Portable and source builds never reach Program Files: they unzip a
-		// few folders deep into Downloads, e.g.
-		// Downloads/Aseprite-v1.3.18.6-Source/build/bin/aseprite.exe.
+		// Portable and source builds unzip a few folders deep into Downloads,
+		// e.g. Downloads/Aseprite-v1.3.18.6-Source/build/bin/aseprite.exe.
 		if home != "" {
 			roots = append(roots,
 				filepath.Join(home, "Downloads"),

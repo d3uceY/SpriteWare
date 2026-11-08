@@ -53,9 +53,8 @@ func TestTheChosenProjectFolderIsUsedForVSCodeConfig(t *testing.T) {
 	}
 }
 
-// No folder chosen means no folder, not the working directory. From a shortcut
-// the working directory is the install folder, so inheriting it wrote a skill
-// where no agent reads and showed a path the user never picked.
+// No folder chosen means no folder, not the working directory: from a shortcut
+// that is the install folder, where a skill is never read.
 func TestAnUnchosenProjectFolderIsEmptyNotTheWorkingDirectory(t *testing.T) {
 	workingDir, err := os.Getwd()
 	if err != nil {
@@ -138,7 +137,7 @@ func mustGetwd(t *testing.T) string {
 }
 
 // A result line replaces the card's own caveat, so it must not repeat it:
-// Gemini's restart hint and its directory note both said "run /skills reload".
+// Gemini's restart hint and its note both said "run /skills reload".
 func TestInstallingASkillSaysOneInstruction(t *testing.T) {
 	isolate(t)
 	project := t.TempDir()

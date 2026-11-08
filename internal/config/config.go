@@ -61,8 +61,7 @@ type Config struct {
 	// BridgePort is where the Aseprite extension dials in, live mode only.
 	BridgePort int `json:"bridgePort,omitempty"`
 	// ProjectPath is the folder "This project" means. Empty means the launch
-	// folder, which is a guess: from a shortcut that is the install directory
-	// or System32, where a skill is never read.
+	// folder, which from a shortcut is the install directory or System32.
 	ProjectPath string `json:"projectPath,omitempty"`
 	// StartMCPOnLaunch opens the MCP endpoint as soon as the app starts.
 	StartMCPOnLaunch bool `json:"startMcpOnLaunch,omitempty"`
@@ -153,16 +152,14 @@ func LoadFrom(path string) (*Store, error) {
 	raw, err := os.ReadFile(path)
 	switch {
 	case err == nil:
-		// A UTF-8 BOM is what Notepad and PowerShell write, and encoding/json
-		// refuses it. Without this the config looks corrupt and the user's
-		// settings vanish with no error they can see.
+		// Notepad and PowerShell write a UTF-8 BOM, which encoding/json refuses;
+		// without this the config looks corrupt and settings vanish.
 		raw = bytes.TrimPrefix(raw, []byte{0xEF, 0xBB, 0xBF})
 		var cfg Config
 		if jsonErr := json.Unmarshal(raw, &cfg); jsonErr != nil {
 			_ = os.Rename(path, strings.TrimSuffix(path, ".json")+".bad.json")
-			// The file is moved aside *and replaced*, which is what the package
-			// doc promises. Without the write, Load returns defaults but leaves no
-			// file, and every caller that looks for one reports a missing config.
+			// Moved aside *and replaced*: without the write, Load returns defaults
+			// but leaves no file, and callers report a missing config.
 			if err := writeFile(path, s.cfg); err != nil {
 				return s, err
 			}

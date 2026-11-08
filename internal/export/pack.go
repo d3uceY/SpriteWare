@@ -196,9 +196,8 @@ type AtlasBox struct {
 	Height int `json:"height"`
 }
 
-// SheetOptions describes one sheet export. A struct rather than six positional
-// arguments, so adding one more thing to carry through does not touch every
-// call site.
+// SheetOptions describes one sheet export. A struct so adding one more thing to
+// carry through does not touch every call site.
 type SheetOptions struct {
 	Frames    []*image.NRGBA
 	Durations []int
@@ -212,9 +211,9 @@ type SheetOptions struct {
 // Sheet writes the frames into one packed PNG plus a JSON atlas, and returns
 // both paths with the atlas.
 //
-// One row with `padding` transparent pixels between frames. Not decoration: at
-// non-integer zoom a GPU samples past a frame's edge into its neighbour, which
-// shows as a one-pixel line along the sprite.
+// One row with `padding` transparent pixels between frames: at non-integer zoom
+// a GPU samples past a frame's edge into its neighbour, which shows as a
+// one-pixel line along the sprite.
 func Sheet(opts SheetOptions) (string, string, Atlas, error) {
 	frames, durations, tags, path := opts.Frames, opts.Durations, opts.Tags, opts.Path
 	scale, padding := opts.Scale, opts.Padding

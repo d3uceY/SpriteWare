@@ -92,8 +92,8 @@ func TestMCPEndpointServesTheToolList(t *testing.T) {
 	}
 }
 
-// With no Aseprite, doctor must still answer and say what to do: that failure
-// took out every other tool in the reference project.
+// With no Aseprite, doctor must still answer and say what to do: one broken
+// doctor must never take out every other tool.
 func TestDoctorAnswersWithNoAseprite(t *testing.T) {
 	svc := newTestService(t)
 

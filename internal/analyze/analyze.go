@@ -1,7 +1,7 @@
 // Package analyze checks a doc.Dump and reports concrete, located problems.
 //
 // Nothing here needs Aseprite: a broken sprite is a dump plus a PNG, so the
-// checks are fast and unit-testable, and all three front ends share them.
+// checks are fast, unit-testable, and shared by the server and the app.
 package analyze
 
 import (
@@ -366,10 +366,8 @@ func cornersAgree(img *image.NRGBA) bool {
 // ---------------------------------------------------------------------------
 
 type accumulator struct {
-	findings []Finding
-	metrics  Metrics
-	// perTarget is the frame a per-frame metric came from, so maxima need no
-	// second pass.
+	findings       []Finding
+	metrics        Metrics
 	seenComponents bool
 	seenBanding    bool
 	heights        []int

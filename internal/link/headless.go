@@ -53,11 +53,9 @@ type HeadlessOptions struct {
 	Log func(format string, args ...any)
 }
 
-// Headless is one long-lived `aseprite -b` process.
-//
-// Long-lived on purpose: a process per call would reload the document and lose
-// the active layer, frame and undo history. One process keeps documents in
-// memory like the editor does.
+// Headless is one long-lived `aseprite -b` process. A process per call would
+// reload the document and lose the active layer, frame and undo history; one
+// process keeps documents in memory like the editor does.
 type Headless struct {
 	opts HeadlessOptions
 
@@ -189,8 +187,8 @@ func (h *Headless) Call(ctx context.Context, cmd string, args any, out any) erro
 
 // Dump reads the sprite into memory.
 func (h *Headless) Dump(ctx context.Context, filter *doc.Filter) (*doc.Dump, error) {
-	// One directory per call, the same rule as the live link: a shared folder let
-	// two dumps overwrite each other's manifest and cel PNGs.
+	// One directory per call, as in the live link: a shared folder let two dumps
+	// overwrite each other's manifest and cel PNGs.
 	dir, err := os.MkdirTemp("", "spriteware-dump-")
 	if err != nil {
 		return nil, protocol.AsError(err)
