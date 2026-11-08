@@ -1,0 +1,363 @@
+name: Release
+
+# A stable tag is the single source of truth for the version. Pushing vX.Y.Z
+# stamps that number into every artifact, builds all three platforms, and
+# publishes a GitHub Release. A tag whose build fails is deleted, so a broken
+# tag can be re-pushed once fixed.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      is_stable: ${{ steps.check.outputs.is_stable }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Validate the tag is a stable release
+        id: check
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "is_stable=true" >> "$GITHUB_OUTPUT"
+            echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_stable=false" >> "$GITHUB_OUTPUT"
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "::notice::$TAG is not a stable vX.Y.Z tag; nothing will be built."
+          fi
+
+  test:
+    runs-on: ubuntu-24.04
+    needs: validate-tag
+    if: needs.validate-tag.outputs.is_stable == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install the GTK4 + WebKitGTK build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential pkg-config \
+            libgtk-4-dev libwebkitgtk-6.0-dev libayatana-appindicator3-dev
+
+      - name: Install the Wails CLI that matches go.mod
+        run: |
+          VERSION=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
+          go install "github.com/wailsapp/wails/v3/cmd/wails3@${VERSION}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      # The window embeds frontend/dist with //go:embed, so the frontend has to
+      # exist before the Go packages will even compile.
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Generate bindings
+        run: wails3 generate bindings -f '-tags production' -clean=true -time-type=Date
+
+      - name: Build the frontend
+        run: npm run build
+        working-directory: frontend
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+  build-windows-amd64:
+    runs-on: windows-latest
+    needs: [validate-tag, test]
+    if: needs.validate-tag.outputs.is_stable == 'true'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          choco install nsis -y
+          $candidates = @(
+            "$env:ChocolateyInstall\bin",
+            "${env:ProgramFiles(x86)}\NSIS",
+            "$env:ProgramFiles\NSIS"
+          )
+          foreach ($candidate in $candidates) {
+            if (Test-Path $candidate) {
+              Add-Content -Path $env:GITHUB_PATH -Value $candidate
+              $env:PATH = "$candidate;$env:PATH"
+            }
+          }
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) {
+            throw "makensis not found after NSIS installation"
+          }
+
+      - name: Install the Wails CLI that matches go.mod
+        run: |
+          VERSION=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
+          go install "github.com/wailsapp/wails/v3/cmd/wails3@${VERSION}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Stamp the tag into the build metadata
+        run: go run ./cmd/stamp "${GITHUB_REF_NAME}"
+
+      # One task builds the frontend, regenerates the bindings and the .syso,
+      # compiles the exe and runs makensis.
+      - name: Build the portable exe and the NSIS installer
+        env:
+          CGO_ENABLED: "0"
+          GOOS: windows
+          GOARCH: amd64
+        run: wails3 task windows:create:nsis:installer ARCH=amd64
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist
+          cp bin/spriteware.exe dist/SpriteWare-windows-amd64.exe
+          cp bin/spriteware-amd64-installer.exe dist/SpriteWare-windows-amd64-installer.exe
+          ls -lh dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-windows-amd64
+          path: dist/*
+          if-no-files-found: error
+
+  build-macos:
+    runs-on: macos-latest
+    needs: [validate-tag, test]
+    if: needs.validate-tag.outputs.is_stable == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install the Wails CLI that matches go.mod
+        run: |
+          VERSION=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
+          go install "github.com/wailsapp/wails/v3/cmd/wails3@${VERSION}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Stamp the tag into the build metadata
+        run: go run ./cmd/stamp "${GITHUB_REF_NAME}"
+
+      # universal builds arm64 and amd64 separately and lipos them, so one DMG
+      # runs on every Mac.
+      - name: Build the universal .app bundle
+        run: wails3 task darwin:package:universal
+
+      - name: Build the DMG
+        run: |
+          mkdir -p dist/stage
+          ditto bin/spriteware.app "dist/stage/SpriteWare.app"
+          ln -s /Applications dist/stage/Applications
+          hdiutil create -volname "SpriteWare" -srcfolder dist/stage \
+            -ov -format UDZO "dist/SpriteWare-macos-universal.dmg"
+          rm -rf dist/stage
+          ls -lh dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-macos
+          path: dist/*.dmg
+          if-no-files-found: error
+
+  build-linux-amd64:
+    runs-on: ubuntu-24.04
+    needs: [validate-tag, test]
+    if: needs.validate-tag.outputs.is_stable == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install the GTK4 + WebKitGTK build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential pkg-config \
+            libgtk-4-dev libwebkitgtk-6.0-dev libayatana-appindicator3-dev
+
+      - name: Install the Wails CLI that matches go.mod
+        run: |
+          VERSION=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
+          go install "github.com/wailsapp/wails/v3/cmd/wails3@${VERSION}"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Stamp the tag into the build metadata
+        run: go run ./cmd/stamp "${GITHUB_REF_NAME}"
+
+      - name: Build the binary and the .deb
+        env:
+          CGO_ENABLED: "1"
+          GOOS: linux
+          GOARCH: amd64
+          # nfpm.yaml fills its maintainer field from these.
+          GIT_COMMITTER_NAME: d3uceY
+          GIT_COMMITTER_EMAIL: d3ucey@users.noreply.github.com
+        run: wails3 task linux:create:deb ARCH=amd64
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist
+          cp bin/spriteware dist/SpriteWare-linux-amd64
+          cp bin/spriteware.deb dist/SpriteWare-linux-amd64.deb
+          ls -lh dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-linux-amd64
+          path: dist/*
+          if-no-files-found: error
+
+  # A tag that produced a broken build is not a release: delete it so the same
+  # version can be pushed again after the fix. Branch protections are untouched.
+  cleanup-tag-on-failure:
+    runs-on: ubuntu-latest
+    needs:
+      - test
+      - build-windows-amd64
+      - build-macos
+      - build-linux-amd64
+    if: |
+      always() && (
+        needs.test.result == 'failure' ||
+        needs.build-windows-amd64.result == 'failure' ||
+        needs.build-macos.result == 'failure' ||
+        needs.build-linux-amd64.result == 'failure'
+      )
+    permissions:
+      contents: write
+    steps:
+      - name: Delete the tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/tags/${GITHUB_REF_NAME}" \
+            && echo "deleted ${GITHUB_REF_NAME}" \
+            || echo "tag ${GITHUB_REF_NAME} was already gone"
+
+  release:
+    runs-on: ubuntu-latest
+    needs:
+      - validate-tag
+      - build-windows-amd64
+      - build-macos
+      - build-linux-amd64
+    if: needs.validate-tag.outputs.is_stable == 'true'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Verify every artifact landed
+        run: |
+          cd dist
+          missing=0
+          for f in \
+            SpriteWare-windows-amd64-installer.exe \
+            SpriteWare-windows-amd64.exe \
+            SpriteWare-macos-universal.dmg \
+            SpriteWare-linux-amd64 \
+            SpriteWare-linux-amd64.deb; do
+            if [ ! -f "$f" ]; then
+              echo "::error::missing $f"
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Write SHA-256 checksums
+        run: |
+          cd dist
+          sha256sum SpriteWare-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Write the release body
+        env:
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          {
+            echo "## Downloads"
+            echo ""
+            echo "| Platform | File | Note |"
+            echo "|---|---|---|"
+            echo "| Windows (installer) | [SpriteWare-windows-amd64-installer.exe](https://github.com/${REPO}/releases/download/${TAG}/SpriteWare-windows-amd64-installer.exe) | SmartScreen will warn - see below |"
+            echo "| Windows (portable) | [SpriteWare-windows-amd64.exe](https://github.com/${REPO}/releases/download/${TAG}/SpriteWare-windows-amd64.exe) | |"
+            echo "| macOS (Apple Silicon + Intel) | [SpriteWare-macos-universal.dmg](https://github.com/${REPO}/releases/download/${TAG}/SpriteWare-macos-universal.dmg) | Gatekeeper will warn - see below |"
+            echo "| Linux (binary) | [SpriteWare-linux-amd64](https://github.com/${REPO}/releases/download/${TAG}/SpriteWare-linux-amd64) | \`chmod +x\` it first |"
+            echo "| Linux (.deb) | [SpriteWare-linux-amd64.deb](https://github.com/${REPO}/releases/download/${TAG}/SpriteWare-linux-amd64.deb) | Ubuntu 24.04+ / Debian 13+ |"
+            echo ""
+            echo "Checksums are in \`SHA256SUMS.txt\`. Every build reports \`${VERSION}\` on the Server screen, and the app itself will offer this release the next time an older copy starts."
+            echo ""
+            echo "## First run"
+            echo ""
+            echo "The builds are unsigned, so the OS will ask before it trusts them."
+            echo ""
+            echo "- **Windows:** SmartScreen -> **More info** -> **Run anyway**."
+            echo "- **macOS:** right-click the app -> **Open** -> **Open** again, or System Settings -> Privacy & Security -> **Open Anyway**."
+            echo "- **Linux:** the .deb needs GTK4 and WebKitGTK 6.0 (\`libgtk-4-1\`, \`libwebkitgtk-6.0-4\`)."
+          } > "${RUNNER_TEMP}/release-body.md"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: SpriteWare ${{ github.ref_name }}
+          body_path: ${{ runner.temp }}/release-body.md
+          generate_release_notes: true
+          append_body: true
+          files: dist/*
