@@ -74,9 +74,6 @@ type Headless struct {
 	started     chan struct{}
 	startErr    error
 
-	// scratchDir holds the PNGs Aseprite writes during a dump; removed on close.
-	scratchDir string
-
 	// luaCleanup removes the unpacked Lua folder, or does nothing when the caller
 	// brought its own.
 	luaCleanup func()
@@ -192,31 +189,19 @@ func (h *Headless) Call(ctx context.Context, cmd string, args any, out any) erro
 
 // Dump reads the sprite into memory.
 func (h *Headless) Dump(ctx context.Context, filter *doc.Filter) (*doc.Dump, error) {
-	dir, err := h.scratch()
+	// One directory per call, the same rule as the live link: a shared folder let
+	// two dumps overwrite each other's manifest and cel PNGs.
+	dir, err := os.MkdirTemp("", "spriteware-dump-")
 	if err != nil {
 		return nil, protocol.AsError(err)
 	}
+	defer os.RemoveAll(dir)
+
 	var out dumpResult
 	if err := h.Call(ctx, "doc.dump", dumpArgs{Filter: filter, Sprite: spriteOf(filter), Dir: dir}, &out); err != nil {
 		return nil, err
 	}
 	return out.toDump()
-}
-
-// scratch returns the folder the script writes cel PNGs into, created on first
-// use: the script has no writable idea of "here".
-func (h *Headless) scratch() (string, error) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if h.scratchDir != "" {
-		return h.scratchDir, nil
-	}
-	dir, err := os.MkdirTemp("", "spriteware-dump-")
-	if err != nil {
-		return "", err
-	}
-	h.scratchDir = dir
-	return dir, nil
 }
 
 // Close stops the process, discarding open documents. Only for shutdown.
@@ -226,17 +211,12 @@ func (h *Headless) Close() error {
 	cmd := h.cmd
 	stdin := h.stdin
 	h.stdin = nil
-	scratch := h.scratchDir
-	h.scratchDir = ""
 	luaCleanup := h.luaCleanup
 	h.luaCleanup = nil
 	pending := h.pending
 	h.pending = map[string]chan *protocol.Reply{}
 	h.mu.Unlock()
 
-	if scratch != "" {
-		defer os.RemoveAll(scratch)
-	}
 	if luaCleanup != nil {
 		defer luaCleanup()
 	}

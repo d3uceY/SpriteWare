@@ -348,8 +348,6 @@ type Live struct {
 	pending map[string]chan *protocol.Reply
 	seq     uint64
 	state   BridgeState
-	// scratchDir holds the PNGs Aseprite writes during a dump; removed on close.
-	scratchDir string
 }
 
 // NewLive builds a live link for a bridge port. It connects on the first call.
@@ -540,12 +538,16 @@ func (l *Live) Call(ctx context.Context, cmd string, args any, out any) error {
 
 // Dump reads the sprite through the window.
 func (l *Live) Dump(ctx context.Context, filter *doc.Filter) (*doc.Dump, error) {
-	// The script has no writable idea of "here", so it is handed a folder, the
-	// same way the headless runner is.
-	dir, err := l.scratch()
+	// One directory per call, removed once it is read back. A cached folder per
+	// link meant two dumps in flight wrote the same dump.json and cel_N_M.png
+	// names, so a concurrent look/validate/export read a half-written file:
+	// "decode dump: unexpected end of JSON input".
+	dir, err := os.MkdirTemp("", "spriteware-live-")
 	if err != nil {
 		return nil, protocol.AsError(err)
 	}
+	defer os.RemoveAll(dir)
+
 	var out dumpResult
 	if err := l.Call(ctx, "doc.dump", dumpArgs{Filter: filter, Sprite: spriteOf(filter), Dir: dir}, &out); err != nil {
 		return nil, err
@@ -553,33 +555,12 @@ func (l *Live) Dump(ctx context.Context, filter *doc.Filter) (*doc.Dump, error) 
 	return out.toDump()
 }
 
-// scratch returns the folder the script writes cel PNGs into, created on first
-// use.
-func (l *Live) scratch() (string, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.scratchDir != "" {
-		return l.scratchDir, nil
-	}
-	dir, err := os.MkdirTemp("", "spriteware-live-")
-	if err != nil {
-		return "", err
-	}
-	l.scratchDir = dir
-	return dir, nil
-}
-
 // Close drops the bridge connection.
 func (l *Live) Close() error {
 	l.mu.Lock()
 	conn := l.conn
 	l.conn = nil
-	scratch := l.scratchDir
-	l.scratchDir = ""
 	l.mu.Unlock()
-	if scratch != "" {
-		defer os.RemoveAll(scratch)
-	}
 	if conn != nil {
 		return conn.CloseNow()
 	}
