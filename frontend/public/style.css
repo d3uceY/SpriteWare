@@ -119,15 +119,15 @@ pre {
   image-rendering: pixelated;
 }
 
-/* The mascot is 32x32 art on a 12-frame strip: nine idle frames, a 400ms
-   hold, then a three-frame blink. All four sheets share the frame count and
+/* The mascot is 32x32 art on a 12-frame strip: an eased settle, a 480ms rest
+   hold, then a three-frame blink. All the sheets share the frame count and
    the timing, so a state swap never desyncs the loop. */
 .px--mascot {
   --w: 32;
   --h: 32;
   --n: 12;
   background-image: url("/sprites/spriteware-idle.png");
-  animation: mascot-idle 1.41s steps(1, end) infinite;
+  animation: mascot-idle 1.54s steps(1, end) infinite;
 }
 
 .px--mascot-live {
@@ -200,55 +200,56 @@ pre {
   background-image: url("/sprites/icon-stop.png");
 }
 
-/* Frame 9 holds for 400ms and the blink frames run at 70ms, so the stops are
-   the sheet's own durations (100/100/100/100/100/100/100/100/400/70/70/70ms)
-   as percentages of the 1410ms loop. */
+/* The stops are the sheet's own durations
+   (120/90/90/110/140/140/80/80/480/70/110/60ms) as percentages of the 1540ms
+   loop: ease down, hold the bottom, ease back up, rest, then a blink whose
+   closed frame holds. */
 @keyframes mascot-idle {
   0% {
     background-position: 0 0;
   }
 
-  7.0922% {
+  7.7922% {
     background-position: calc(var(--w) * var(--px) * -1) 0;
   }
 
-  14.1844% {
+  13.6364% {
     background-position: calc(var(--w) * var(--px) * -2) 0;
   }
 
-  21.2766% {
+  19.4805% {
     background-position: calc(var(--w) * var(--px) * -3) 0;
   }
 
-  28.3688% {
+  26.6234% {
     background-position: calc(var(--w) * var(--px) * -4) 0;
   }
 
-  35.461% {
+  35.7143% {
     background-position: calc(var(--w) * var(--px) * -5) 0;
   }
 
-  42.5532% {
+  44.8052% {
     background-position: calc(var(--w) * var(--px) * -6) 0;
   }
 
-  49.6454% {
+  50% {
     background-position: calc(var(--w) * var(--px) * -7) 0;
   }
 
-  56.7376% {
+  55.1948% {
     background-position: calc(var(--w) * var(--px) * -8) 0;
   }
 
-  85.1064% {
+  86.3636% {
     background-position: calc(var(--w) * var(--px) * -9) 0;
   }
 
-  90.0709% {
+  90.9091% {
     background-position: calc(var(--w) * var(--px) * -10) 0;
   }
 
-  95.0355%,
+  98.0519%,
   100% {
     background-position: calc(var(--w) * var(--px) * -11) 0;
   }
