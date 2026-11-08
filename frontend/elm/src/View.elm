@@ -87,7 +87,7 @@ chrome model =
     Html.header [ Attr.class "chrome" ]
         [ Html.div [ Attr.class "topbar" ]
             [ Html.div [ Attr.class "brand" ]
-                [ Pixel.mascot
+                [ Pixel.mascot model.status.running
                 , Pixel.text "" "SpriteWare"
                 ]
             , statePlate model
@@ -299,7 +299,7 @@ confirmDialog model =
                 , Attr.attribute "aria-labelledby" "found-title"
                 ]
                 [ Html.div [ Attr.class "dialog__head" ]
-                    [ Html.div [ Attr.class "dialog__mark" ] [ Pixel.mascot ]
+                    [ Html.div [ Attr.class "dialog__mark" ] [ Pixel.mascot model.status.running ]
                     , Html.div [ Attr.class "dialog__headline" ]
                         [ Html.span [ Attr.class "label" ] [ Html.text "Found Aseprite" ]
                         , Html.h2 [ Attr.id "found-title", Attr.class "dialog__title" ]
@@ -467,8 +467,25 @@ startCard model =
                 , segButton status "live" "Editor window"
                 ]
             ]
+        , bridgeNote model
         , problemNote model
         ]
+
+{-| Live mode is only useful with Aseprite on the other end, and "Listening"
+looks the same whether or not anything is attached. Say which it is.
+-}
+bridgeNote : Model -> Html Msg
+bridgeNote model =
+    if model.status.mode /= "live" then
+        Html.text ""
+
+    else if model.status.bridgeConnected then
+        Html.p [ Attr.class "bridge bridge--on" ]
+            [ Html.text "Aseprite is connected. Tool calls draw in the open window." ]
+
+    else
+        Html.p [ Attr.class "bridge bridge--waiting" ]
+            [ Html.text "Waiting for Aseprite: open it with the SpriteWare extension enabled." ]
 
 
 {-| The snippet card: pick an assistant, read where the config goes, then copy

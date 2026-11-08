@@ -168,6 +168,9 @@ func (s *MCPService) StartBridge() error {
 	}
 	port := s.cfg.Get().BridgePort
 	b := link.NewBridge()
+	// Aseprite coming or going is the one thing the panel cannot learn from a
+	// button press, so the bridge reports it.
+	b.OnStateChange(func(link.BridgeState) { s.pushStatus() })
 	s.bridge = b
 	s.mu.Unlock()
 
@@ -232,9 +235,24 @@ func (s *MCPService) statusLocked() MCPStatus {
 	return st
 }
 
-// SwitchMode changes the connection. Both stay alive, so nothing is lost.
+// SwitchMode changes the connection and remembers it, so a restart opens in the
+// mode the user picked. Both links stay alive, so nothing is lost.
 func (s *MCPService) SwitchMode(mode string) MCPStatus {
-	s.links.Use(config.Mode(mode))
+	next := config.Config{Mode: config.Mode(mode)}.Normalize().Mode
+	s.links.Use(next)
+
+	if _, err := s.cfg.Update(func(c *config.Config) { c.Mode = next }); err != nil {
+		slog.Warn("could not save the mode", "err", err)
+	}
+
+	// Live without a listener fails every call, so selecting it brings the
+	// bridge up.
+	if next == config.ModeLive {
+		if err := s.StartBridge(); err != nil {
+			slog.Warn("bridge did not start", "err", err)
+		}
+	}
+
 	s.pushStatus()
 	return s.GetMCPStatus()
 }
