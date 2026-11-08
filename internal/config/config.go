@@ -109,8 +109,66 @@ func (c Config) Normalize() Config {
 	// subsystem.
 	if c.BridgePort == c.Port {
 		c.BridgePort = d.BridgePort
+		// The default bridge port is the one value that cannot repair a
+		// collision with itself: an MCP port of 9934 used to leave both
+		// listeners on 9934.
+		if c.BridgePort == c.Port {
+			c.BridgePort = nextPort(c.Port)
+		}
 	}
 	return c
+}
+
+// nextPort returns a port one step from p that is still usable.
+func nextPort(p int) int {
+	if p < 65535 {
+		return p + 1
+	}
+	return p - 1
+}
+
+// Validate reports what Normalize would quietly repair.
+//
+// The settings screen calls this before saving: a typo should come back as a
+// sentence, not as a value the app silently replaced with its default. A zero
+// port means "unset", which Normalize fills in, so it is not an error here.
+func (c Config) Validate() error {
+	switch c.Mode {
+	case "", ModeHeadless, ModeLive:
+	default:
+		return fmt.Errorf("mode %q is not one of %q or %q", c.Mode, ModeHeadless, ModeLive)
+	}
+
+	switch c.Transport {
+	case "", TransportStreamableHTTP, TransportSSE:
+	default:
+		return fmt.Errorf("transport %q is not one of %q or %q", c.Transport, TransportStreamableHTTP, TransportSSE)
+	}
+
+	for _, field := range []struct {
+		name string
+		port int
+	}{
+		{"MCP port", c.Port},
+		{"bridge port", c.BridgePort},
+	} {
+		if field.port != 0 && (field.port < 1 || field.port > 65535) {
+			return fmt.Errorf("the %s has to be 1..65535, not %d", field.name, field.port)
+		}
+	}
+
+	// Compare what would actually be bound, not what was typed.
+	port, bridge := c.Port, c.BridgePort
+	if port == 0 {
+		port = Default().Port
+	}
+	if bridge == 0 {
+		bridge = Default().BridgePort
+	}
+	if port == bridge {
+		return fmt.Errorf("the MCP port and the bridge port cannot both be %d", port)
+	}
+	return nil
 }
 
 // Path returns the config file location for this OS.

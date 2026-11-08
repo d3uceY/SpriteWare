@@ -53,6 +53,61 @@ func TestNormalizeFillsInEverything(t *testing.T) {
 	}
 }
 
+// Everything Normalize would repair, Validate names instead, so the settings
+// form can explain a typo rather than accept a silent default.
+func TestValidateNamesWhatNormalizeWouldRepair(t *testing.T) {
+	bad := map[string]Config{
+		"mode":        {Mode: "nonsense"},
+		"transport":   {Transport: "carrier-pigeon"},
+		"port high":   {Port: 70000},
+		"port low":    {Port: -1},
+		"bridge high": {BridgePort: 70000},
+		"collision":   {Port: 5000, BridgePort: 5000},
+		"default collision": {
+			Port:       Default().BridgePort,
+			BridgePort: Default().BridgePort,
+		},
+		// An unset bridge port falls back to 9934, which collides with an MCP
+		// port of 9934 - the case Normalize used to leave broken.
+		"collision with the bridge default": {Port: Default().BridgePort},
+	}
+	for name, in := range bad {
+		if err := in.Validate(); err == nil {
+			t.Errorf("%s: Validate accepted %+v", name, in)
+		}
+	}
+
+	// Unset ports mean "use the default", which is what Save then writes.
+	good := []Config{
+		{},
+		Default(),
+		{Port: 22999, BridgePort: 22998},
+		{Mode: ModeLive, Transport: TransportSSE, Port: 9977, BridgePort: 9978},
+	}
+	for _, in := range good {
+		if err := in.Validate(); err != nil {
+			t.Errorf("Validate rejected %+v: %v", in, err)
+		}
+	}
+}
+
+// An MCP port equal to the default bridge port has to end up on two different
+// ports, or the app binds the same number twice and one listener fails.
+func TestNormalizeBreaksTheDefaultBridgeCollision(t *testing.T) {
+	out := Config{Port: Default().BridgePort}.Normalize()
+	if out.Port == out.BridgePort {
+		t.Fatalf("both listeners ended up on %d", out.Port)
+	}
+	if out.BridgePort < 1 || out.BridgePort > 65535 {
+		t.Fatalf("bridge port %d is not usable", out.BridgePort)
+	}
+
+	last := Config{Port: 65535, BridgePort: 65535}.Normalize()
+	if last.Port == last.BridgePort || last.BridgePort < 1 || last.BridgePort > 65535 {
+		t.Fatalf("a collision at the top of the range left %d/%d", last.Port, last.BridgePort)
+	}
+}
+
 // A corrupt file is moved aside rather than stopping the app from starting.
 func TestCorruptConfigIsSetAside(t *testing.T) {
 	dir := t.TempDir()
