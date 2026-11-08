@@ -153,9 +153,9 @@ tasks:
     cmds:
       - wails3 generate bindings -f '{{.BUILD_FLAGS}}' -clean=true -time-type=Date{{if eq .OBFUSCATED "true"}} -obfuscated{{end}}
 
-  # appicon.png (1024x1024) is the only icon source. It is the mascot on the
-  # app's slate stage: the 64x64 plate in appicon.aseprite scaled 16x with the
-  # 32x32 mascot's ink cropped out and scaled 32x, both nearest neighbour.
+  # appicon.png (1024x1024) is the only icon source. It is the mascot's hat on
+  # transparency: the 15x10 hat layer of spriteware.aseprite scaled 60x, no
+  # plate behind it. appicon.aseprite holds that same art, one layer, 1024x1024.
   generate:icons:
     summary: Generates Windows `.ico` and Mac `.icns` from `appicon.png`.
     run: once

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="build/appicon.png" width="120" alt="SpriteWare's pixel-art mascot on a slate plate">
+<img src="build/appicon.png" width="120" alt="SpriteWare's pixel-art hat icon">
 
 # SpriteWare
 
