@@ -30,4 +30,9 @@ go test ./internal/link -run Integration
 - UI changes follow `DESIGN.md`. Sprites are drawn with SpriteWare's own MCP
   tools.
 
-Code layout and test layers: `dev-docs/code-map.md`, `dev-docs/testing.md`.
+## Docs
+
+- `dev-docs/README.md` — the design record, indexed.
+- `dev-docs/code-map.md` — where to change things.
+- `dev-docs/testing.md` — the three test layers.
+- `DESIGN.md` — palette, layout and art rules.

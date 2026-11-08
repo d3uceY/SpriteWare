@@ -9,7 +9,7 @@ folder of markdown that an agent reads on demand.
 
 ```
 SKILL.md              entry point: rules, the loop, a table of workflows
-new/                  eleven workflows, one folder each
+new/                  ten workflows, one folder each
 draw/ shade/ palette/ rig/ animate/ tileset/ fix/ review/ export/
 references/           craft chapters: craft, palette, shading,
                       animation, structure, checks

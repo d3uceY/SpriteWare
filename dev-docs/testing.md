@@ -55,7 +55,7 @@ $cfg = "$env:TEMP\spriteware-e2e\config.json"
 
 $env:SPRITEWARE_CONFIG = $cfg
 $env:SPRITEWARE_EXTENSIONS_DIR = "$env:TEMP\spriteware-e2e\extensions"
-.\bin\spriteware-dev.exe
+.\bin\spriteware.exe
 
 $env:SPRITEWARE_E2E_URL = "http://127.0.0.1:9977/mcp"
 $env:SPRITEWARE_E2E_BRIDGE = "9978"
@@ -73,8 +73,9 @@ and the BOM problem above.
 
 ## Watching the app
 
-Build and run `bin\spriteware-dev.exe` yourself. It uses the real settings file
-unless you set `SPRITEWARE_CONFIG`, so keep the two runs apart.
+Build and run `bin\spriteware.exe` yourself (`task build`, then the exe). It
+uses the real settings file unless you set `SPRITEWARE_CONFIG`, so keep the two
+runs apart.
 
 For UI work, `wails3 dev` gives a window that reloads when the Elm or CSS
 changes.

@@ -30,14 +30,19 @@ name before the picture is not scoring blind, so the label lives only in
 
 ## Commands
 
+These are the `spriteware eval …` subcommands. The wrapper went with the CLI
+([removed-command-line.md](./removed-command-line.md)), so nothing in the
+shipped binary calls them; the functions behind each line are still in
+`internal/eval`, still built, still tested.
+
 ```
-spriteware eval list                      the benchmarks and what each asks
-spriteware eval new --benchmark <slug>    start a run; --technique goes in .technique
-spriteware eval brief <run>               print the step texts to hand over
-spriteware eval add --role <role> <run> <file>
-spriteware eval check <run>               answer the automatic criteria, write the form
-spriteware eval score <run>               read the form back and print the result
-spriteware eval table                     every run, with the spread of verdicts
+eval list                      the benchmarks and what each asks
+eval new --benchmark <slug>    start a run; --technique goes in .technique
+eval brief <run>               print the step texts to hand over
+eval add --role <role> <run> <file>
+eval check <run>               answer the automatic criteria, write the form
+eval score <run>               read the form back and print the result
+eval table                     every run, with the spread of verdicts
 ```
 
 `eval add` takes the role before the positional arguments, because Go's flag
@@ -102,10 +107,11 @@ A review names the run it belongs to. `eval check` writes that line, `eval score
 keeps it, and a form copied into another run's folder is refused rather than
 scored against the wrong pictures.
 
-The rubric the axes refer to is `internal documents/craft-rubric.md`.
+The rubric the axes refer to is `internal documents/craft-rubric.md` — local
+only, not in the repo.
 
 ## Adding a benchmark
 
-Make a folder with a `benchmark.yaml` and run `eval list`. Every criterion needs
-a check or `human: true`, every criterion needs a step that exists, and the
-loader refuses a benchmark whose steps or criteria would score nothing.
+Make a folder with a `benchmark.yaml`. Every criterion needs a check or
+`human: true`, every criterion needs a step that exists, and the loader refuses
+a benchmark whose steps or criteria would score nothing.

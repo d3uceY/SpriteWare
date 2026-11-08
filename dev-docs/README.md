@@ -15,6 +15,8 @@ Read these in order:
 | [protocol.md](./protocol.md) | the exact bytes between the app and Aseprite |
 | [skills.md](./skills.md) | the text that teaches an agent to use the tools |
 | [testing.md](./testing.md) | how to run the tests, including against a real Aseprite |
+| [evals.md](./evals.md) | benchmarks, runs, and how an attempt is scored |
+| [mcp-improvements.md](./mcp-improvements.md) | what drawing the app's own art broke, and its status |
 | [removed-command-line.md](./removed-command-line.md) | what the CLI was, why it is gone, and why the eval harness stayed |
 
 ## The short version
@@ -35,12 +37,12 @@ either mode.
 
 ```powershell
 npm --prefix frontend run build          # Elm + Vite -> frontend/dist
-go build -o bin\spriteware-dev.exe .
-.\bin\spriteware-dev.exe
+go build -o bin\spriteware.exe .
+.\bin\spriteware.exe
 ```
+
+`task build` does the same; `task dev` is `wails3 dev`, which reloads the window
+as the Elm or CSS changes.
 
 The window opens on the Server page. Start the server, copy the URL into your
 agent's MCP config, or press Install to write that config for you.
-
-`wails3 dev` gives you a hot-reloading window instead, if you have the Wails CLI
-on your PATH.
