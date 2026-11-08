@@ -7,13 +7,13 @@ anywhere else someone is representing the project. Follows the spirit of the
 ## Expected
 
 - Assume the other person is acting in good faith.
-- Critique the code, the sprite, or the argument — not the person.
+- Critique the code, the sprite, or the argument, not the person, unless they were a dickhead (slurs are not allowed. Only i can use slurs).
 - Take a maintainer's "no" without relitigating it.
 
 ## Not acceptable
 
 Harassment, insults, slurs, unwanted sexual attention, threats, publishing
-someone's private information, and derailing a thread on purpose.
+someone's private information (dox them only when they piss me off, lol), and derailing a thread on purpose.
 
 ## Reporting
 
