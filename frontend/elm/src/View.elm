@@ -386,7 +386,7 @@ serverPage : Model -> Html Msg
 serverPage model =
     Html.div [ Attr.class "page" ]
         [ pageHead "Server"
-            "Loopback only. Start it, then connect an assistant."
+            "Connect an assistant."
         , startCard model
         , connectCard model
         , skillCard model

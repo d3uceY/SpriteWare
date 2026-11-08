@@ -4,8 +4,8 @@ description: A quiet pixel-art control panel for the MCP server that lets an AI 
 colors:
   window-beige: "#d3cbbe"
   window-hot: "#faf0e6"
-  workspace-slate: "#7d929e"
-  slate-highlight: "#99b3c2"
+  workspace-slate: "#c1cbd0"
+  slate-highlight: "#cedae2"
   key-grey: "#c6c6c6"
   key-grey-lo: "#8e8e8e"
   well-white: "#ffffff"
@@ -126,7 +126,7 @@ The palette is Aseprite's light theme (`aseprite-theme-light.xml`) with two addi
 ### Neutral
 - **Window Beige** (#d3cbbe): the window, the tab strip and every card. Text on it is black.
 - **Window Hot** (#faf0e6): card highlight edge, dialog fill, the mascot's body.
-- **Workspace Slate** (#7d929e): the stage behind the cards, and the open tab, so the tab reads as the page it opens.
+- **Workspace Slate** (#c1cbd0): the stage behind the cards, and the open tab, so the tab reads as the page it opens.
 - **Key Grey** (#c6c6c6): secondary keys, closed tabs, the open segment of a segmented control.
 - **Key Grey Low** (#8e8e8e): the bottom-right bevel of every grey key.
 - **Well White** (#ffffff): anything you read or type: addresses, paths, snippets, the tool list, menus.
