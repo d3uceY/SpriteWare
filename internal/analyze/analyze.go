@@ -88,7 +88,7 @@ const (
 	CheckExpect     = "expect"
 	CheckVolume     = "volume"
 	CheckCompliance = "compliance"
-	CheckUI = "ui"
+	CheckUI         = "ui"
 )
 
 // AllChecks is the default set, in the order they are reported.
