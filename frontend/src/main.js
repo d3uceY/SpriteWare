@@ -17,7 +17,7 @@ import "@fontsource-variable/pixelify-sans";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 
-import { MCPService } from "../bindings/github.com/d3uceY/spriteware/backend/index.js";
+import { AppService, MCPService } from "../bindings/github.com/d3uceY/spriteware/backend/index.js";
 
 const STATUS_EVENT = "mcp:status";
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -88,7 +88,18 @@ async function refreshAfterProjectChange() {
 }
 
 const actions = {
-  bootstrap: refreshAll,
+  // The version comes from the binary, not from package.json, so a stamped
+  // release build reports the tag it was cut from. Neither call may be the
+  // reason the window looks broken, so both are allowed to fail quietly.
+  bootstrap: async () => {
+    await refreshAll();
+    try {
+      send("versionFromJs", String((await AppService.GetVersion()) ?? ""));
+      send("updateFromJs", toUpdate(await AppService.CheckForUpdate()));
+    } catch (err) {
+      console.warn("[update] version check failed:", describe(err));
+    }
+  },
 
   status: refreshServer,
 
@@ -162,6 +173,13 @@ const actions = {
       ok: Boolean(result?.ok),
       message: String(result?.message ?? ""),
     });
+  },
+
+  // The release page opens in the user's browser; the app itself never
+  // installs anything, because an unsigned build cannot verify its own
+  // replacement.
+  "open-downloads": async (url) => {
+    await AppService.OpenDownloadsPage(String(url ?? ""));
   },
 };
 
@@ -251,6 +269,17 @@ function toSetup(raw) {
 
 function toTool(raw) {
   return { name: String(raw?.name ?? ""), blurb: String(raw?.blurb ?? "") };
+}
+
+function toUpdate(raw) {
+  const u = raw ?? {};
+  return {
+    current: String(u.current ?? ""),
+    latest: String(u.latest ?? ""),
+    available: Boolean(u.available),
+    url: String(u.url ?? ""),
+    notes: String(u.notes ?? ""),
+  };
 }
 
 // ProjectFolder resolves to a [path, chosen] pair; the pair is meaningless to

@@ -14,7 +14,7 @@ structure, JavaScript owns motion.
 
 import Browser
 import Json.Decode as Decode exposing (Decoder)
-import Types exposing (Client, ClientInstall, ClientSkill, ClientTarget, Model, Msg(..), Setup, Status, Tab(..), Tool, emptySetup, emptySkill, emptyStatus)
+import Types exposing (Client, ClientInstall, ClientSkill, ClientTarget, Model, Msg(..), Setup, Status, Tab(..), Tool, Update, emptySetup, emptySkill, emptyStatus, emptyUpdate)
 import View
 
 
@@ -43,6 +43,12 @@ port skillTextFromJs : (String -> msg) -> Sub msg
 
 
 port projectFromJs : (Decode.Value -> msg) -> Sub msg
+
+
+port versionFromJs : (String -> msg) -> Sub msg
+
+
+port updateFromJs : (Decode.Value -> msg) -> Sub msg
 
 
 port errorFromJs : (String -> msg) -> Sub msg
@@ -84,6 +90,8 @@ init _ =
       , skillText = ""
       , project = ""
       , projectChosen = False
+      , version = ""
+      , update = Nothing
       , ready = False
       , error = Nothing
       }
@@ -153,6 +161,29 @@ update msg model =
 
         GotProject path chosen ->
             ( { model | project = path, projectChosen = chosen }, Cmd.none )
+
+        GotVersion version ->
+            ( { model | version = version }, Cmd.none )
+
+        GotUpdate info ->
+            -- Only a newer release is worth interrupting for: "up to date" and
+            -- "could not check" are silence, not a dialog.
+            ( { model
+                | update =
+                    if info.available then
+                        Just info
+
+                    else
+                        Nothing
+              }
+            , Cmd.none
+            )
+
+        DismissUpdate ->
+            ( { model | update = Nothing }, Cmd.none )
+
+        OpenDownloads url ->
+            ( model, request { action = "open-downloads", target = url } )
 
         ChooseProjectFolder ->
             ( model, request { action = "choose-project", target = "" } )
@@ -243,6 +274,8 @@ subscriptions _ =
         , skillFromJs (decodeOr ( False, "" ) installDecoder >> \( ok, message ) -> GotSkill ok message)
         , skillTextFromJs GotSkillText
         , projectFromJs (decodeOr ( "", False ) projectDecoder >> \( path, chosen ) -> GotProject path chosen)
+        , versionFromJs GotVersion
+        , updateFromJs (decodeOr emptyUpdate updateDecoder >> GotUpdate)
         , errorFromJs GotError
         ]
 
@@ -337,3 +370,13 @@ projectDecoder =
     Decode.map2 Tuple.pair
         (Decode.oneOf [ Decode.field "path" Decode.string, Decode.succeed "" ])
         (Decode.oneOf [ Decode.field "chosen" Decode.bool, Decode.succeed False ])
+
+
+updateDecoder : Decoder Update
+updateDecoder =
+    Decode.map5 Update
+        (Decode.oneOf [ Decode.field "current" Decode.string, Decode.succeed "" ])
+        (Decode.oneOf [ Decode.field "latest" Decode.string, Decode.succeed "" ])
+        (Decode.oneOf [ Decode.field "available" Decode.bool, Decode.succeed False ])
+        (Decode.oneOf [ Decode.field "url" Decode.string, Decode.succeed "" ])
+        (Decode.oneOf [ Decode.field "notes" Decode.string, Decode.succeed "" ])

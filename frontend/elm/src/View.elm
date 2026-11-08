@@ -26,6 +26,7 @@ view model =
             ]
             [ stage model ]
         , confirmDialog model
+        , updateDialog model
         ]
 
 
@@ -90,7 +91,10 @@ chrome model =
                 [ Pixel.mascot model.status.running
                 , Pixel.text "" "SpriteWare"
                 ]
-            , statePlate model
+            , Html.div [ Attr.class "topbar__end" ]
+                [ versionBadge model
+                , statePlate model
+                ]
             ]
         , Html.nav
             [ Attr.class "tabs"
@@ -151,8 +155,20 @@ tabButton model tab which label =
         ]
 
 
-{-| The connection state at the right edge of the strip: a dot and a word, the
-way vectile shows its model state.
+{-| Stamped into the binary at release time, so Go is the only source. Empty
+outside the window (browser preview), where there is nothing to show.
+-}
+versionBadge : Model -> Html Msg
+versionBadge model =
+    if model.version == "" then
+        Html.text ""
+
+    else
+        Html.span [ Attr.class "version" ]
+            [ Html.text ("v" ++ model.version) ]
+
+
+{-| The connection state at the right edge of the strip: a dot and a word.
 -}
 statePlate : Model -> Html Msg
 statePlate model =
@@ -276,16 +292,22 @@ findButton model =
         ]
 
 
+{-| Whether the "found Aseprite" prompt is up. Only until it is confirmed: the
+candidate stays set afterwards so the Aseprite screen can show it, and a prompt
+about a path that is already saved would never stop asking.
+-}
+setupDialogOpen : Model -> Bool
+setupDialogOpen model =
+    model.setup.found && not model.setup.confirmed && not model.rejected
+
+
 {-| The path a search returns is a guess, so it arrives in a dialog that names
 it and asks. `alertdialog` rather than `dialog`: it interrupts to ask for an
 answer, and a screen reader should say so.
 -}
 confirmDialog : Model -> Html Msg
 confirmDialog model =
-    -- Only until it is confirmed: the candidate stays set afterwards so the
-    -- Aseprite screen can show it, and a prompt about a path that is already
-    -- saved would never stop asking.
-    if model.setup.found && not model.setup.confirmed && not model.rejected then
+    if setupDialogOpen model then
         Html.div [ Attr.class "dialog__wrap", Attr.attribute "data-dialog" "" ]
             [ Html.div
                 [ Attr.class "dialog__scrim"
@@ -330,6 +352,79 @@ confirmDialog model =
 
     else
         Html.text ""
+
+
+{-| A newer release exists. It is not a question and it can wait, so this is a
+`dialog` and the answer that carries on is the quiet one. The setup prompt wins
+when both would be up: a copy that cannot find Aseprite has a bigger problem
+than being one version behind.
+-}
+updateDialog : Model -> Html Msg
+updateDialog model =
+    case model.update of
+        Just update ->
+            if setupDialogOpen model then
+                Html.text ""
+
+            else
+                Html.div [ Attr.class "dialog__wrap", Attr.attribute "data-dialog" "" ]
+                    [ Html.div
+                        [ Attr.class "dialog__scrim"
+                        , Events.onClick DismissUpdate
+                        ]
+                        []
+                    , Html.div
+                        [ Attr.class "dialog"
+                        , Attr.attribute "role" "dialog"
+                        , Attr.attribute "aria-modal" "true"
+                        , Attr.attribute "aria-labelledby" "update-title"
+                        ]
+                        [ Html.div [ Attr.class "dialog__head" ]
+                            [ Html.div [ Attr.class "dialog__mark" ] [ Pixel.mascot model.status.running ]
+                            , Html.div [ Attr.class "dialog__headline" ]
+                                [ Html.h2 [ Attr.id "update-title", Attr.class "dialog__title" ]
+                                    [ Html.text ("v" ++ update.latest ++ " is out") ]
+                                ]
+                            ]
+                        , updateLead update
+                        , updateNotes update
+                        , Html.div [ Attr.class "row row--end" ]
+                            [ Html.button
+                                [ Attr.class "btn btn--ghost"
+                                , Attr.attribute "data-dialog-cancel" ""
+                                , Events.onClick DismissUpdate
+                                ]
+                                [ Html.text "Later" ]
+                            , Html.button
+                                [ Attr.class "btn"
+                                , Attr.attribute "data-dialog-confirm" ""
+                                , Events.onClick (OpenDownloads update.url)
+                                ]
+                                [ Html.text "Download" ]
+                            ]
+                        ]
+                    ]
+
+        Nothing ->
+            Html.text ""
+
+
+updateLead : Types.Update -> Html Msg
+updateLead update =
+    if update.current == "" then
+        Html.text ""
+
+    else
+        Html.p [ Attr.class "dialog__lead" ] [ Html.text ("You have v" ++ update.current) ]
+
+
+updateNotes : Types.Update -> Html Msg
+updateNotes update =
+    if update.notes == "" then
+        Html.text ""
+
+    else
+        Html.p [ Attr.class "dialog__notes" ] [ Html.text update.notes ]
 
 
 searchHint : Model -> Html Msg

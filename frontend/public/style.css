@@ -349,6 +349,22 @@ pre {
   --px: 2px;
 }
 
+/* The right-hand end of the strip: what this build is, then the state. */
+.topbar__end {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.version {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  user-select: text;
+}
+
 /* The state plate: a white well holding a lamp and a word. */
 .state {
   display: inline-flex;
@@ -411,7 +427,6 @@ pre {
 }
 
 .tab--on {
-  height: 46px;
   margin-bottom: -2px;
   border-image-source: url("/sprites/tab-on.png");
 }
@@ -1180,6 +1195,18 @@ pre {
 .dialog__lead {
   font-size: 13.5px;
   text-wrap: pretty;
+}
+
+/* Release notes are copied from GitHub, so they are a white well like a path:
+   one short block, scrollable, with the markers stripped in Go. */
+.dialog__notes {
+  max-height: 92px;
+  overflow-y: auto;
+  padding: 6px 8px;
+  background: var(--white);
+  border: 2px solid var(--black);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
 }
 
 /* Narrow ------------------------------------------------------------------ */

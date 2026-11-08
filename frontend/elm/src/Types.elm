@@ -9,9 +9,11 @@ module Types exposing
     , Status
     , Tab(..)
     , Tool
+    , Update
     , emptySetup
     , emptySkill
     , emptyStatus
+    , emptyUpdate
     )
 
 {-| The app's state, its messages, and the shapes that cross the port boundary.
@@ -45,6 +47,29 @@ emptyStatus =
     , bridgeConnected = False
     , toolCount = 0
     , lastError = ""
+    }
+
+
+{-| What GitHub says about the newest release. `available` is decided in Go, so
+the window never has to compare version strings itself.
+
+-}
+type alias Update =
+    { current : String
+    , latest : String
+    , available : Bool
+    , url : String
+    , notes : String
+    }
+
+
+emptyUpdate : Update
+emptyUpdate =
+    { current = ""
+    , latest = ""
+    , available = False
+    , url = ""
+    , notes = ""
     }
 
 
@@ -157,6 +182,8 @@ type alias Model =
     , skillText : String
     , project : String
     , projectChosen : Bool
+    , version : String
+    , update : Maybe Update
     , ready : Bool
     , error : Maybe String
     }
@@ -191,3 +218,7 @@ type Msg
     | GotSkillText String
     | ChooseProjectFolder
     | GotProject String Bool
+    | GotVersion String
+    | GotUpdate Update
+    | DismissUpdate
+    | OpenDownloads String
