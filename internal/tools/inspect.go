@@ -53,7 +53,7 @@ func (s *Service) registerLook(srv *server.MCPServer) {
 		mcp.WithNumber("scale", mcp.Description("For preview: whole-number zoom. Omit to fit the preview budget.")),
 		mcp.WithString("path", mcp.Description("For ascii: read this PNG from disk instead of a document, so an exported file can be checked without opening it.")),
 		mcp.WithBoolean("rulers", mcp.Description("ascii/diff: false drops the rulers, leaving rows you can send straight back to draw.")),
-		mcp.WithString("sprite", mcp.Description("Target sprite by absolute path.")),
+		mcp.WithString("sprite", mcp.Description(spriteNote)),
 	)
 
 	srv.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -526,7 +526,7 @@ func (s *Service) registerExport(srv *server.MCPServer) {
 		mcp.WithString("format", mcp.Description("For tileset: json (default), tiled or godot. Adds that tool's import file beside the sheet.")),
 		mcp.WithArray("tags", mcp.Description("Keep only the frames these tags cover."), stringItems()),
 		mcp.WithArray("layers", mcp.Description("Export only these layers."), stringItems()),
-		mcp.WithString("sprite", mcp.Description("Target sprite by absolute path.")),
+		mcp.WithString("sprite", mcp.Description(spriteNote)),
 	)
 
 	srv.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

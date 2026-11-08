@@ -140,9 +140,35 @@ end
 -- leaves it nil so the user's open sprite wins.
 local current = nil
 
--- Unsaved documents have no filename, so a name has to be remembered here. The
--- table is weak: closing a document drops its entry with the sprite.
-local unsavedNames = setmetatable({}, { __mode = "k" })
+-- Unsaved documents have no filename, so a name has to be remembered here.
+--
+-- Keyed by document id, not by the Sprite userdata. The weak table this used to
+-- be lost the name whenever Lua handed back a different wrapper for the same
+-- document: `sprite new` named a document, and `sprite list` then reported
+-- "Sprite" for it because it reached the sprite through `app.sprites` instead
+-- of through `current`.
+local unsavedNames = {}
+
+local function name_key(spr)
+  return tostring(spr.id)
+end
+
+-- color_mode_name turns the enum into a word.
+--
+-- Aseprite reports colorMode as a plain number, so stripping a "ColorMode."
+-- prefix never matched and every document reported "0". The names come from the
+-- enum itself rather than a guessed numbering.
+local COLOR_MODE_NAMES = {}
+for _, key in ipairs({ "RGB", "GRAYSCALE", "INDEXED", "BITMAP" }) do
+  local value = ColorMode and ColorMode[key]
+  if value ~= nil then COLOR_MODE_NAMES[tonumber(value) or value] = key:lower() end
+end
+
+local function color_mode_name(mode)
+  local named = COLOR_MODE_NAMES[tonumber(mode) or mode]
+  if named then return named end
+  return (tostring(mode):gsub("^ColorMode%.", "")):lower()
+end
 
 -- same_path compares two absolute paths the way a user reads them: one separator
 -- and one case. Aseprite hands back backslashes on Windows and the callers send
@@ -160,19 +186,36 @@ end
 -- and any failed sprite lookup crashes with "attempt to call a nil value".
 local open_paths
 
+-- match_sprite resolves whatever a caller names a document by.
+--
+-- Four spellings reach the same sprite: its path, its id, "unsaved:<id>" and the
+-- name a `sprite op=new` gave it. The name used to be missing, so the `id` that
+-- `sprite new` hands back could not be passed to any other tool — every call
+-- answered "No open sprite matches 'probe-audit'". The same gap made
+-- doc.activate unable to reach an unsaved document, which reports no filename.
+local function match_sprite(want)
+  local candidates = {}
+  if current then candidates[#candidates + 1] = current end
+  if app.activeSprite then candidates[#candidates + 1] = app.activeSprite end
+  for _, spr in ipairs(app.sprites) do candidates[#candidates + 1] = spr end
+
+  for _, spr in ipairs(candidates) do
+    local named = unsavedNames[name_key(spr)]
+    if same_path(spr.filename, want)
+      or tostring(spr.id) == want
+      or ("unsaved:" .. tostring(spr.id)) == want
+      or (named ~= nil and named == want) then
+      return spr
+    end
+  end
+  return nil
+end
+
 local function asprite(args)
   if args and args.sprite and args.sprite ~= "" then
     local want = tostring(args.sprite)
-    local candidates = {}
-    if current then candidates[#candidates + 1] = current end
-    if app.activeSprite then candidates[#candidates + 1] = app.activeSprite end
-    for _, spr in ipairs(app.sprites) do candidates[#candidates + 1] = spr end
-    for _, spr in ipairs(candidates) do
-      if same_path(spr.filename, want) or tostring(spr.id) == want
-        or ("unsaved:" .. tostring(spr.id)) == want then
-        return spr
-      end
-    end
+    local found = match_sprite(want)
+    if found then return found end
     fail("not_found", "No open sprite matches '" .. want .. "'.", { open = open_paths() })
   end
   if current then return current end
@@ -201,7 +244,7 @@ local function is_saved(spr)
 end
 
 local function sprite_summary(spr)
-  local named = unsavedNames[spr]
+  local named = unsavedNames[name_key(spr)]
   local saved = is_saved(spr)
   return {
     id = saved and spr.filename or (named or ("unsaved:" .. tostring(spr.id))),
@@ -209,7 +252,7 @@ local function sprite_summary(spr)
     path = saved and spr.filename or "",
     width = spr.width,
     height = spr.height,
-    colorMode = tostring(spr.colorMode):gsub("^ColorMode%.", ""):lower(),
+    colorMode = color_mode_name(spr.colorMode),
     saved = saved,
   }
 end
@@ -282,11 +325,36 @@ local function require_layer(spr, name)
   return layer
 end
 
+-- activate_layer selects a layer the only way Aseprite allows.
+--
+-- Reading `spr.activeLayer` is fine, but assigning it raises "Cannot set field
+-- activeLayer" from the sprite's generic __newindex, which turns layer.activate
+-- and layer.reorder into a Lua stack trace. App.activeLayer is the writable one,
+-- and it acts on the active document, so a target in another file is made active
+-- first or the assignment would land in the wrong sprite.
+local function activate_layer(spr, layer)
+  local ok, live = pcall(function() return app.activeSprite end)
+  if ok and live ~= spr then app.activeSprite = spr end
+  app.activeLayer = layer
+end
+
 -- `spr.frame` raises instead of returning nil when nothing is showing, which is
--- always the case under `aseprite -b`. Frame 1 is the honest answer.
+-- always the case under `aseprite -b`. It is not a Sprite property at all in
+-- 1.3, so the lookup failed in live mode too and every caller fell back to 1:
+-- "use the active frame" silently meant frame 1 for every op that omits
+-- `frame`. App.activeFrame is the real one, and frameNumber is its 1-based
+-- number. Frame 1 stays the answer when there is no window to ask.
 local function active_frame_number(spr)
-  local ok, n = pcall(function() return spr.frame end)
-  if ok and n then return n end
+  -- App.activeFrame belongs to the active document, so it is only this sprite's
+  -- answer when this sprite is the active one.
+  local okLive, live = pcall(function() return app.activeSprite end)
+  if not okLive or live == nil or live ~= spr then return 1 end
+
+  local ok, frame = pcall(function() return app.activeFrame end)
+  if ok and frame ~= nil then
+    local n = tonumber(frame.frameNumber)
+    if n and n >= 1 then return math.floor(n) end
+  end
   return 1
 end
 
@@ -587,7 +655,7 @@ H["doc.new"] = function(args)
   spr.layers[1].name = "Layer 1"
   for i = 2, frames do spr:newEmptyFrame(i) end
   local name = tostring(args.name or "")
-  if name ~= "" then unsavedNames[spr] = name end
+  if name ~= "" then unsavedNames[name_key(spr)] = name end
   current = spr
   app.activeSprite = spr
   return { sprite = sprite_summary(spr), frames = #spr.frames }
@@ -622,15 +690,21 @@ H["doc.open"] = function(args)
 end
 
 H["doc.activate"] = function(args)
-  local path = tostring(args.path or args.sprite or "")
-  for _, spr in ipairs(app.sprites) do
-    if same_path(spr.filename, path) then
-      current = spr
-      app.activeSprite = spr
-      return { sprite = sprite_summary(spr), active = true }
-    end
+  -- `path` arrives already resolved to an absolute path; `sprite` is what the
+  -- caller typed, which may be an id or the name from `sprite op=new`, so both
+  -- get a turn. A path-only match answered "That document is not open" for a
+  -- document that was.
+  local spr = match_sprite(tostring(args.path or ""))
+  if not spr and args.sprite ~= nil and tostring(args.sprite) ~= "" then
+    spr = match_sprite(tostring(args.sprite))
   end
-  fail("not_found", "That document is not open.", { path = path, open = open_paths() })
+  if not spr then
+    fail("not_found", "That document is not open.",
+      { path = tostring(args.path or ""), open = open_paths() })
+  end
+  current = spr
+  app.activeSprite = spr
+  return { sprite = sprite_summary(spr), active = true }
 end
 
 H["doc.save"] = function(args)
@@ -665,6 +739,7 @@ H["doc.close"] = function(args)
   end
   spr:close()
   if current == spr then current = nil end
+  unsavedNames[name_key(spr)] = nil
   return { closed = true }
 end
 
@@ -683,6 +758,7 @@ H["doc.closeAll"] = function(args)
   end
   for _, spr in ipairs(list) do spr:close() end
   current = nil
+  unsavedNames = {}
   return { closed = #list }
 end
 
@@ -919,42 +995,10 @@ H["layer.duplicate"] = function(args)
   return { name = copy.name }
 end
 
-H["layer.reorder"] = function(args)
-  local spr = asprite(args)
-  local layer = require_layer(spr, args.name)
-  local target = tonumber(args.index) or 0
-  target = math.max(0, math.min(#spr.layers - 1, math.floor(target)))
-
-  local currentIndex = 0
-  for i, l in ipairs(spr.layers) do
-    if l == layer then currentIndex = i - 1 break end
-  end
-  local delta = target - currentIndex
-  if delta == 0 then return { index = currentIndex } end
-
-  local commandName = delta > 0 and "MoveLayerUp" or "MoveLayerDown"
-  spr.activeLayer = layer
-  for _ = 1, math.abs(delta) do
-    local ok = pcall(function() app.command[commandName]() end)
-    if not ok then
-      fail("unsupported_command",
-        "This Aseprite build has no layer reordering command.",
-        { command = commandName, extensionVersion = EXTENSION_VERSION })
-    end
-  end
-
-  local landed = 0
-  for i, l in ipairs(spr.layers) do
-    if l == layer then landed = i - 1 break end
-  end
-  -- Report where it actually is, not where it was asked to go.
-  return { index = landed }
-end
-
 H["layer.activate"] = function(args)
   local spr = asprite(args)
   local layer = require_layer(spr, args.name)
-  spr.activeLayer = layer
+  activate_layer(spr, layer)
   return { name = layer.name }
 end
 
@@ -972,6 +1016,28 @@ local function stack_index_of(spr, layer)
     if sibling == layer then return i end
   end
   return nil
+end
+
+-- reorder lives below siblings_of on purpose: a `local function` is only in
+-- scope after its own line, so the same body above it called a nil global.
+H["layer.reorder"] = function(args)
+  local spr = asprite(args)
+  local layer = require_layer(spr, args.name)
+
+  local siblings = siblings_of(spr, layer)
+  local target = tonumber(args.index) or 0
+  target = math.max(0, math.min(#siblings - 1, math.floor(target)))
+
+  -- Assigning stackIndex is the whole move. It used to drive
+  -- app.command.MoveLayerUp/MoveLayerDown, which this build does not have, so
+  -- every reorder failed with "This Aseprite build has no layer reordering
+  -- command". stackIndex is 1-based and the tool's index is 0-based, the same
+  -- convention layer.group relies on.
+  layer.stackIndex = target + 1
+
+  -- Report where it actually is, not where it was asked to go.
+  local landed = (stack_index_of(spr, layer) or (target + 1)) - 1
+  return { index = landed, name = layer.name }
 end
 
 -- resolve_sources turns a list of names into layers, refusing the two things a
@@ -1026,7 +1092,16 @@ end
 
 H["layer.ungroup"] = function(args)
   local spr = asprite(args)
-  local group = require_layer(spr, args.name)
+  -- The tool description offers `layers` for group/ungroup/merge, but ungroup
+  -- only ever takes one group. Accept either spelling; anything else reported
+  -- "No layer named 'nil'", which names the argument rather than the mistake.
+  local want = args.name
+  if (want == nil or want == "") and type(args.layers) == "table" then want = args.layers[1] end
+  if want == nil or want == "" then
+    fail("invalid_args", "layer.ungroup needs the group to ungroup.",
+      { hint = "pass `name`, or one entry in `layers`" })
+  end
+  local group = require_layer(spr, want)
   if not group.isGroup then
     fail("invalid_args", "'" .. group.name .. "' is not a group; ungroup only takes a group.",
       { name = group.name })
@@ -1217,8 +1292,20 @@ end
 
 H["frame.activate"] = function(args)
   local spr = asprite(args)
-  spr.frame = frame_index(spr, args)
-  return { activeFrame = spr.frame }
+  local n = frame_index(spr, args)
+
+  -- `spr.frame` is read-only here and raises "Cannot set field frame", so the
+  -- frame has to be set on App. App_set_frame reads the argument with
+  -- get_frame_number_from_arg, which takes a Frame object or a 1-based number
+  -- and otherwise does lua_tointeger on it: spr.frames[n] is not always a
+  -- FrameObj, and a table there became frame -1, which Aseprite clamped to
+  -- frame 1. The number cannot be misread.
+  local ok, live = pcall(function() return app.activeSprite end)
+  if ok and live ~= spr then app.activeSprite = spr end
+  app.activeFrame = n
+
+  local reached = active_frame_number(spr)
+  return { activeFrame = reached, requested = n, applied = reached == n }
 end
 
 H["frame.normalise"] = function(args)
@@ -1311,8 +1398,14 @@ H["cel.copy"] = function(args)
   return {
     from = { layer = srcLayer.name, frame = srcFrame },
     to = { layer = dstLayer.name, frame = dstFrame },
-    x = cel.position.x + srcCel.position.x + dx,
-    y = cel.position.y + srcCel.position.y + dy,
+    -- x/y is the cel's position, the same quantity cel.list, cel.move and
+    -- cel.set report. It used to be the source's content origin, so a caller
+    -- reading `copy.x` and passing it on landed somewhere else. contentX/Y names
+    -- the other answer explicitly: where the source's pixels ended up.
+    x = cel.position.x,
+    y = cel.position.y,
+    contentX = cel.position.x + srcCel.position.x + dx,
+    contentY = cel.position.y + srcCel.position.y + dy,
   }
 end
 
@@ -2532,7 +2625,17 @@ local function handle_command(frame)
   -- Arrays (doc.list, layer.list) have no named document to report, and a field
   -- on an array breaks its decode on the far side.
   if type(payload) == "table" and not is_array(payload) then
-    local target = current
+    -- The document the command acted on, not whichever happened to be active.
+    -- Reading `current` reported the active document, so `draw` aimed at one
+    -- file with `sprite` and still said the other file was the target — the one
+    -- field meant to answer "did it touch the right document" was wrong.
+    local target
+    local wanted = frame.args and frame.args.sprite
+    if wanted ~= nil and tostring(wanted) ~= "" then
+      local ok, found = pcall(match_sprite, tostring(wanted))
+      if ok then target = found end
+    end
+    if target == nil then target = current end
     if target == nil then
       local ok, active = pcall(function() return app.activeSprite end)
       if ok then target = active end

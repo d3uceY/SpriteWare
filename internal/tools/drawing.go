@@ -21,7 +21,7 @@ const drawSchema = `{
   "type": "object",
   "properties": {
     "label": {"type": "string", "description": "Shows up in the undo history, e.g. \"shade helmet\"."},
-    "sprite": {"type": "string", "description": "Target sprite by absolute path."},
+    "sprite": {"type": "string", "description": "Target sprite by absolute path, by the id a reply gave it, or by the name passed to sprite op=new."},
     "ignoreSelection": {"type": "boolean", "description": "Draw the whole cel even when a selection is set. Default false: a selection clips every draw."},
     "ops": {
       "type": "array",
@@ -149,11 +149,10 @@ func (s *Service) registerDraw(srv *server.MCPServer) {
 			args["label"] = label
 		}
 		if sp := strings.TrimSpace(req.GetString("sprite", "")); sp != "" {
-			resolved, err := resolveTarget(sp)
-			if err != nil {
-				return fail(err), nil
-			}
-			args["sprite"] = resolved
+			// Passed through like every other tool's sprite argument. Resolving it
+			// here turned the id or name a reply handed back into a path no
+			// document answers to.
+			args["sprite"] = sp
 		}
 		if req.GetBool("ignoreSelection", false) {
 			args["ignoreSelection"] = true
@@ -350,7 +349,7 @@ func (s *Service) registerPalette(srv *server.MCPServer) {
 		mcp.WithArray("colors", mcp.Description("For set: the palette as hex strings."), stringItems()),
 		mcp.WithString("layer", mcp.Description("For snap: only this layer. Omit for every layer.")),
 		mcp.WithNumber("frame", mcp.Description("For snap: only this frame. Omit for every frame.")),
-		mcp.WithString("sprite", mcp.Description("Target sprite by absolute path.")),
+		mcp.WithString("sprite", mcp.Description(spriteNote)),
 	)
 
 	srv.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -511,10 +510,9 @@ func (s *Service) dump(ctx context.Context, req mcp.CallToolRequest) (*doc.Dump,
 	if err != nil {
 		return nil, err
 	}
-	sprite, err := resolveTarget(req.GetString("sprite", ""))
-	if err != nil {
-		return nil, err
-	}
+	// The selector goes through untouched: it may be a path, an id or a name, and
+	// the document side decides which.
+	sprite := strings.TrimSpace(req.GetString("sprite", ""))
 	d, err := l.Dump(ctx, &doc.Filter{Sprite: sprite})
 	if err != nil {
 		return nil, err

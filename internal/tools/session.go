@@ -107,6 +107,14 @@ func (s *Service) registerDoctor(srv *server.MCPServer) {
 				report.AsepriteVersion = hello.AsepriteVersion
 				report.Features = hello.Features
 			}
+			// Live mode has no Hello on the link; the script version arrives over
+			// the bridge instead. Without this the summary read "live (script )",
+			// so there was no way to see which script was running — and a stale
+			// one is what a session spent an hour chasing.
+			if report.ExtensionVersion == "" && report.Bridge.Connected {
+				report.ExtensionVersion = report.Bridge.Version
+				report.AsepriteVersion = report.Bridge.Aseprite
+			}
 			if err != nil {
 				report.Remediation = doctorRemediation(report.Mode, err, report.AsepriteFound)
 			}
@@ -194,7 +202,7 @@ func (s *Service) registerSprite(srv *server.MCPServer) {
 		mcp.WithNumber("height", mcp.Description("Canvas height for op=new or resize.")),
 		mcp.WithNumber("frames", mcp.Description("For new: how many animation frames to create, default 1.")),
 		mcp.WithBoolean("force", mcp.Description("For close_all: discard documents that were never saved. Without it, close_all refuses rather than losing work.")),
-		mcp.WithString("sprite", mcp.Description("Target sprite by absolute path. Omit to use the active one.")),
+		mcp.WithString("sprite", mcp.Description(spriteNote)),
 	)
 
 	srv.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -230,20 +238,30 @@ func (s *Service) registerSprite(srv *server.MCPServer) {
 			return ok(out, "created a new document"), nil
 
 		case "open", "activate":
-			path, err := resolveOutput(req.GetString("path", ""))
+			// activate also accepts the id or name a reply gave a document, and
+			// resolveOutput would turn that into a path no document answers to.
+			// The resolved path goes as `path`, what the caller typed goes as
+			// `sprite`, and the Lua tries both.
+			typed := strings.TrimSpace(req.GetString("path", ""))
+			if typed == "" {
+				typed = strings.TrimSpace(req.GetString("sprite", ""))
+			}
+			path, err := resolveOutput(typed)
 			if err != nil {
 				return fail(err), nil
 			}
 			cmd := "doc.open"
+			args := map[string]any{"path": path}
 			if opName == "activate" {
 				cmd = "doc.activate"
+				args["sprite"] = typed
 			}
 			var out map[string]any
-			if err := s.call(ctx, cmd, map[string]any{"path": path}, &out); err != nil {
+			if err := s.call(ctx, cmd, args, &out); err != nil {
 				return fail(err), nil
 			}
 			if already, _ := out["alreadyOpen"].(bool); already {
-				return ok(out, "activated "+path+", which was already open"), nil
+				return ok(out, "activated "+typed+", which was already open"), nil
 			}
 			return ok(out, "opened "+path), nil
 

@@ -38,7 +38,7 @@ func (s *Service) registerSelect(srv *server.MCPServer) {
 		mcp.WithNumber("y", mcp.Description("For set: top edge, 0-based.")),
 		mcp.WithNumber("width", mcp.Description("For set: width in pixels.")),
 		mcp.WithNumber("height", mcp.Description("For set: height in pixels.")),
-		mcp.WithString("sprite", mcp.Description("Target sprite by absolute path.")),
+		mcp.WithString("sprite", mcp.Description(spriteNote)),
 	)
 
 	srv.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -108,7 +108,7 @@ func (s *Service) registerSlice(srv *server.MCPServer) {
 				"height": map[string]any{"type": "integer"},
 			}),
 		),
-		mcp.WithString("sprite", mcp.Description("Target sprite by absolute path.")),
+		mcp.WithString("sprite", mcp.Description(spriteNote)),
 	)
 
 	srv.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

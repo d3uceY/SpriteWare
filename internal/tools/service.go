@@ -205,16 +205,6 @@ func resolveOutput(p string) (string, error) {
 	return abs, nil
 }
 
-// resolveTarget makes an optional sprite path absolute. Empty stays empty,
-// meaning the active document.
-func resolveTarget(p string) (string, error) {
-	p = strings.TrimSpace(p)
-	if p == "" {
-		return "", nil
-	}
-	return resolveOutput(p)
-}
-
 // scratchDir creates a per-request directory for dump files.
 func (s *Service) scratchDir() (string, error) {
 	s.mu.Lock()
@@ -233,6 +223,12 @@ const coordinateNote = "Coordinates are 0-based and sprite-absolute: (0,0) is th
 
 // indexNote states the one numbering convention, in and out.
 const indexNote = "Layer indexes are 0-based with 0 at the bottom, and the same value is reported back. Frames are 1-based."
+
+// spriteNote lists every way a caller can name a document.
+//
+// The `id` that `sprite op=new` returns is one of them: it used to be accepted
+// by no other tool, so the round trip the reply invites was a dead end.
+const spriteNote = "Target sprite by absolute path, by the `id` a reply gave it, or by the name passed to `sprite op=new`. Omit to use the active one."
 
 // unknownOp lists what was expected.
 func unknownOp(tool, got string, allowed ...string) error {

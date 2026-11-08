@@ -198,19 +198,20 @@ func (s *Service) registerLayer(srv *server.MCPServer) {
 				"A layer name may be a plain name or a \"group/child\" path. A name that matches more "+
 				"than one layer fails and lists every match instead of silently picking one.\n"+
 				"`group` puts the named layers into one new group, which takes the slot of the lowest "+
-				"layer moved. `ungroup` lifts a group's children into its parent and deletes the group. "+
+				"layer moved. `ungroup` lifts a group's children into its parent and deletes the group; it "+
+				"takes the one group to open, as `name` or as the only entry of `layers`. "+
 				"`merge` composites the named layers into one, bottom to top, and deletes the originals: "+
 				"the result keeps the pixels, not the blend modes."),
-		mcp.WithString("op", mcp.Required(), mcp.Enum(ops...)),
+		mcp.WithString("op", mcp.Enum(ops...)),
 		mcp.WithArray("ops", mcp.Description("Batch: an array of {op, …args} applied in order."), batchItems()),
 		mcp.WithString("name", mcp.Description("Target layer, the new name for op=create, or the group's name for op=group.")),
 		mcp.WithString("to", mcp.Description("New name for rename, the copy's name for duplicate, or the merged layer's name for merge.")),
-		mcp.WithArray("layers", mcp.Description("For group, ungroup and merge: the layer names to act on. Every name must share a parent."), stringItems()),
+		mcp.WithArray("layers", mcp.Description("For group, ungroup and merge: the layer names to act on. Every name must share a parent. ungroup opens exactly one group."), stringItems()),
 		mcp.WithBoolean("visible", mcp.Description("For op=set.")),
 		mcp.WithNumber("opacity", mcp.Description("For op=set, 0-255.")),
 		mcp.WithString("blendMode", mcp.Description("For op=set: normal, multiply, screen, overlay, darken, lighten, color_dodge, color_burn, hard_light, soft_light, difference, exclusion, hue, saturation, color, luminosity, addition, subtract, divide.")),
 		mcp.WithNumber("index", mcp.Description("For reorder: 0-based stack position, 0 at the bottom. The result reports where the layer actually ended up.")),
-		mcp.WithString("sprite", mcp.Description("Target sprite by absolute path.")),
+		mcp.WithString("sprite", mcp.Description(spriteNote)),
 	)
 
 	srv.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -241,12 +242,15 @@ func (s *Service) registerCel(srv *server.MCPServer) {
 			"Manage the pixels one layer holds on one frame. Ops: list, create, clear, delete, move, copy, tween, oscillate, set, reset.\n"+
 				"Batches as `ops`.\n"+indexNote+"\n"+
 				"`copy` copies one cel onto another layer or frame, which is how a baked sprite is split onto a rig "+
-				"(`fromLayer`/`fromFrame` default to the target). `tween` and `oscillate` fill in missing cels from "+
+				"(`fromLayer`/`fromFrame` default to the target). It stamps the source over the destination, so "+
+				"pixels already on the target survive wherever the source is transparent; run `clear` first to "+
+				"replace it. The reply reports the cel's position as `x`/`y`, like every other cel op, and where "+
+				"the source's pixels landed as `contentX`/`contentY`. `tween` and `oscillate` fill in missing cels from "+
 				"the first frame of a range: `tween` moves or fades from one value to another with an easing curve, "+
 				"`oscillate` applies a sine offset for a bob, a float or a sway. `reset` sets a cel's position back "+
 				"to the origin. Use it after duplicating a frame: a copy carries the source's offsets, so an idle "+
 				"pose's 1 px bob silently becomes part of every animation built on it."),
-		mcp.WithString("op", mcp.Required(),
+		mcp.WithString("op",
 			mcp.Enum("list", "create", "clear", "delete", "move", "copy", "tween", "oscillate", "set", "reset")),
 		mcp.WithArray("ops", mcp.Description("Batch: an array of {op, …args} applied in order."), batchItems()),
 		mcp.WithString("layer", mcp.Description("Layer name or group path.")),
@@ -270,7 +274,7 @@ func (s *Service) registerCel(srv *server.MCPServer) {
 		mcp.WithNumber("x", mcp.Description("For set: absolute x.")),
 		mcp.WithNumber("y", mcp.Description("For set: absolute y.")),
 		mcp.WithNumber("opacity", mcp.Description("For set: 0-255.")),
-		mcp.WithString("sprite", mcp.Description("Target sprite by absolute path.")),
+		mcp.WithString("sprite", mcp.Description(spriteNote)),
 	)
 
 	srv.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -300,14 +304,14 @@ func (s *Service) registerFrame(srv *server.MCPServer) {
 				"`duplicate` reports `carriedOffsets` — the per-layer positions the copy inherited. "+
 				"`normalise` zeroes every cel on a frame, which is what makes a duplicated frame a truly "+
 				"neutral starting point."),
-		mcp.WithString("op", mcp.Required(),
+		mcp.WithString("op",
 			mcp.Enum("list", "add", "duplicate", "delete", "set_duration", "activate", "normalise")),
 		mcp.WithArray("ops", mcp.Description("Batch: an array of {op, …args} applied in order."), batchItems()),
 		mcp.WithNumber("frame", mcp.Description("1-based frame.")),
 		mcp.WithNumber("count", mcp.Description("For add: how many frames.")),
 		mcp.WithNumber("durationMs", mcp.Description("For set_duration, milliseconds.")),
 		mcp.WithArray("frames", mcp.Description("For set_duration: which frames. Omit for all."), integerItems()),
-		mcp.WithString("sprite", mcp.Description("Target sprite by absolute path.")),
+		mcp.WithString("sprite", mcp.Description(spriteNote)),
 	)
 
 	srv.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -334,14 +338,14 @@ func (s *Service) registerTag(srv *server.MCPServer) {
 				"the range end and a rename that looked like a range would silently move the tag.\n"+
 				"Untagged frames are unaddressable by a game engine, so a multi-frame sprite with no tag "+
 				"is reported as an error by `validate`."),
-		mcp.WithString("op", mcp.Required(), mcp.Enum("list", "create", "update", "delete")),
+		mcp.WithString("op", mcp.Enum("list", "create", "update", "delete")),
 		mcp.WithArray("ops", mcp.Description("Batch: an array of {op, …args} applied in order."), batchItems()),
 		mcp.WithString("name", mcp.Description("Tag name.")),
 		mcp.WithString("rename", mcp.Description("For update: the tag's new name.")),
 		mcp.WithNumber("from", mcp.Description("First frame, 1-based.")),
 		mcp.WithNumber("to", mcp.Description("Last frame, 1-based, inclusive.")),
 		mcp.WithString("direction", mcp.Description("forward | reverse | pingpong")),
-		mcp.WithString("sprite", mcp.Description("Target sprite by absolute path.")),
+		mcp.WithString("sprite", mcp.Description(spriteNote)),
 	)
 
 	srv.AddTool(tool, func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
