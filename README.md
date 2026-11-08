@@ -30,7 +30,7 @@ Latest release.
 | <img src="https://api.iconify.design/mdi/debian.svg?color=%23A80030" width="18" height="18" alt="Debian"> | Linux package | [SpriteWare-linux-amd64.deb](https://github.com/d3uceY/SpriteWare/releases/latest/download/SpriteWare-linux-amd64.deb) |
 
 The builds are unsigned. Windows: SmartScreen → **More info** → **Run anyway**.
-macOS: right-click the app → **Open**. Linux binary: `chmod +x` it first.
+macOS: right-click the app click **Open**. Linux binary: `chmod +x` it first. For Mac, you may need to allow apps from unidentified developers in System Preferences then Security & Privacy.
 
 ## Run it
 
