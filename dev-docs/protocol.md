@@ -1,20 +1,22 @@
 # Protocol
 
 Two things talk this protocol: the app, and the Lua running inside Aseprite.
-Both ends are ours, so it is as small as it can be. One message is one line of
-JSON. No WebSocket, no length prefixes.
+Both ends are ours, so it is as small as it can be. One message is one JSON
+object.
 
 ## Connecting
 
-The first line names the caller.
+Aseprite has no LuaSocket, so the live bridge is a WebSocket (Aseprite ships
+one) and the role is the route instead of a line:
 
 ```
-{"role":"extension"}     Aseprite dialling in
-{"role":"client"}        the tools dialling in
+ws://127.0.0.1:9934/extension    Aseprite dialling in
+ws://127.0.0.1:9934/client       the tools dialling in
 ```
 
-On the bridge that is all the handshake there is. Over the hidden process there
-is no handshake: the Lua is already running when the app gets its first line.
+One WebSocket message carries one envelope. Over the hidden process the same
+envelope travels as one line on stdin/stdout, and there is no handshake: the Lua
+is already running when the app gets its first line.
 
 ## Two directions, one marker
 

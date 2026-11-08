@@ -1128,7 +1128,8 @@ end
 H["frame.list"] = function(args)
   local spr = asprite(args)
   local out = arr()
-  for i, f in ipairs(spr.frames) do
+  for i = 1, #spr.frames do
+    local f = spr.frames[i]
     local cels = arr()
     for _, layer in ipairs(spr.layers) do
       local cel = layer:cel(f)
@@ -1144,7 +1145,8 @@ H["frame.list"] = function(args)
     end
     out[#out + 1] = { index = i, durationMs = math.floor(f.duration * 1000 + 0.5), cels = cels }
   end
-  return { frames = out, activeFrame = spr.frame }
+  -- `spr.frame` raises under `aseprite -b` when no frame is showing.
+  return { frames = out, activeFrame = active_frame_number(spr) }
 end
 
 H["frame.add"] = function(args)
@@ -2547,8 +2549,9 @@ SPRITEWARE.array = arr
 --------------------------------------------------------------------------------
 -- Live transport
 --
--- Plain TCP lines, not a WebSocket: both ends are ours, so no framing layer to
--- get wrong, and Lua only needs luasocket, which Aseprite bundles.
+-- Aseprite has no LuaSocket: `require("socket")` fails in every build, so the
+-- first version of this file connected to nothing at all. What Aseprite does
+-- ship is a WebSocket class (IXWebSocket), so live mode rides on that.
 --
 -- Skipped in batch mode, where app.isUIAvailable is false and headless/runner.lua
 -- owns stdin/stdout.
@@ -2559,57 +2562,25 @@ local BRIDGE_PORT = tonumber(app.params["bridgePort"] or "") or 9934 -- spritewa
 local function start_live()
   if not app.isUIAvailable then return end
 
-  local socketOk, socket = pcall(require, "socket")
-  if not socketOk or not socket then
-    -- Live mode needs the bridge; headless does not. Say so once.
-    print("SpriteWare: LuaSocket is unavailable, so live mode cannot connect. Headless mode still works.")
+  if type(WebSocket) ~= "function" then
+    -- Say it once, in the console. A silent return is what made this look like
+    -- "the agent just doesn't draw anything".
+    print("SpriteWare: this Aseprite build has no WebSocket support, so live mode cannot connect. Headless mode still works.")
     return
   end
 
-  local client = nil
-  local pending = ""
-  local announced = false
+  local socket = nil
+  local open = false
+  local connecting = false
+  SPRITEWARE.live = SPRITEWARE.live or {}
 
-  local function disconnect()
-    if client then pcall(function() client:close() end) end
-    client = nil
-    pending = ""
-    announced = false
+  local function send(payload)
+    if not open or not socket then return end
+    pcall(function() socket:sendText(payload) end)
   end
 
-  local function emit(payload)
-    if not client then return end
-    local ok = pcall(function()
-      client:send("\30SW1 " .. encode_json(payload) .. "\n")
-    end)
-    if not ok then disconnect() end
-  end
-
-  local function connect()
-    local c = socket.tcp()
-    if not c then return end
-    c:settimeout(3)
-    if not c:connect("127.0.0.1", BRIDGE_PORT) then
-      pcall(function() c:close() end)
-      return
-    end
-    local sent = pcall(function() c:send('{"role":"extension"}\n') end)
-    if not sent then
-      pcall(function() c:close() end)
-      return
-    end
-    c:settimeout(0)
-    client = c
-    pending = ""
-    announced = false
-  end
-
-  local function handle_line(line)
-    local body = line
-    if body:sub(1, #"\30SW1 ") == "\30SW1 " then
-      body = body:sub(#"\30SW1 " + 1)
-    end
-    local decodedOk, decoded = pcall(json.decode, body)
+  local function handle_message(data)
+    local decodedOk, decoded = pcall(json.decode, data)
     if not decodedOk or not decoded then return end
     local frame = to_plain(decoded)
     if type(frame) ~= "table" or frame.id == nil then return end
@@ -2620,48 +2591,87 @@ local function start_live()
         error = { code = "lua_error", message = tostring(reply), details = {} },
       }
     end
-    emit(reply)
+    -- A script edit changes the image, not Aseprite's idea of when to paint:
+    -- without this the window keeps showing the previous canvas until the user
+    -- moves it.
+    pcall(function() app.refresh() end)
+    send(encode_json(reply))
   end
 
-  local function pump()
-    if not client then return end
-    for _ = 1, 64 do
-      local line, err, partial = client:receive("*l")
-      if line then
-        local full = pending .. line
-        pending = ""
-        handle_line(full)
-      else
-        if partial and #partial > 0 then pending = pending .. partial end
-        if err ~= "timeout" then disconnect() end
-        return
-      end
+  local function drop()
+    if socket then
+      pcall(function() socket:close() end)
     end
+    socket = nil
+    SPRITEWARE.live.socket = nil
+    open = false
+    connecting = false
   end
 
-  local timer = nil
-  timer = Timer {
-    interval = 0.05,
-    onTick = function()
-      if not client then
-        connect()
-        if client and not announced then
-          announced = true
-          emit({
-            type = "hello",
-            protocol = PROTOCOL_VERSION,
-            extensionVersion = EXTENSION_VERSION,
-            asepriteVersion = tostring(app.version),
-            headless = false,
-            features = FEATURES,
-          })
-        end
-        return
+  -- A dropped connection ends IXWebSocket's own thread for good: its reconnect
+  -- loop gives up after a close, and reusing the object does nothing because
+  -- start() refuses to spawn a second thread. A new object is the only way back,
+  -- so the watchdog below builds one whenever the socket is not open.
+  local function attempt()
+    drop()
+    connecting = true
+    local made, err = pcall(function()
+      socket = WebSocket {
+        url = "ws://127.0.0.1:" .. BRIDGE_PORT .. "/extension",
+        minreconnectwait = 0.2,
+        maxreconnectwait = 2,
+        onreceive = function(kind, data)
+          if kind == WebSocketMessageType.OPEN then
+            open = true
+            connecting = false
+            send(encode_json({
+              type = "hello",
+              protocol = PROTOCOL_VERSION,
+              extensionVersion = EXTENSION_VERSION,
+              asepriteVersion = tostring(app.version),
+              headless = false,
+              features = FEATURES,
+            }))
+          elseif kind == WebSocketMessageType.TEXT then
+            handle_message(data)
+          elseif kind == WebSocketMessageType.CLOSE or kind == WebSocketMessageType.ERROR then
+            open = false
+            connecting = false
+          end
+        end,
+      }
+    end)
+    if not made or not socket then
+      connecting = false
+      print("SpriteWare: could not create the live socket: " .. tostring(err))
+      return
+    end
+    -- Anchored on the module table on purpose: a local would be collected the
+    -- moment start_live returns, and __gc stops both the socket and the timer.
+    SPRITEWARE.live.socket = socket
+    pcall(function() socket:connect() end)
+  end
+
+  SPRITEWARE.live = SPRITEWARE.live or {}
+  local watchdog = Timer {
+    interval = 1.0,
+    -- Aseprite reads this field as lowercase `ontick` (timer_class.cpp); an
+    -- `onTick` key connects nothing and the timer ticks into the void.
+    ontick = function()
+      -- A killed app leaves this end of the socket looking open, and IXWebSocket
+      -- only raises Close when its own transport notices. A ping it cannot send
+      -- is the earliest reliable sign.
+      if open and socket then
+        local pinged = pcall(function() socket:sendPing("spriteware") end)
+        if not pinged then open = false end
       end
-      pump()
+
+      if not open and not connecting then attempt() end
     end,
   }
-  timer:start()
+  SPRITEWARE.live.watchdog = watchdog
+  watchdog:start()
+  attempt()
 end
 
 -- Wrapped: a failed transport start must not stop the handler table existing,

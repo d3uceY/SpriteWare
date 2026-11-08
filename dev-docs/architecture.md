@@ -43,9 +43,14 @@ open editor. [protocol.md](./protocol.md) has the details.
 | | Live | Headless |
 |---|---|---|
 | Aseprite | the window you have open | a hidden `aseprite -b` process |
-| Transport | TCP to the bridge (9934) | stdin and stdout of that process |
+| Transport | WebSocket to the bridge (9934) | stdin and stdout of that process |
 | Needs | the extension installed | nothing but the Aseprite binary |
 | Good for | watching the agent draw | agents and CI with no human |
+
+The bridge speaks WebSocket because Aseprite's Lua has no LuaSocket, and a
+WebSocket class is the one transport Aseprite does ship. The extension connects
+to `/extension`, the tools to `/client`; a watchdog rebuilds the socket when the
+app restarts, because IXWebSocket gives up on a dropped connection.
 
 `internal/link` has two types, `Live` and `Headless`, behind one `Link`
 interface. Tools do not know which one they got, so a command cannot behave

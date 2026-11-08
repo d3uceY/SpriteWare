@@ -1,30 +1,34 @@
 package link
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/d3uceY/spriteware/internal/doc"
 	"github.com/d3uceY/spriteware/internal/protocol"
 )
 
-// The bridge speaks newline-delimited JSON over plain TCP on 127.0.0.1. Both
-// ends are ours, so no WebSocket: no framing layer to get wrong, luasocket is
-// enough, and a test can drive it.
+// The bridge speaks WebSocket on 127.0.0.1. Aseprite's Lua has no LuaSocket
+// (`require("socket")` fails in every build), but it does expose a WebSocket
+// class, so the extension dials in over that and the tools use the same
+// transport.
 //
-// The first line names the caller:
+// Two routes, one per role:
 //
-//	{"role":"extension"}   Aseprite dialling in
-//	{"role":"client"}      an MCP server dialling in
+//	/extension   Aseprite dialling in
+//	/client      an MCP server dialling in
 //
-// Everything after that is the same framed envelope the headless runner uses.
+// One WebSocket message is one envelope, the same shape the headless runner
+// uses on stdin and stdout.
 
 // BridgeState is what the bridge knows about the Aseprite attached to it.
 type BridgeState struct {
@@ -41,10 +45,23 @@ type BridgeState struct {
 type Bridge struct {
 	mu      sync.Mutex
 	ln      net.Listener
+	srv     *http.Server
 	ext     *peer
 	clients map[*peer]bool
 	next    int
 	state   BridgeState
+	// onState runs after any attachment change, so a UI can repaint without
+	// polling. Called outside the lock; it must not call back into the bridge
+	// from the same goroutine's critical section.
+	onState func(BridgeState)
+}
+
+// OnStateChange registers the callback run whenever the attached window comes
+// or goes.
+func (b *Bridge) OnStateChange(fn func(BridgeState)) {
+	b.mu.Lock()
+	b.onState = fn
+	b.mu.Unlock()
 }
 
 // NewBridge builds a stopped bridge.
@@ -52,17 +69,32 @@ func NewBridge() *Bridge {
 	return &Bridge{clients: map[*peer]bool{}}
 }
 
-// Start listens on 127.0.0.1:port.
+// acceptOptions upgrades every request.
+//
+// The origin check is off because the listener is already bound to 127.0.0.1,
+// which is the boundary that matters, and the extension sends no Origin header
+// at all. Aseprite's WebSocket client is not a browser and cannot be made to
+// add one.
+var acceptOptions = &websocket.AcceptOptions{InsecureSkipVerify: true}
+
+// Start listens on 127.0.0.1:port and upgrades both routes to WebSocket.
 func (b *Bridge) Start(port int) error {
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		return fmt.Errorf("bridge could not listen on port %d: %w", port, err)
 	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/extension", b.serveExtension)
+	mux.HandleFunc("/client", b.serveClient)
+	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+
 	b.mu.Lock()
 	b.ln = ln
+	b.srv = srv
 	b.mu.Unlock()
 
-	go b.acceptLoop(ln)
+	go func() { _ = srv.Serve(ln) }()
 	return nil
 }
 
@@ -92,10 +124,11 @@ func (b *Bridge) State() BridgeState {
 // Close stops listening and drops every connection.
 func (b *Bridge) Close() error {
 	b.mu.Lock()
-	ln := b.ln
+	srv := b.srv
 	ext := b.ext
 	clients := b.clients
 	b.ln = nil
+	b.srv = nil
 	b.ext = nil
 	b.clients = map[*peer]bool{}
 	b.mu.Unlock()
@@ -106,120 +139,103 @@ func (b *Bridge) Close() error {
 	for c := range clients {
 		c.close()
 	}
-	if ln != nil {
-		return ln.Close()
+	if srv != nil {
+		return srv.Close()
 	}
 	return nil
 }
 
-func (b *Bridge) acceptLoop(ln net.Listener) {
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			return
-		}
-		go b.serveConn(conn)
-	}
-}
-
-func (b *Bridge) serveConn(conn net.Conn) {
-	reader := bufio.NewReaderSize(conn, 1<<20)
-
-	// The role line, then everything else is frames.
-	_ = conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-	roleLine, err := reader.ReadString('\n')
+// serveExtension holds the user's window open for as long as Aseprite stays up.
+func (b *Bridge) serveExtension(w http.ResponseWriter, r *http.Request) {
+	ws, err := websocket.Accept(w, r, acceptOptions)
 	if err != nil {
-		_ = conn.Close()
-		return
-	}
-	_ = conn.SetReadDeadline(time.Time{})
-
-	var hello struct {
-		Role string `json:"role"`
-	}
-	if json.Unmarshal([]byte(strings.TrimSpace(roleLine)), &hello) != nil {
-		_ = conn.Close()
 		return
 	}
 
-	p := &peer{conn: conn, writer: bufio.NewWriter(conn)}
+	p := newPeer("ext", ws)
+	b.mu.Lock()
+	previous := b.ext
+	b.ext = p
+	b.mu.Unlock()
+	if previous != nil {
+		previous.close()
+	}
+	b.setState(BridgeState{})
 
-	switch hello.Role {
-	case "extension":
-		p.id = "ext"
-		b.mu.Lock()
-		if b.ext != nil {
-			b.ext.close()
-		}
-		b.ext = p
-		b.mu.Unlock()
+	go b.keepAlive(p)
+	b.readPeer(p, b.fromExtension)
+
+	// A replaced window's cleanup used to report the new one as gone, so only
+	// the peer that is still current clears the state.
+	b.mu.Lock()
+	wasCurrent := b.ext == p
+	if wasCurrent {
+		b.ext = nil
+	}
+	b.mu.Unlock()
+	if wasCurrent {
 		b.setState(BridgeState{})
-		b.readExtension(p, reader)
-
-	case "client":
-		b.mu.Lock()
-		b.next++
-		p.id = "c" + strconv.Itoa(b.next)
-		b.clients[p] = true
-		b.mu.Unlock()
-
-		if st := b.State(); st.Connected {
-			p.write(stateFrame(st))
-		}
-		b.readClient(p, reader)
-
-	default:
-		_ = conn.Close()
 	}
+	p.close()
 }
 
-func (b *Bridge) readExtension(p *peer, reader *bufio.Reader) {
-	defer func() {
-		b.mu.Lock()
-		wasCurrent := b.ext == p
-		if wasCurrent {
-			b.ext = nil
-		}
-		b.mu.Unlock()
-		if wasCurrent {
-			b.setState(BridgeState{})
-		}
-		p.close()
-	}()
-
-	for {
-		line, err := readFrame(reader)
-		if err != nil {
-			return
-		}
-		b.fromExtension(p, line)
-	}
-}
-
-func (b *Bridge) readClient(p *peer, reader *bufio.Reader) {
-	defer func() {
-		b.mu.Lock()
-		delete(b.clients, p)
-		b.mu.Unlock()
-		p.close()
-	}()
-
-	for {
-		line, err := readFrame(reader)
-		if err != nil {
-			return
-		}
-		b.fromClient(p, line)
-	}
-}
-
-// readFrame reads one line and strips the marker.
-func readFrame(reader *bufio.Reader) ([]byte, error) {
-	line, err := reader.ReadBytes('\n')
+// serveClient accepts one MCP server's connection.
+func (b *Bridge) serveClient(w http.ResponseWriter, r *http.Request) {
+	ws, err := websocket.Accept(w, r, acceptOptions)
 	if err != nil {
-		return nil, err
+		return
 	}
-	return stripMarker(line), nil
+
+	b.mu.Lock()
+	b.next++
+	p := newPeer("c"+strconv.Itoa(b.next), ws)
+	b.clients[p] = true
+	b.mu.Unlock()
+
+	if st := b.State(); st.Connected {
+		p.write(statePayload(st))
+	}
+
+	b.readPeer(p, b.fromClient)
+
+	b.mu.Lock()
+	delete(b.clients, p)
+	b.mu.Unlock()
+	p.close()
+}
+
+// readPeer feeds every message to handle until the socket dies.
+func (b *Bridge) readPeer(p *peer, handle func(*peer, []byte)) {
+	for {
+		_, data, err := p.ws.Read(p.ctx)
+		if err != nil {
+			return
+		}
+		handle(p, data)
+	}
+}
+
+// keepAlive pings the window and drops it when the pong stops.
+//
+// A killed app leaves the socket looking open on the far side, so without this
+// the plate says "connected" for minutes after Aseprite or the app is gone.
+func (b *Bridge) keepAlive(p *peer) {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-p.ctx.Done():
+			return
+		case <-ticker.C:
+			ctx, cancel := context.WithTimeout(p.ctx, 2*time.Second)
+			err := p.ws.Ping(ctx)
+			cancel()
+			if err != nil {
+				p.close()
+				return
+			}
+		}
+	}
 }
 
 // fromClient prefixes the id with the client's slot, so the reply routes back.
@@ -230,30 +246,30 @@ func (b *Bridge) fromClient(p *peer, line []byte) {
 
 	var cmd protocol.Command
 	if err := json.Unmarshal(line, &cmd); err != nil {
-		p.write(frame(replyFrameJSON("", protocol.New(protocol.CodeInvalidArgs, "malformed command"))))
+		p.write(replyFrameJSON("", protocol.New(protocol.CodeInvalidArgs, "malformed command")))
 		return
 	}
 
 	if ext == nil {
-		p.write(frame(replyFrameJSON(cmd.ID, protocol.New(protocol.CodeNotConnected,
+		p.write(replyFrameJSON(cmd.ID, protocol.New(protocol.CodeNotConnected,
 			"Aseprite is not connected to the bridge").
-			WithRemediation("open Aseprite with the SpriteWare script installed, or switch to headless mode"))))
+			WithRemediation("open Aseprite with the SpriteWare script installed, or switch to headless mode")))
 		return
 	}
 
 	cmd.ID = p.id + "::" + cmd.ID
 	out, err := json.Marshal(cmd)
 	if err != nil {
-		p.write(frame(replyFrameJSON(cmd.ID, protocol.New(protocol.CodeInternal, "encode command: %v", err))))
+		p.write(replyFrameJSON(cmd.ID, protocol.New(protocol.CodeInternal, "encode command: %v", err)))
 		return
 	}
-	ext.write(frame(out))
+	ext.write(out)
 }
 
 func (b *Bridge) fromExtension(_ *peer, line []byte) {
 	if hello, ok := protocol.ParseHello(append([]byte(protocol.FrameMarker), line...)); ok {
 		b.setState(BridgeState{Version: hello.ExtensionVersion, Aseprite: hello.AsepriteVersion})
-		b.broadcast(stateFrame(b.State()))
+		b.broadcast(statePayload(b.State()))
 		return
 	}
 
@@ -283,7 +299,7 @@ func (b *Bridge) fromExtension(_ *peer, line []byte) {
 	b.mu.Unlock()
 
 	if target != nil {
-		target.write(frame(out))
+		target.write(out)
 	}
 }
 
@@ -309,7 +325,12 @@ func (b *Bridge) setState(st BridgeState) {
 		st.Version, st.Aseprite = "", ""
 	}
 	b.state = st
+	hook := b.onState
 	b.mu.Unlock()
+
+	if hook != nil {
+		hook(st)
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -319,15 +340,16 @@ func (b *Bridge) setState(st BridgeState) {
 // Live talks to the bridge, which talks to the user's window.
 type Live struct {
 	port int
-	addr string
+	url  string
 
 	mu      sync.Mutex
-	conn    net.Conn
-	writer  *bufio.Writer
+	conn    *websocket.Conn
 	hello   *protocol.Hello
 	pending map[string]chan *protocol.Reply
 	seq     uint64
 	state   BridgeState
+	// scratchDir holds the PNGs Aseprite writes during a dump; removed on close.
+	scratchDir string
 }
 
 // NewLive builds a live link for a bridge port. It connects on the first call.
@@ -337,7 +359,7 @@ func NewLive(port int) (*Live, error) {
 	}
 	return &Live{
 		port:    port,
-		addr:    fmt.Sprintf("127.0.0.1:%d", port),
+		url:     fmt.Sprintf("ws://127.0.0.1:%d/client", port),
 		pending: map[string]chan *protocol.Reply{},
 	}, nil
 }
@@ -370,49 +392,37 @@ func (l *Live) State() BridgeState {
 // Connect dials the bridge if it is not already connected.
 func (l *Live) Connect(ctx context.Context) error {
 	l.mu.Lock()
-	if l.conn != nil {
-		l.mu.Unlock()
+	connected := l.conn != nil
+	l.mu.Unlock()
+	if connected {
 		return nil
 	}
-	l.mu.Unlock()
 
-	d := net.Dialer{Timeout: 3 * time.Second}
-	conn, err := d.DialContext(ctx, "tcp", l.addr)
+	dialCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	conn, _, err := websocket.Dial(dialCtx, l.url, nil)
 	if err != nil {
 		return protocol.New(protocol.CodeBridgeUnavailable,
 			"no bridge is listening on 127.0.0.1:%d", l.port).
 			WithRemediation("start the MCP server from the app, which runs the bridge, or switch to headless mode").
-			WithDetail("address", l.addr)
-	}
-
-	writer := bufio.NewWriter(conn)
-	if _, err := writer.WriteString("{\"role\":\"client\"}\n"); err != nil {
-		_ = conn.Close()
-		return protocol.New(protocol.CodeBridgeUnavailable, "bridge handshake failed: %v", err)
-	}
-	if err := writer.Flush(); err != nil {
-		_ = conn.Close()
-		return protocol.New(protocol.CodeBridgeUnavailable, "bridge handshake failed: %v", err)
+			WithDetail("address", l.url)
 	}
 
 	l.mu.Lock()
 	l.conn = conn
-	l.writer = writer
 	l.mu.Unlock()
 
 	go l.readLoop(conn)
 	return nil
 }
 
-func (l *Live) readLoop(conn net.Conn) {
-	reader := bufio.NewReaderSize(conn, 1<<20)
+func (l *Live) readLoop(conn *websocket.Conn) {
 	for {
-		line, err := readFrame(reader)
+		_, data, err := conn.Read(context.Background())
 		if err != nil {
 			l.mu.Lock()
 			if l.conn == conn {
 				l.conn = nil
-				l.writer = nil
 				l.state = BridgeState{}
 			}
 			pending := l.pending
@@ -427,13 +437,13 @@ func (l *Live) readLoop(conn net.Conn) {
 			return
 		}
 
-		if st, ok := parseStateFrame(line); ok {
+		if st, ok := parseStateFrame(data); ok {
 			l.mu.Lock()
 			l.state = st
 			l.mu.Unlock()
 			continue
 		}
-		withMarker := append([]byte(protocol.FrameMarker), line...)
+		withMarker := append([]byte(protocol.FrameMarker), data...)
 		if hello, ok := protocol.ParseHello(withMarker); ok {
 			l.mu.Lock()
 			l.hello = hello
@@ -470,7 +480,7 @@ func (l *Live) Call(ctx context.Context, cmd string, args any, out any) error {
 	l.mu.Lock()
 	l.seq++
 	id := fmt.Sprintf("r%d", l.seq)
-	conn, writer, ok := l.conn, l.writer, l.conn != nil
+	conn := l.conn
 	ch := make(chan *protocol.Reply, 1)
 	l.pending[id] = ch
 	l.mu.Unlock()
@@ -481,7 +491,7 @@ func (l *Live) Call(ctx context.Context, cmd string, args any, out any) error {
 		l.mu.Unlock()
 	}()
 
-	if !ok || conn == nil || writer == nil {
+	if conn == nil {
 		return protocol.New(protocol.CodeNotConnected, "the bridge connection closed").
 			WithRemediation("try again; the app restarts the bridge automatically")
 	}
@@ -491,12 +501,9 @@ func (l *Live) Call(ctx context.Context, cmd string, args any, out any) error {
 		return protocol.AsError(err)
 	}
 
-	l.mu.Lock()
-	_, writeErr := writer.Write(line)
-	if writeErr == nil {
-		writeErr = writer.Flush()
-	}
-	l.mu.Unlock()
+	writeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	writeErr := conn.Write(writeCtx, websocket.MessageText, line)
+	cancel()
 	if writeErr != nil {
 		return protocol.New(protocol.CodeBridgeUnavailable, "could not send %q: %v", cmd, writeErr)
 	}
@@ -533,11 +540,33 @@ func (l *Live) Call(ctx context.Context, cmd string, args any, out any) error {
 
 // Dump reads the sprite through the window.
 func (l *Live) Dump(ctx context.Context, filter *doc.Filter) (*doc.Dump, error) {
+	// The script has no writable idea of "here", so it is handed a folder, the
+	// same way the headless runner is.
+	dir, err := l.scratch()
+	if err != nil {
+		return nil, protocol.AsError(err)
+	}
 	var out dumpResult
-	if err := l.Call(ctx, "doc.dump", dumpArgs{Filter: filter, Sprite: spriteOf(filter)}, &out); err != nil {
+	if err := l.Call(ctx, "doc.dump", dumpArgs{Filter: filter, Sprite: spriteOf(filter), Dir: dir}, &out); err != nil {
 		return nil, err
 	}
 	return out.toDump()
+}
+
+// scratch returns the folder the script writes cel PNGs into, created on first
+// use.
+func (l *Live) scratch() (string, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.scratchDir != "" {
+		return l.scratchDir, nil
+	}
+	dir, err := os.MkdirTemp("", "spriteware-live-")
+	if err != nil {
+		return "", err
+	}
+	l.scratchDir = dir
+	return dir, nil
 }
 
 // Close drops the bridge connection.
@@ -545,10 +574,14 @@ func (l *Live) Close() error {
 	l.mu.Lock()
 	conn := l.conn
 	l.conn = nil
-	l.writer = nil
+	scratch := l.scratchDir
+	l.scratchDir = ""
 	l.mu.Unlock()
+	if scratch != "" {
+		defer os.RemoveAll(scratch)
+	}
 	if conn != nil {
-		return conn.Close()
+		return conn.CloseNow()
 	}
 	return nil
 }
@@ -557,39 +590,33 @@ func (l *Live) Close() error {
 // Peer and framing helpers
 // ---------------------------------------------------------------------------
 
+// peer is one WebSocket on the bridge: the user's window, or one MCP server.
 type peer struct {
-	id     string
-	conn   net.Conn
-	writer *bufio.Writer
-	wmu    sync.Mutex
+	id   string
+	ws   *websocket.Conn
+	ctx  context.Context
+	stop context.CancelFunc
+	wmu  sync.Mutex
 }
 
-func (p *peer) write(data []byte) {
+func newPeer(id string, ws *websocket.Conn) *peer {
+	ctx, stop := context.WithCancel(context.Background())
+	return &peer{id: id, ws: ws, ctx: ctx, stop: stop}
+}
+
+// write sends one envelope. A dead socket is dropped silently: the reader loop
+// notices and unregisters the peer.
+func (p *peer) write(body []byte) {
 	p.wmu.Lock()
 	defer p.wmu.Unlock()
-	if _, err := p.writer.Write(data); err != nil {
-		return
-	}
-	_ = p.writer.Flush()
+	ctx, cancel := context.WithTimeout(p.ctx, 5*time.Second)
+	defer cancel()
+	_ = p.ws.Write(ctx, websocket.MessageText, body)
 }
 
 func (p *peer) close() {
-	_ = p.conn.Close()
-}
-
-// frame prefixes a payload with the protocol marker and a newline.
-func frame(body []byte) []byte {
-	out := make([]byte, 0, len(body)+len(protocol.FrameMarker)+1)
-	out = append(out, protocol.FrameMarker...)
-	out = append(out, body...)
-	out = append(out, '\n')
-	return out
-}
-
-// stripMarker removes the marker and any trailing newline.
-func stripMarker(line []byte) []byte {
-	s := strings.TrimPrefix(string(line), protocol.FrameMarker)
-	return []byte(strings.TrimRight(s, "\r\n"))
+	p.stop()
+	_ = p.ws.CloseNow()
 }
 
 func replyFrameJSON(id string, err *protocol.Error) []byte {
@@ -605,13 +632,13 @@ func replyFrameJSON(id string, err *protocol.Error) []byte {
 	return out
 }
 
-func stateFrame(st BridgeState) []byte {
+func statePayload(st BridgeState) []byte {
 	payload := map[string]any{"type": "bridge_state", "state": st}
 	out, err := json.Marshal(payload)
 	if err != nil {
-		return frame([]byte(`{"type":"bridge_state"}`))
+		return []byte(`{"type":"bridge_state"}`)
 	}
-	return frame(out)
+	return out
 }
 
 func parseStateFrame(line []byte) (BridgeState, bool) {
@@ -619,7 +646,7 @@ func parseStateFrame(line []byte) (BridgeState, bool) {
 		Type  string      `json:"type"`
 		State BridgeState `json:"state"`
 	}
-	if err := json.Unmarshal(stripMarker(line), &probe); err != nil || probe.Type != "bridge_state" {
+	if err := json.Unmarshal(line, &probe); err != nil || probe.Type != "bridge_state" {
 		return BridgeState{}, false
 	}
 	return probe.State, true

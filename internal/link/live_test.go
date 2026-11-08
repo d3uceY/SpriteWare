@@ -1,18 +1,19 @@
 package link
 
 import (
-	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/coder/websocket"
 )
 
 // ---------------------------------------------------------------------------
 // The bridge keeps the user's window attached while an agent host restarts the
-// server. These tests drive it over real sockets, as production does.
+// server. These tests drive it over a real WebSocket, as production does.
 // ---------------------------------------------------------------------------
 
 func startBridge(t *testing.T) *Bridge {
@@ -25,47 +26,57 @@ func startBridge(t *testing.T) *Bridge {
 	return b
 }
 
-func dialRole(t *testing.T, b *Bridge, role string) (net.Conn, *bufio.Reader) {
+// dialRole connects on the route the bridge serves for that role: /extension is
+// Aseprite, /client is one MCP server.
+func dialRole(t *testing.T, b *Bridge, role string) *websocket.Conn {
 	t.Helper()
-	addr := fmt.Sprintf("127.0.0.1:%d", b.Port())
-	conn, err := net.DialTimeout("tcp", addr, 2*time.Second)
+	url := fmt.Sprintf("ws://127.0.0.1:%d/%s", b.Port(), role)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	conn, _, err := websocket.Dial(ctx, url, nil)
+	cancel()
 	if err != nil {
-		t.Fatalf("dial %s: %v", addr, err)
+		t.Fatalf("dial %s: %v", url, err)
 	}
-	t.Cleanup(func() { _ = conn.Close() })
-	if _, err := fmt.Fprintf(conn, "{\"role\":%q}\n", role); err != nil {
-		t.Fatalf("send role: %v", err)
-	}
-	return conn, bufio.NewReaderSize(conn, 1<<20)
+	conn.SetReadLimit(1 << 20)
+	t.Cleanup(func() { _ = conn.CloseNow() })
+	return conn
 }
 
-func writeCommand(t *testing.T, conn net.Conn, id, cmd string) {
+func writeCommand(t *testing.T, conn *websocket.Conn, id, cmd string) {
 	t.Helper()
 	body, _ := json.Marshal(map[string]any{"id": id, "cmd": cmd})
-	if _, err := conn.Write(frame(body)); err != nil {
-		t.Fatalf("write command: %v", err)
+	write(t, conn, body)
+}
+
+func write(t *testing.T, conn *websocket.Conn, body []byte) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err := conn.Write(ctx, websocket.MessageText, body); err != nil {
+		t.Fatalf("write: %v", err)
 	}
 }
 
-func readLine(t *testing.T, conn net.Conn, r *bufio.Reader) map[string]any {
+func readMessage(t *testing.T, conn *websocket.Conn) map[string]any {
 	t.Helper()
-	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-	line, err := r.ReadBytes('\n')
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_, data, err := conn.Read(ctx)
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}
 	var out map[string]any
-	if err := json.Unmarshal(stripMarker(line), &out); err != nil {
-		t.Fatalf("decode %q: %v", line, err)
+	if err := json.Unmarshal(data, &out); err != nil {
+		t.Fatalf("decode %q: %v", data, err)
 	}
 	return out
 }
 
 // waitForID skips bridge_state notices and returns the reply with this id.
-func waitForID(t *testing.T, conn net.Conn, r *bufio.Reader, id string) map[string]any {
+func waitForID(t *testing.T, conn *websocket.Conn, id string) map[string]any {
 	t.Helper()
 	for i := 0; i < 10; i++ {
-		msg := readLine(t, conn, r)
+		msg := readMessage(t, conn)
 		if msg["type"] == "bridge_state" {
 			continue
 		}
@@ -82,13 +93,10 @@ func waitForID(t *testing.T, conn net.Conn, r *bufio.Reader, id string) map[stri
 // client's reply lands in the other's channel.
 func TestBridgeRoutesRepliesToTheRightClient(t *testing.T) {
 	b := startBridge(t)
-	addr := fmt.Sprintf("127.0.0.1:%d", b.Port())
+	ext := dialRole(t, b, "extension")
 
-	ext, extReader := dialRole(t, b, "extension")
-	_ = ext
-
-	c1, c1Reader := dialRole(t, b, "client")
-	c2, c2Reader := dialRole(t, b, "client")
+	c1 := dialRole(t, b, "client")
+	c2 := dialRole(t, b, "client")
 
 	writeCommand(t, c1, "a1", "doc.info")
 	writeCommand(t, c2, "a2", "doc.info")
@@ -97,8 +105,8 @@ func TestBridgeRoutesRepliesToTheRightClient(t *testing.T) {
 	// is read off the wire.
 	prefix := map[string]string{}
 	for _, msg := range []map[string]any{
-		waitForExtensionCommand(t, ext, extReader),
-		waitForExtensionCommand(t, ext, extReader),
+		waitForExtensionCommand(t, ext),
+		waitForExtensionCommand(t, ext),
 	} {
 		id, _ := msg["id"].(string)
 		_, local, ok := strings.Cut(id, "::")
@@ -112,39 +120,33 @@ func TestBridgeRoutesRepliesToTheRightClient(t *testing.T) {
 	}
 
 	// Reply to the second client first, out of order, and check delivery.
-	if _, err := ext.Write(frame(mustJSON(t, map[string]any{
+	write(t, ext, mustJSON(t, map[string]any{
 		"id": prefix["a2"], "ok": true, "data": map[string]any{"who": "two"},
-	}))); err != nil {
-		t.Fatalf("extension write: %v", err)
-	}
-	got := waitForID(t, c2, c2Reader, "a2")
+	}))
+	got := waitForID(t, c2, "a2")
 	data, _ := got["data"].(map[string]any)
 	if data["who"] != "two" {
 		t.Fatalf("client 2 got %v", got)
 	}
 
-	if _, err := ext.Write(frame(mustJSON(t, map[string]any{
+	write(t, ext, mustJSON(t, map[string]any{
 		"id": prefix["a1"], "ok": true, "data": map[string]any{"who": "one"},
-	}))); err != nil {
-		t.Fatalf("extension write: %v", err)
-	}
-	got = waitForID(t, c1, c1Reader, "a1")
+	}))
+	got = waitForID(t, c1, "a1")
 	data, _ = got["data"].(map[string]any)
 	if data["who"] != "one" {
 		t.Fatalf("client 1 got %v", got)
 	}
-
-	_ = addr
 }
 
 // A request with no window must fail immediately and say why: a hang reads as
 // "slow", and the obvious retry edits the file behind the user's editor.
 func TestBridgeAnswersImmediatelyWhenAsepriteIsMissing(t *testing.T) {
 	b := startBridge(t)
-	c1, reader := dialRole(t, b, "client")
+	c1 := dialRole(t, b, "client")
 
 	writeCommand(t, c1, "r1", "doc.info")
-	msg := waitForID(t, c1, reader, "r1")
+	msg := waitForID(t, c1, "r1")
 
 	if okValue, _ := msg["ok"].(bool); okValue {
 		t.Fatal("the bridge reported success with no Aseprite attached")
@@ -159,30 +161,24 @@ func TestBridgeAnswersImmediatelyWhenAsepriteIsMissing(t *testing.T) {
 func TestBridgeAcceptsAReconnect(t *testing.T) {
 	b := startBridge(t)
 
-	first, firstReader := dialRole(t, b, "extension")
-	_ = first
-	if _, err := first.Write(frame(mustJSON(t, map[string]any{
+	first := dialRole(t, b, "extension")
+	write(t, first, mustJSON(t, map[string]any{
 		"type": "hello", "protocol": 1, "extensionVersion": "0.1.0", "features": []any{},
-	}))); err != nil {
-		t.Fatalf("hello: %v", err)
-	}
-	_ = firstReader
+	}))
 
 	waitConnected(t, b, true)
 
-	second, _ := dialRole(t, b, "extension") // a second window takes over
-	if _, err := second.Write(frame(mustJSON(t, map[string]any{
+	second := dialRole(t, b, "extension") // a second window takes over
+	write(t, second, mustJSON(t, map[string]any{
 		"type": "hello", "protocol": 1, "extensionVersion": "0.2.0", "features": []any{},
-	}))); err != nil {
-		t.Fatalf("second hello: %v", err)
-	}
+	}))
 
 	// Wait for the takeover to be recorded before killing the old socket, or the
 	// test races the bridge.
 	waitVersion(t, b, "0.2.0")
 
 	// The old socket's cleanup must not report the replacement as gone.
-	_ = first.Close()
+	_ = first.CloseNow()
 	for i := 0; i < 20; i++ {
 		if !b.State().Connected {
 			t.Fatal("the old socket's cleanup cleared the new window")
@@ -217,16 +213,17 @@ func waitConnected(t *testing.T, b *Bridge, want bool) {
 	t.Fatalf("bridge state connected = %v, want %v", b.State().Connected, want)
 }
 
-func waitForExtensionCommand(t *testing.T, conn net.Conn, r *bufio.Reader) map[string]any {
+func waitForExtensionCommand(t *testing.T, conn *websocket.Conn) map[string]any {
 	t.Helper()
-	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-	line, err := r.ReadBytes('\n')
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_, data, err := conn.Read(ctx)
 	if err != nil {
 		t.Fatalf("extension read: %v", err)
 	}
 	var out map[string]any
-	if err := json.Unmarshal(stripMarker(line), &out); err != nil {
-		t.Fatalf("decode %q: %v", line, err)
+	if err := json.Unmarshal(data, &out); err != nil {
+		t.Fatalf("decode %q: %v", data, err)
 	}
 	return out
 }
