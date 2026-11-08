@@ -15,8 +15,11 @@ import (
 	"github.com/d3uceY/spriteware/internal/tools"
 )
 
-// Version is reported to every client that handshakes, and stamps the tool list.
-const Version = "0.1.0"
+// Version is reported to every client that handshakes, stamps the tool list,
+// and is what the window shows. Release builds override it with
+// -ldflags "-X github.com/d3uceY/spriteware/backend.Version=<tag>"; it has to
+// stay a var, because a const cannot be overridden.
+var Version = "0.1.0"
 
 // MCPStatus is pushed on the mcp:status event, so the UI never polls.
 type MCPStatus struct {
