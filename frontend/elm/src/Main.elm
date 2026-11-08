@@ -14,7 +14,7 @@ structure, JavaScript owns motion.
 
 import Browser
 import Json.Decode as Decode exposing (Decoder)
-import Types exposing (Client, ClientInstall, ClientSkill, ClientTarget, Model, Msg(..), Setup, Status, Tab(..), Tool, Update, emptySetup, emptySkill, emptyStatus, emptyUpdate)
+import Types exposing (Client, ClientInstall, ClientSkill, ClientTarget, Model, Msg(..), Settings, SettingsDraft, Setup, Status, Tab(..), Tool, Update, draftOf, emptyDraft, emptySetup, emptySettings, emptySkill, emptyStatus, emptyUpdate, parsedDraft)
 import View
 
 
@@ -43,6 +43,12 @@ port skillTextFromJs : (String -> msg) -> Sub msg
 
 
 port projectFromJs : (Decode.Value -> msg) -> Sub msg
+
+
+port settingsFromJs : (Decode.Value -> msg) -> Sub msg
+
+
+port savedSettingsFromJs : (Decode.Value -> msg) -> Sub msg
 
 
 port versionFromJs : (String -> msg) -> Sub msg
@@ -90,6 +96,10 @@ init _ =
       , skillText = ""
       , project = ""
       , projectChosen = False
+      , settings = emptySettings
+      , draft = emptyDraft
+      , settingsNote = ""
+      , settingsOK = True
       , version = ""
       , update = Nothing
       , ready = False
@@ -193,8 +203,9 @@ update msg model =
 
         SelectTab tab ->
             -- Setup is not optional: until a path is confirmed, it is the only
-            -- screen that can progress.
-            if not model.setup.confirmed then
+            -- screen that can progress. Settings is the exception, because a port
+            -- that is taken is exactly why the setup screen may be stuck.
+            if not model.setup.confirmed && tab /= AsepriteTab && tab /= SettingsTab then
                 ( { model | tab = AsepriteTab }, Cmd.none )
 
             else
@@ -262,6 +273,102 @@ update msg model =
         CopySnippet id payload ->
             ( { model | copied = id }, copyToClipboard payload )
 
+        GotSettings settings ->
+            -- A fetch is the only thing that resets the draft, so a status push
+            -- in the middle of typing cannot undo it.
+            ( { model
+                | settings = settings
+                , draft = draftOf settings
+                , settingsNote = ""
+                , settingsOK = True
+              }
+            , Cmd.none
+            )
+
+        TypedMcpPort text ->
+            let
+                draft =
+                    model.draft
+            in
+            ( { model
+                | draft = { draft | mcpPort = digitsOnly text }
+                , settingsNote = ""
+              }
+            , Cmd.none
+            )
+
+        TypedBridgePort text ->
+            let
+                draft =
+                    model.draft
+            in
+            ( { model
+                | draft = { draft | bridgePort = digitsOnly text }
+                , settingsNote = ""
+              }
+            , Cmd.none
+            )
+
+        DraftTransport transport ->
+            let
+                draft =
+                    model.draft
+            in
+            ( { model | draft = { draft | transport = transport }, settingsNote = "" }, Cmd.none )
+
+        DraftStartOnLaunch ->
+            let
+                draft =
+                    model.draft
+            in
+            ( { model
+                | draft = { draft | startOnLaunch = not draft.startOnLaunch }
+                , settingsNote = ""
+              }
+            , Cmd.none
+            )
+
+        DiscardSettings ->
+            ( { model
+                | draft = draftOf model.settings
+                , settingsNote = ""
+                , settingsOK = True
+                , error = Nothing
+              }
+            , Cmd.none
+            )
+
+        SaveSettings ->
+            case parsedDraft model.draft of
+                Nothing ->
+                    ( { model
+                        | settingsOK = False
+                        , settingsNote = "Both ports have to be whole numbers from 1 to 65535, and they have to differ."
+                      }
+                    , Cmd.none
+                    )
+
+                Just next ->
+                    ( { model | settingsOK = True, settingsNote = "Saving…", error = Nothing }
+                    , request { action = "save-settings", target = encodeSettings next }
+                    )
+
+        GotSettingsSaved ok message settings ->
+            if ok then
+                ( { model
+                    | settings = settings
+                    , draft = draftOf settings
+                    , settingsOK = True
+                    , settingsNote = message
+                  }
+                , Cmd.none
+                )
+
+            else
+                -- The draft stays as typed: the reason is about the numbers in
+                -- the fields, and the user has to be able to fix them.
+                ( { model | settingsOK = False, settingsNote = message }, Cmd.none )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -274,6 +381,8 @@ subscriptions _ =
         , skillFromJs (decodeOr ( False, "" ) installDecoder >> \( ok, message ) -> GotSkill ok message)
         , skillTextFromJs GotSkillText
         , projectFromJs (decodeOr ( "", False ) projectDecoder >> \( path, chosen ) -> GotProject path chosen)
+        , settingsFromJs (decodeOr emptySettings settingsDecoder >> GotSettings)
+        , savedSettingsFromJs (decodeOr ( False, "", emptySettings ) savedSettingsDecoder >> \( ok, message, settings ) -> GotSettingsSaved ok message settings)
         , versionFromJs GotVersion
         , updateFromJs (decodeOr emptyUpdate updateDecoder >> GotUpdate)
         , errorFromJs GotError
@@ -283,6 +392,30 @@ subscriptions _ =
 decodeOr : a -> Decoder a -> Decode.Value -> a
 decodeOr fallback decoder value =
     Decode.decodeValue decoder value |> Result.withDefault fallback
+
+
+{-| A port field holds nothing but digits, so typing cannot produce a value the
+server refuses for a reason the user did not intend.
+-}
+digitsOnly : String -> String
+digitsOnly text =
+    String.filter Char.isDigit text |> String.left 5
+
+
+{-| The request port carries one string, the way `install-skill` carries two
+values. -}
+encodeSettings : Settings -> String
+encodeSettings settings =
+    String.join "|"
+        [ String.fromInt settings.mcpPort
+        , settings.transport
+        , String.fromInt settings.bridgePort
+        , if settings.startOnLaunch then
+            "1"
+
+          else
+            "0"
+        ]
 
 
 statusDecoder : Decoder Status
@@ -370,6 +503,23 @@ projectDecoder =
     Decode.map2 Tuple.pair
         (Decode.oneOf [ Decode.field "path" Decode.string, Decode.succeed "" ])
         (Decode.oneOf [ Decode.field "chosen" Decode.bool, Decode.succeed False ])
+
+
+settingsDecoder : Decoder Settings
+settingsDecoder =
+    Decode.map4 Settings
+        (Decode.field "port" Decode.int)
+        (Decode.oneOf [ Decode.field "transport" Decode.string, Decode.succeed "streamable-http" ])
+        (Decode.field "bridgePort" Decode.int)
+        (Decode.oneOf [ Decode.field "startMcpOnLaunch" Decode.bool, Decode.succeed True ])
+
+
+savedSettingsDecoder : Decoder ( Bool, String, Settings )
+savedSettingsDecoder =
+    Decode.map3 (\ok message settings -> ( ok, message, settings ))
+        (Decode.oneOf [ Decode.field "ok" Decode.bool, Decode.succeed False ])
+        (Decode.oneOf [ Decode.field "message" Decode.string, Decode.succeed "" ])
+        (Decode.field "settings" settingsDecoder)
 
 
 updateDecoder : Decoder Update

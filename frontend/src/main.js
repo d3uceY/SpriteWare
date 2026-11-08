@@ -18,6 +18,7 @@ import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 
 import { AppService, MCPService } from "../bindings/github.com/d3uceY/spriteware/backend/index.js";
+import { Config } from "../bindings/github.com/d3uceY/spriteware/internal/config/models.js";
 
 const STATUS_EVENT = "mcp:status";
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -49,13 +50,14 @@ function send(port, value) {
 }
 
 async function refreshAll() {
-  const [status, setup, tools, clients, skillText, project] = await Promise.all([
+  const [status, setup, tools, clients, skillText, project, settings] = await Promise.all([
     MCPService.GetMCPStatus(),
     MCPService.GetSetupState(),
     MCPService.ListTools(),
     MCPService.ListClients(),
     MCPService.SkillText(),
     MCPService.ProjectFolder(),
+    MCPService.GetSettings(),
   ]);
   send("statusFromJs", toStatus(status));
   send("setupFromJs", toSetup(setup));
@@ -63,6 +65,7 @@ async function refreshAll() {
   send("clientsFromJs", (clients ?? []).map(toClient));
   send("skillTextFromJs", String(skillText ?? ""));
   send("projectFromJs", toProject(project));
+  send("settingsFromJs", toSettings(settings));
 }
 
 async function refreshServer() {
@@ -116,6 +119,37 @@ const actions = {
 
   mode: async (mode) => {
     send("statusFromJs", toStatus(await MCPService.SwitchMode(mode)));
+  },
+
+  "save-settings": async (target) => {
+    const [port, transport, bridgePort, on] = String(target ?? "").split("|");
+    let current = null;
+    try {
+      current = await MCPService.GetSettings();
+      const saved = await MCPService.SaveSettings(
+        Config.createFrom({
+          ...current,
+          port: Number(port),
+          transport: String(transport),
+          bridgePort: Number(bridgePort),
+          startMcpOnLaunch: on === "1",
+        }),
+      );
+      send("savedSettingsFromJs", {
+        ok: true,
+        message: `Saved. Port ${Number(saved?.port ?? 0)}.`,
+        settings: toSettings(saved),
+      });
+      // The listener may have moved, so the Server tab's address has to follow.
+      await refreshServer();
+    } catch (err) {
+      // The note belongs on the card, next to the numbers that caused it.
+      send("savedSettingsFromJs", {
+        ok: false,
+        message: describe(err),
+        settings: toSettings(current),
+      });
+    }
   },
 
   "confirm-path": async (path) => {
@@ -287,6 +321,16 @@ function toUpdate(raw) {
 function toProject(raw) {
   const [path, chosen] = Array.isArray(raw) ? raw : [];
   return { path: String(path ?? ""), chosen: Boolean(chosen) };
+}
+
+function toSettings(raw) {
+  const s = raw ?? {};
+  return {
+    port: Number(s.port ?? 0),
+    transport: String(s.transport ?? "streamable-http"),
+    bridgePort: Number(s.bridgePort ?? 0),
+    startMcpOnLaunch: Boolean(s.startMcpOnLaunch),
+  };
 }
 
 function toClient(raw) {

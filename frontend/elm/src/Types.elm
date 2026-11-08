@@ -5,15 +5,21 @@ module Types exposing
     , ClientTarget
     , Model
     , Msg(..)
+    , Settings
+    , SettingsDraft
     , Setup
     , Status
     , Tab(..)
     , Tool
     , Update
+    , draftOf
+    , emptyDraft
     , emptySetup
+    , emptySettings
     , emptySkill
     , emptyStatus
     , emptyUpdate
+    , parsedDraft
     )
 
 {-| The app's state, its messages, and the shapes that cross the port boundary.
@@ -71,6 +77,84 @@ emptyUpdate =
     , url = ""
     , notes = ""
     }
+
+
+{-| The four numbers and switches a user can change. Everything else in
+`config.json` (the Aseprite path, the project folder, the Lua switch) is set by
+the screen that owns it.
+-}
+type alias Settings =
+    { mcpPort : Int
+    , transport : String
+    , bridgePort : Int
+    , startOnLaunch : Bool
+    }
+
+
+emptySettings : Settings
+emptySettings =
+    { mcpPort = 9933
+    , transport = "streamable-http"
+    , bridgePort = 9934
+    , startOnLaunch = True
+    }
+
+
+{-| The same four as typed: ports stay text so a half-typed "99" is not a
+number yet, and saving is what turns them into one.
+-}
+type alias SettingsDraft =
+    { mcpPort : String
+    , transport : String
+    , bridgePort : String
+    , startOnLaunch : Bool
+    }
+
+
+emptyDraft : SettingsDraft
+emptyDraft =
+    { mcpPort = ""
+    , transport = "streamable-http"
+    , bridgePort = ""
+    , startOnLaunch = True
+    }
+
+
+{-| The saved settings as the form shows them, so "is this edited" is one
+comparison rather than four.
+-}
+draftOf : Settings -> SettingsDraft
+draftOf settings =
+    { mcpPort = String.fromInt settings.mcpPort
+    , transport = settings.transport
+    , bridgePort = String.fromInt settings.bridgePort
+    , startOnLaunch = settings.startOnLaunch
+    }
+
+
+{-| Typed text as a value, or nothing while it is still unusable. Go checks
+again before writing: this only keeps the button quiet until the numbers add up.
+-}
+parsedDraft : SettingsDraft -> Maybe Settings
+parsedDraft draft =
+    case ( String.toInt draft.mcpPort, String.toInt draft.bridgePort ) of
+        ( Just mcpPort, Just bridgePort ) ->
+            if mcpPort < 1 || mcpPort > 65535 || bridgePort < 1 || bridgePort > 65535 then
+                Nothing
+
+            else if mcpPort == bridgePort then
+                Nothing
+
+            else
+                Just
+                    { mcpPort = mcpPort
+                    , transport = draft.transport
+                    , bridgePort = bridgePort
+                    , startOnLaunch = draft.startOnLaunch
+                    }
+
+        _ ->
+            Nothing
 
 
 {-| Where the app is with finding Aseprite.
@@ -161,6 +245,7 @@ type Tab
     = ServerTab
     | AsepriteTab
     | ToolsTab
+    | SettingsTab
 
 
 type alias Model =
@@ -182,6 +267,10 @@ type alias Model =
     , skillText : String
     , project : String
     , projectChosen : Bool
+    , settings : Settings
+    , draft : SettingsDraft
+    , settingsNote : String
+    , settingsOK : Bool
     , version : String
     , update : Maybe Update
     , ready : Bool
@@ -218,6 +307,14 @@ type Msg
     | GotSkillText String
     | ChooseProjectFolder
     | GotProject String Bool
+    | GotSettings Settings
+    | TypedMcpPort String
+    | TypedBridgePort String
+    | DraftTransport String
+    | DraftStartOnLaunch
+    | SaveSettings
+    | DiscardSettings
+    | GotSettingsSaved Bool String Settings
     | GotVersion String
     | GotUpdate Update
     | DismissUpdate

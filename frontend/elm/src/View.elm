@@ -5,7 +5,7 @@ import Html.Attributes as Attr
 import Html.Events as Events
 import Json.Decode as Decode
 import Pixel exposing (Icon(..), icon)
-import Types exposing (Client, Model, Msg(..), Status, Tab(..), Tool)
+import Types exposing (Client, Model, Msg(..), Status, Tab(..), Tool, draftOf, parsedDraft)
 
 
 {-| One window, four screens. The chrome is a strip along the top and the
@@ -31,20 +31,21 @@ view model =
 
 
 {-| Which tab the stage is showing. Until a path is confirmed, setup borrows
-the Aseprite tab because that is the screen that can make progress.
+the Aseprite tab because that is the screen that can make progress. Settings is
+reachable anyway: a port that is taken is a reason setup cannot finish.
 -}
 shownTab : Model -> Tab
 shownTab model =
-    if not model.setup.confirmed then
-        AsepriteTab
+    if model.setup.confirmed || model.tab == SettingsTab then
+        model.tab
 
     else
-        model.tab
+        AsepriteTab
 
 
 viewName : Model -> String
 viewName model =
-    if not model.setup.confirmed then
+    if not model.setup.confirmed && model.tab /= SettingsTab then
         "setup"
 
     else
@@ -58,10 +59,13 @@ viewName model =
             ToolsTab ->
                 "tools"
 
+            SettingsTab ->
+                "settings"
+
 
 stage : Model -> Html Msg
 stage model =
-    if not model.setup.confirmed then
+    if not model.setup.confirmed && model.tab /= SettingsTab then
         setupPage model
 
     else
@@ -74,6 +78,9 @@ stage model =
 
             ToolsTab ->
                 toolsPage model
+
+            SettingsTab ->
+                settingsPage model
 
 
 {-| The strip along the top: the mark and connection state, then one tab per
@@ -104,6 +111,7 @@ chrome model =
             [ tabButton model ServerTab ServerIcon "Server"
             , tabButton model AsepriteTab BrushIcon "Aseprite"
             , tabButton model ToolsTab BlocksIcon "Tools"
+            , tabButton model SettingsTab SettingsIcon "Settings"
             ]
         ]
 
@@ -120,6 +128,9 @@ tabId tab =
         ToolsTab ->
             "tab-tools"
 
+        SettingsTab ->
+            "tab-settings"
+
 
 tabButton : Model -> Tab -> Icon -> String -> Html Msg
 tabButton model tab which label =
@@ -128,7 +139,7 @@ tabButton model tab which label =
             shownTab model == tab
 
         locked =
-            not model.setup.confirmed && tab /= AsepriteTab
+            not model.setup.confirmed && tab /= AsepriteTab && tab /= SettingsTab
     in
     Html.button
         [ Attr.class
@@ -558,12 +569,12 @@ startCard model =
                     ]
                 ]
             , Html.div [ Attr.class "seg" ]
-                [ segButton status "headless" "Background"
-                , segButton status "live" "Editor window"
+                [ segChoice (status.mode == "headless") "Background" (SetMode "headless")
+                , segChoice (status.mode == "live") "Editor window" (SetMode "live")
                 ]
             ]
         , bridgeNote model
-        , problemNote model
+        , serverProblem model
         ]
 
 {-| Live mode is only useful with Aseprite on the other end, and "Listening"
@@ -581,6 +592,42 @@ bridgeNote model =
     else
         Html.p [ Attr.class "bridge bridge--waiting" ]
             [ Html.text "Waiting for Aseprite: open it with the SpriteWare extension enabled." ]
+
+
+{-| Why nothing is listening, whichever path reported it, with the way out of
+it beside the reason. A start at launch has no caller left to report to, so that
+failure only exists as `lastError`.
+-}
+serverProblem : Model -> Html Msg
+serverProblem model =
+    case problemText model of
+        "" ->
+            Html.text ""
+
+        message ->
+            Html.div [ Attr.class "row row--between" ]
+                [ Html.p [ Attr.class "note note--bad", Attr.attribute "role" "alert" ]
+                    [ Html.text message ]
+                , Html.button
+                    [ Attr.class "btn btn--ghost"
+                    , Events.onClick (SelectTab SettingsTab)
+                    ]
+                    [ Html.text "Change port" ]
+                ]
+
+
+problemText : Model -> String
+problemText model =
+    case model.error of
+        Just message ->
+            message
+
+        Nothing ->
+            if not (String.isEmpty model.status.lastError) then
+                model.status.lastError
+
+            else
+                model.setup.problem
 
 
 {-| The snippet card: pick an assistant, read where the config goes, then copy
@@ -986,12 +1033,8 @@ copyButton model id payload =
         ]
 
 
-segButton : Status -> String -> String -> Html Msg
-segButton status value label =
-    let
-        active =
-            status.mode == value
-    in
+segChoice : Bool -> String -> Msg -> Html Msg
+segChoice active label onClickMsg =
     Html.button
         [ Attr.class
             (if active then
@@ -1001,9 +1044,159 @@ segButton status value label =
                 "seg__btn"
             )
         , Attr.disabled active
-        , Events.onClick (SetMode value)
+        , Events.onClick onClickMsg
         ]
         [ Html.text label ]
+
+
+{-| The four values the app had to guess for the user. Each one fixes something
+they cannot see otherwise: where assistants connect, how they talk, where the
+extension dials in, and whether the endpoint is up before anyone asks.
+-}
+settingsPage : Model -> Html Msg
+settingsPage model =
+    let
+        draft =
+            model.draft
+
+        ready =
+            parsedDraft draft /= Nothing
+    in
+    Html.div [ Attr.class "page" ]
+        [ pageHead "Settings"
+            "Ports and startup."
+        , Html.section [ Attr.class "card" ]
+            [ Html.div [ Attr.class "card__head" ]
+                [ Html.h2 [ Attr.class "card__title" ] [ Html.text "MCP server" ]
+                , Html.p [ Attr.class "card__lead" ]
+                    [ Html.text "Assistant connection." ]
+                ]
+            , portField "settings-mcp-port" "Port" draft.mcpPort TypedMcpPort
+            , Html.div [ Attr.class "row" ]
+                [ Html.div [ Attr.class "seg" ]
+                    [ segChoice (draft.transport == "streamable-http")
+                        "Streamable HTTP"
+                        (DraftTransport "streamable-http")
+                    , segChoice (draft.transport == "sse") "SSE" (DraftTransport "sse")
+                    ]
+                ]
+            , Html.p [ Attr.class "hint" ]
+                [ Html.text "Restarts the server. Reinstall assistants afterwards." ]
+            ]
+        , Html.section [ Attr.class "card" ]
+            [ Html.div [ Attr.class "card__head" ]
+                [ Html.h2 [ Attr.class "card__title" ] [ Html.text "Aseprite bridge" ]
+                , Html.p [ Attr.class "card__lead" ]
+                    [ Html.text "Live mode only." ]
+                ]
+            , portField "settings-bridge-port" "Port" draft.bridgePort TypedBridgePort
+            , if ready then
+                Html.text ""
+
+              else
+                Html.p [ Attr.class "note note--bad", Attr.attribute "role" "alert" ]
+                    [ Html.text "Ports must be 1-65535 and differ." ]
+            , Html.p [ Attr.class "hint" ]
+                [ Html.text "Rewrites the extension. Restart Aseprite." ]
+            ]
+        , Html.section [ Attr.class "card" ]
+            [ Html.div [ Attr.class "card__head" ]
+                [ Html.h2 [ Attr.class "card__title" ] [ Html.text "At launch" ] ]
+            , Html.div [ Attr.class "row" ]
+                [ Html.button
+                    [ Attr.class
+                        (if draft.startOnLaunch then
+                            "switch switch--on"
+
+                         else
+                            "switch"
+                        )
+                    , Attr.attribute "role" "switch"
+                    , Attr.attribute "aria-checked"
+                        (if draft.startOnLaunch then
+                            "true"
+
+                         else
+                            "false"
+                        )
+                    , Events.onClick DraftStartOnLaunch
+                    ]
+                    [ Pixel.switch draft.startOnLaunch
+                    , Html.span [ Attr.class "switch__label" ]
+                        [ Html.text
+                            (if draft.startOnLaunch then
+                                "Start with the app"
+
+                             else
+                                "Start manually"
+                            )
+                        ]
+                    ]
+                ]
+            , Html.p [ Attr.class "hint" ]
+                [ Html.text "Applies on the next launch." ]
+            ]
+        , Html.div [ Attr.class "row row--between" ]
+            [ Html.button
+                [ Attr.class "btn btn--ghost"
+                , Attr.disabled (draft == draftOf model.settings)
+                , Events.onClick DiscardSettings
+                ]
+                [ Html.text "Discard" ]
+            , Html.button
+                [ Attr.class "btn"
+                , Attr.disabled (not ready)
+                , Events.onClick SaveSettings
+                ]
+                [ Html.text "Save" ]
+            ]
+        , settingsNote model
+        , problemNote model
+        ]
+
+
+{-| A port in a well: the host is fixed, so it is printed rather than typed. -}
+portField : String -> String -> String -> (String -> Msg) -> Html Msg
+portField id label value onInput =
+    Html.div [ Attr.class "field" ]
+        [ Html.label [ Attr.class "field__label", Attr.for id ] [ Html.text label ]
+        , Html.div [ Attr.class "numfield" ]
+            [ Html.span [ Attr.class "numfield__prefix" ] [ Html.text "127.0.0.1:" ]
+            , Html.input
+                [ Attr.id id
+                , Attr.class "numfield__input"
+                , Attr.type_ "text"
+                , Attr.attribute "inputmode" "numeric"
+                , Attr.attribute "autocomplete" "off"
+                , Attr.value value
+                , Attr.spellcheck False
+                , Events.onInput onInput
+                ]
+                []
+            ]
+        ]
+
+
+{-| The answer to a save: what changed, or why nothing did. -}
+settingsNote : Model -> Html Msg
+settingsNote model =
+    if String.isEmpty model.settingsNote then
+        Html.text ""
+
+    else
+        Html.p
+            [ Attr.class
+                ("hint "
+                    ++ (if model.settingsOK then
+                            "hint--ok"
+
+                        else
+                            "hint--bad"
+                       )
+                )
+            , Attr.attribute "role" "status"
+            ]
+            [ Html.text model.settingsNote ]
 
 
 asepritePage : Model -> Html Msg

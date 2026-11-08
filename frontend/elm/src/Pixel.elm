@@ -1,4 +1,4 @@
-module Pixel exposing (Icon(..), caret, icon, led, mascot, text)
+module Pixel exposing (Icon(..), caret, icon, led, mascot, switch, text)
 
 {-| The pixel art in the app. Every sheet in `public/sprites` was drawn through
 SpriteWare's own MCP server, and the `.aseprite` sources sit in
@@ -64,6 +64,7 @@ type Icon
     = ServerIcon
     | BrushIcon
     | BlocksIcon
+    | SettingsIcon
     | SearchIcon
     | FolderIcon
     | PlayIcon
@@ -89,6 +90,9 @@ nameOf which =
         BlocksIcon ->
             "nav-tools"
 
+        SettingsIcon ->
+            "nav-settings"
+
         SearchIcon ->
             "icon-search"
 
@@ -100,6 +104,25 @@ nameOf which =
 
         StopIcon ->
             "icon-stop"
+
+
+{-| The launch switch: one sheet, two frames, so the control cannot show a state
+the app is not in. -}
+switch : Bool -> Html msg
+switch on =
+    Html.span
+        [ Attr.class
+            ("px px--switch"
+                ++ (if on then
+                        " px--switch-on"
+
+                    else
+                        ""
+                   )
+            )
+        , Attr.attribute "aria-hidden" "true"
+        ]
+        []
 
 
 {-| Display text, set one drawn glyph at a time from the `glyphs` sheet.

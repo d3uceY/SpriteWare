@@ -165,7 +165,8 @@ pre {
 
 .px--nav-server,
 .px--nav-aseprite,
-.px--nav-tools {
+.px--nav-tools,
+.px--nav-settings {
   --n: 2;
 }
 
@@ -182,6 +183,24 @@ pre {
 .px--nav-tools {
   background-image: url("/sprites/nav-tools.png");
   animation-duration: 0.9s;
+}
+
+.px--nav-settings {
+  background-image: url("/sprites/nav-settings.png");
+  animation-duration: 1.3s;
+}
+
+/* The launch switch is one sheet of two frames, so the knob cannot drift from
+   the state the app is in. */
+.px--switch {
+  --w: 16;
+  --h: 10;
+  --n: 2;
+  background-image: url("/sprites/switch.png");
+}
+
+.px--switch-on {
+  background-position: calc(var(--w) * var(--px) * -1) 0;
 }
 
 .px--icon-search {
@@ -564,6 +583,7 @@ pre {
 .snippet__code,
 .url,
 .pathfield,
+.numfield,
 .tools {
   border: 6px solid transparent;
   border-image: url("/sprites/plate.png") 3 fill / 6px stretch;
@@ -640,6 +660,99 @@ pre {
 .pathfield__browse:focus-visible {
   outline: 2px solid var(--blue);
   outline-offset: -4px;
+}
+
+/* Fields ------------------------------------------------------------------
+   A labelled control: label above, well below. A port's host is fixed, so it is
+   printed inside the well rather than typed into it. */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.field__label {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+
+.numfield {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 42px;
+  max-width: 200px;
+  padding: 0 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.numfield:focus-within {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.numfield__prefix {
+  color: var(--muted);
+  user-select: none;
+}
+
+.numfield__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--black);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.numfield__input:focus {
+  outline: none;
+}
+
+/* The launch switch: a drawn two-frame toggle inside a ghost frame, so the whole
+   control is pressable and reads as one object. */
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 8px;
+  border: 6px solid transparent;
+  border-image: url("/sprites/btn-ghost.png") 3 fill / 6px stretch;
+  background: transparent;
+  color: var(--black);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  image-rendering: pixelated;
+}
+
+.switch .px {
+  --px: 2px;
+}
+
+.switch:hover {
+  filter: brightness(1.04);
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.switch__label {
+  white-space: nowrap;
 }
 
 .row {
