@@ -1,0 +1,128 @@
+{
+  "image": "spriteware-blush-idle.png",
+  "width": 384,
+  "height": 32,
+  "frameWidth": 32,
+  "frameHeight": 32,
+  "columns": 12,
+  "padding": 0,
+  "frames": [
+    {
+      "index": 1,
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "durationMs": 100,
+      "backgroundPosition": "-0px -0px"
+    },
+    {
+      "index": 2,
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "durationMs": 100,
+      "backgroundPosition": "-32px -0px"
+    },
+    {
+      "index": 3,
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "durationMs": 100,
+      "backgroundPosition": "-64px -0px"
+    },
+    {
+      "index": 4,
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "durationMs": 100,
+      "backgroundPosition": "-96px -0px"
+    },
+    {
+      "index": 5,
+      "x": 128,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "durationMs": 100,
+      "backgroundPosition": "-128px -0px"
+    },
+    {
+      "index": 6,
+      "x": 160,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "durationMs": 100,
+      "backgroundPosition": "-160px -0px"
+    },
+    {
+      "index": 7,
+      "x": 192,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "durationMs": 100,
+      "backgroundPosition": "-192px -0px"
+    },
+    {
+      "index": 8,
+      "x": 224,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "durationMs": 100,
+      "backgroundPosition": "-224px -0px"
+    },
+    {
+      "index": 9,
+      "x": 256,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "durationMs": 400,
+      "backgroundPosition": "-256px -0px"
+    },
+    {
+      "index": 10,
+      "x": 288,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "durationMs": 70,
+      "backgroundPosition": "-288px -0px"
+    },
+    {
+      "index": 11,
+      "x": 320,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "durationMs": 70,
+      "backgroundPosition": "-320px -0px"
+    },
+    {
+      "index": 12,
+      "x": 352,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "durationMs": 70,
+      "backgroundPosition": "-352px -0px"
+    }
+  ],
+  "tags": [
+    {
+      "name": "idle",
+      "from": 1,
+      "to": 12,
+      "direction": "forward"
+    }
+  ],
+  "scale": 1
+}

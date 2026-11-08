@@ -119,10 +119,23 @@ pre {
   image-rendering: pixelated;
 }
 
+/* The mascot is 32x32 art on a 12-frame strip: nine idle frames, a 400ms
+   hold, then a three-frame blink. All four sheets share the frame count and
+   the timing, so a state swap never desyncs the loop. */
 .px--mascot {
-  --n: 3;
-  background-image: url("/sprites/mascot.png");
-  animation: mascot 5.2s steps(1, end) infinite;
+  --w: 32;
+  --h: 32;
+  --n: 12;
+  background-image: url("/sprites/spriteware-idle.png");
+  animation: mascot-idle 1.41s steps(1, end) infinite;
+}
+
+.px--mascot-live {
+  background-image: url("/sprites/spriteware-smile-idle.png");
+}
+
+.px--mascot:hover {
+  background-image: url("/sprites/spriteware-blush-idle.png");
 }
 
 .px--led {
@@ -187,25 +200,57 @@ pre {
   background-image: url("/sprites/icon-stop.png");
 }
 
-@keyframes mascot {
+/* Frame 9 holds for 400ms and the blink frames run at 70ms, so the stops are
+   the sheet's own durations (100/100/100/100/100/100/100/100/400/70/70/70ms)
+   as percentages of the 1410ms loop. */
+@keyframes mascot-idle {
   0% {
     background-position: 0 0;
   }
 
-  68% {
+  7.0922% {
     background-position: calc(var(--w) * var(--px) * -1) 0;
   }
 
-  70% {
-    background-position: 0 0;
-  }
-
-  84% {
+  14.1844% {
     background-position: calc(var(--w) * var(--px) * -2) 0;
   }
 
-  95% {
-    background-position: 0 0;
+  21.2766% {
+    background-position: calc(var(--w) * var(--px) * -3) 0;
+  }
+
+  28.3688% {
+    background-position: calc(var(--w) * var(--px) * -4) 0;
+  }
+
+  35.461% {
+    background-position: calc(var(--w) * var(--px) * -5) 0;
+  }
+
+  42.5532% {
+    background-position: calc(var(--w) * var(--px) * -6) 0;
+  }
+
+  49.6454% {
+    background-position: calc(var(--w) * var(--px) * -7) 0;
+  }
+
+  56.7376% {
+    background-position: calc(var(--w) * var(--px) * -8) 0;
+  }
+
+  85.1064% {
+    background-position: calc(var(--w) * var(--px) * -9) 0;
+  }
+
+  90.0709% {
+    background-position: calc(var(--w) * var(--px) * -10) 0;
+  }
+
+  95.0355%,
+  100% {
+    background-position: calc(var(--w) * var(--px) * -11) 0;
   }
 }
 
@@ -285,7 +330,7 @@ pre {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  height: 56px;
+  height: 64px;
   padding: 0 16px;
 }
 
@@ -296,8 +341,8 @@ pre {
   gap: 12px;
 }
 
-.brand .px {
-  --px: 2px;
+.brand .px--mascot {
+  --px: var(--mark-px, 2px);
 }
 
 .brand .glyphs {
@@ -753,6 +798,22 @@ pre {
   color: var(--muted);
 }
 
+/* Live mode: which end of the bridge is missing ------------------------- */
+
+.bridge {
+  margin: 0;
+  font-size: 13px;
+  text-wrap: pretty;
+}
+
+.bridge--on {
+  color: var(--mint, #59c98b);
+}
+
+.bridge--waiting {
+  color: var(--muted);
+}
+
 /* The address is what people came for, and its well turns green once something
    is listening on it. */
 .url {
@@ -1090,7 +1151,7 @@ pre {
 }
 
 .dialog__mark .px {
-  --px: 3px;
+  --px: var(--mark-px, 2px);
 }
 
 .dialog__headline {

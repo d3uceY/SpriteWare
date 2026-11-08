@@ -24,11 +24,24 @@ sprite name =
         []
 
 
-{-| Three frames: eyes open, shut, and looking to the side.
+{-| The app mark: the idle loop (nine idle frames, then a blink). `live` plays
+the smiling sheet while the server is listening; hover adds the blushing one.
 -}
-mascot : Html msg
-mascot =
-    sprite "mascot"
+mascot : Bool -> Html msg
+mascot live =
+    Html.span
+        [ Attr.class
+            ("px px--mascot"
+                ++ (if live then
+                        " px--mascot-live"
+
+                    else
+                        ""
+                   )
+            )
+        , Attr.attribute "aria-hidden" "true"
+        ]
+        []
 
 
 caret : Html msg

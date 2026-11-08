@@ -22,6 +22,16 @@ import { MCPService } from "../bindings/github.com/d3uceY/spriteware/backend/ind
 const STATUS_EVENT = "mcp:status";
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+// An art pixel has to land on a whole number of device pixels. At 125% Windows
+// scaling 2px is 2.5 device pixels, so the mascot's 1px eyes round to 2px wide
+// on one side and 3px on the other. Snap --px to the nearest integer device
+// pixel instead and hand it to CSS as --mark-px.
+const dpr = window.devicePixelRatio || 1;
+document.documentElement.style.setProperty(
+  "--mark-px",
+  `${Math.max(1, Math.round(2 * dpr)) / dpr}px`,
+);
+
 const elm = window.Elm.Main.init({
   node: document.getElementById("app"),
   flags: null,
