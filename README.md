@@ -6,6 +6,11 @@
 
 Pixel-art tooling an AI agent can actually use
 
+[![Latest release](https://img.shields.io/github/v/release/d3uceY/SpriteWare?style=flat-square&label=release&sort=semver)](https://github.com/d3uceY/SpriteWare/releases/latest)
+[![License](https://img.shields.io/github/license/d3uceY/SpriteWare?style=flat-square)](LICENSE)
+[![Go](https://img.shields.io/github/go-mod/go-version/d3uceY/SpriteWare?style=flat-square&label=go)](go.mod)
+[![Aseprite](https://img.shields.io/badge/aseprite-1.3%2B-7d929e?style=flat-square)](https://www.aseprite.org/)
+
 </div>
 
 SpriteWare runs an MCP server that lets an agent open a sprite, draw pixels, read
@@ -16,13 +21,13 @@ you have open, or a hidden Aseprite when none is.
 
 Latest release.
 
-| Platform | File |
-|---|---|
-| Windows installer | [SpriteWare-windows-amd64-installer.exe](https://github.com/d3uceY/SpriteWare/releases/latest/download/SpriteWare-windows-amd64-installer.exe) |
-| Windows portable | [SpriteWare-windows-amd64.exe](https://github.com/d3uceY/SpriteWare/releases/latest/download/SpriteWare-windows-amd64.exe) |
-| macOS (Apple Silicon and Intel) | [SpriteWare-macos-universal.dmg](https://github.com/d3uceY/SpriteWare/releases/latest/download/SpriteWare-macos-universal.dmg) |
-| Linux binary | [SpriteWare-linux-amd64](https://github.com/d3uceY/SpriteWare/releases/latest/download/SpriteWare-linux-amd64) |
-| Linux package | [SpriteWare-linux-amd64.deb](https://github.com/d3uceY/SpriteWare/releases/latest/download/SpriteWare-linux-amd64.deb) |
+|    | Platform | File |
+|:-:|---|---|
+| <img src="https://api.iconify.design/mdi/microsoft-windows.svg?color=%230078D4" width="18" height="18" alt="Windows"> | Windows installer | [SpriteWare-windows-amd64-installer.exe](https://github.com/d3uceY/SpriteWare/releases/latest/download/SpriteWare-windows-amd64-installer.exe) |
+| <img src="https://api.iconify.design/mdi/microsoft-windows.svg?color=%230078D4" width="18" height="18" alt="Windows"> | Windows portable | [SpriteWare-windows-amd64.exe](https://github.com/d3uceY/SpriteWare/releases/latest/download/SpriteWare-windows-amd64.exe) |
+| <img src="https://api.iconify.design/mdi/apple.svg?color=%23A2AAAD" width="18" height="18" alt="macOS"> | macOS (Apple Silicon and Intel) | [SpriteWare-macos-universal.dmg](https://github.com/d3uceY/SpriteWare/releases/latest/download/SpriteWare-macos-universal.dmg) |
+| <img src="https://api.iconify.design/mdi/linux.svg?color=%23FCC624" width="18" height="18" alt="Linux"> | Linux binary | [SpriteWare-linux-amd64](https://github.com/d3uceY/SpriteWare/releases/latest/download/SpriteWare-linux-amd64) |
+| <img src="https://api.iconify.design/mdi/debian.svg?color=%23A80030" width="18" height="18" alt="Debian"> | Linux package | [SpriteWare-linux-amd64.deb](https://github.com/d3uceY/SpriteWare/releases/latest/download/SpriteWare-linux-amd64.deb) |
 
 The builds are unsigned. Windows: SmartScreen → **More info** → **Run anyway**.
 macOS: right-click the app → **Open**. Linux binary: `chmod +x` it first.
