@@ -12,23 +12,18 @@ task build   # into bin/
 ## Before a pull request
 
 ```powershell
-gofmt -l .      # nothing new should appear (internal/skill/skill.go is grandfathered)
-go test ./...   # no Aseprite, no window, no network
+gofmt -l .     
+go test ./...   
 ```
 
-Anything that runs inside Aseprite needs a test that runs inside Aseprite:
+For testing and stuff:
 
 ```powershell
 $env:SPRITEWARE_ASEPRITE = "C:\path\to\aseprite.exe"
 go test ./internal/link -run Integration
 ```
 
-## Conventions
 
-- One change per pull request, described in the title.
-- Comments say why, not what. Match the surrounding style.
-- UI changes follow `DESIGN.md`. Sprites are drawn with SpriteWare's own MCP
-  tools.
 
 ## Docs
 
