@@ -8,8 +8,6 @@
 		<string>Go for the machine, Wails for the window, Elm for the DOM</string>
 		<key>CFBundleIconFile</key>
 		<string>icons</string>
-		<key>CFBundleIconName</key>
-		<string>appicon</string>
 		<key>CFBundleIdentifier</key>
 		<string>com.d3ucey.spriteware</string>
 		<key>CFBundleName</key>
