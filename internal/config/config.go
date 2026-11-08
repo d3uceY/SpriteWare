@@ -38,7 +38,8 @@ const (
 	ModeLive Mode = "live"
 )
 
-// DefaultPort is deliberately high: 9931/9932 belong to the reference bridge.
+// DefaultPort is high on purpose, clear of the ports other Aseprite tooling
+// listens on.
 const DefaultPort = 9933
 
 // DefaultBridgePort is where the live bridge listens for the extension.

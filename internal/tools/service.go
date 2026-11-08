@@ -214,8 +214,8 @@ func (s *Service) scratchDir() (string, error) {
 // Schema fragments
 // ---------------------------------------------------------------------------
 
-// coordinateNote is repeated in every tool that takes pixels: the reference
-// project left this unstated.
+// coordinateNote is repeated in every tool that takes pixels: leaving the origin
+// unstated is how a caller draws in the wrong place.
 const coordinateNote = "Coordinates are 0-based and sprite-absolute: (0,0) is the top-left corner of the canvas, x right, y down. Layer offsets never shift them."
 
 // indexNote states the one numbering convention, in and out.

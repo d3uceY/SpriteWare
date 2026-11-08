@@ -127,8 +127,8 @@ func TestShadeDarkensAndLightens(t *testing.T) {
 	}
 }
 
-// The reference project's snap list was empty every time, which is how a sprite
-// drifted out of its palette unnoticed.
+// An exact match has to come back at distance zero: a snap step that quietly
+// picks a neighbour is how a sprite drifts out of its palette unnoticed.
 func TestNearestReturnsExactMatch(t *testing.T) {
 	palette := []RGB{MustHex("#112233"), MustHex("#445566")}
 	idx, dist := Nearest(MustHex("#445566"), palette)

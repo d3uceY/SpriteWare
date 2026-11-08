@@ -18,8 +18,8 @@ import (
 // Transparent is the glyph for "nothing here", never assigned to a colour.
 const Transparent = '.'
 
-// glyphPoolSize matches the reference budget: colliding glyphs would misreport
-// which colour is where, so the renderer refuses to reuse one.
+// glyphPoolSize is how many distinct glyphs the pool holds. A reused glyph would
+// misreport which colour is where, so the renderer always takes the next one.
 const glyphPoolSize = 261
 
 var glyphPoolCache []rune

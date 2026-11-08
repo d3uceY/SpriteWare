@@ -132,9 +132,8 @@ func summaryOf(opName string, r opResult) string {
 	return opName + " " + name
 }
 
-// extractOps reads either the flat argument map or an `ops` array. A batch
-// replaces the twelve calls the reference project needed to move four layers
-// across three frames.
+// extractOps reads either the flat argument map or an `ops` array. A batch turns
+// a dozen calls into one.
 func extractOps(req mcp.CallToolRequest) ([]map[string]any, bool) {
 	args := req.GetArguments()
 

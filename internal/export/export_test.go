@@ -34,8 +34,8 @@ func TestPNGWritesThePathItReports(t *testing.T) {
 	}
 }
 
-// The reference project echoed the pattern instead of the files, so an agent
-// could not tell whether the export worked.
+// Echoing the pattern instead of the files leaves an agent unable to tell
+// whether the export worked.
 func TestFramesReportsConcreteNames(t *testing.T) {
 	frames := []*image.NRGBA{canvas(2, 2), canvas(2, 2), canvas(2, 2)}
 	dir := t.TempDir()
