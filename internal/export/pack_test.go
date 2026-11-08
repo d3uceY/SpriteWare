@@ -64,6 +64,34 @@ func TestGIFKeepsFrameCountAndTiming(t *testing.T) {
 	}
 }
 
+// Each frame must restore to background, or a transparent canvas keeps the
+// previous frame's pixels and every position stacks into one smeared picture.
+func TestGIFDisposesEachFrame(t *testing.T) {
+	frames := []*image.NRGBA{
+		sprite(4, 4, color.NRGBA{R: 255, A: 255}),
+		sprite(4, 4, color.NRGBA{G: 255, A: 255}),
+	}
+	path := filepath.Join(t.TempDir(), "dispose.gif")
+
+	if _, err := GIF(frames, []int{80, 80}, path, 1); err != nil {
+		t.Fatalf("gif: %v", err)
+	}
+	f, _ := os.Open(path)
+	defer f.Close()
+	decoded, err := gif.DecodeAll(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(decoded.Disposal) != len(frames) {
+		t.Fatalf("decoded %d disposal entries, want %d", len(decoded.Disposal), len(frames))
+	}
+	for i, d := range decoded.Disposal {
+		if d != gif.DisposalBackground {
+			t.Errorf("frame %d disposal = %d, want %d (DisposalBackground)", i+1, d, gif.DisposalBackground)
+		}
+	}
+}
+
 // A zero GIF delay makes every viewer pick its own speed. Never export one.
 func TestGIFNeverWritesAZeroDelay(t *testing.T) {
 	frames := []*image.NRGBA{sprite(2, 2, color.NRGBA{A: 255}), sprite(2, 2, color.NRGBA{R: 9, A: 255})}

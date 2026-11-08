@@ -155,6 +155,11 @@ local function same_path(a, b)
   return norm(a) == norm(b)
 end
 
+-- open_paths is referenced inside asprite below, before its definition, so it
+-- is forward-declared here. Without this, asprite resolves it as a nil global
+-- and any failed sprite lookup crashes with "attempt to call a nil value".
+local open_paths
+
 local function asprite(args)
   if args and args.sprite and args.sprite ~= "" then
     local want = tostring(args.sprite)
@@ -179,7 +184,7 @@ local function asprite(args)
   return spr
 end
 
-local function open_paths()
+open_paths = function()
   local out = arr()
   for _, spr in ipairs(app.sprites) do out[#out + 1] = spr.filename or "" end
   return out

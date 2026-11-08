@@ -47,6 +47,7 @@ func GIF(frames []*image.NRGBA, durations []int, path string, scale int) (string
 	out := &gif.GIF{
 		Image:     make([]*image.Paletted, 0, len(scaled)),
 		Delay:     make([]int, 0, len(scaled)),
+		Disposal:  make([]byte, 0, len(scaled)),
 		LoopCount: 0, // 0 means loop forever, which is what an asset preview wants
 	}
 
@@ -69,6 +70,9 @@ func GIF(frames []*image.NRGBA, durations []int, path string, scale int) (string
 			}
 		}
 		out.Delay = append(out.Delay, delay)
+		// Restore to background after each frame so a transparent canvas clears
+		// the previous ball instead of stacking every frame into one picture.
+		out.Disposal = append(out.Disposal, gif.DisposalBackground)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
