@@ -212,7 +212,7 @@ Four tabs: Server, Aseprite, Tools, Settings. Closed tabs are grey chips on the 
 A labelled control: a Display label in Link Blue above a well. The host half of a port is fixed, so it is printed inside the well (`.numfield__prefix`) and only the number is typed. Focus rings the well, the same outline a path field uses.
 
 ### Toggle
-A two-frame drawn switch (grey track with the knob left, red track with the knob right) inside a grey key, with the sentence describing the current state beside it. One asset, two frames, so the control cannot show a state the app is not in. It carries `role="switch"` and `aria-checked`.
+A drawn switch inside a grey key, with the sentence describing the current state beside it. One asset, five frames — off, three sliding poses, on — so the knob cannot show a state the app is not in. The sheet's background position steps through the poses on toggle, and settles on frame 1 or frame 5. It carries `role="switch"` and `aria-checked`.
 
 ### Assistant Picker
 A grey key that opens a white list. Hover is Hover Cream; the chosen row is Lamp Red. The list flips upward when there is no room below.

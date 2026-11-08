@@ -190,17 +190,25 @@ pre {
   animation-duration: 1.3s;
 }
 
-/* The launch switch is one sheet of two frames, so the knob cannot drift from
-   the state the app is in. */
+/* The launch switch is one sheet of five frames: off, three sliding poses, on.
+   The on class moves the sheet four frames and the transition steps through
+   the poses, so the knob cannot drift from the state the app is in. */
 .px--switch {
   --w: 16;
   --h: 10;
-  --n: 2;
+  --n: 5;
   background-image: url("/sprites/switch.png");
+  transition: background-position 240ms steps(4, end);
 }
 
 .px--switch-on {
-  background-position: calc(var(--w) * var(--px) * -1) 0;
+  background-position: calc(var(--w) * var(--px) * -4) 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .px--switch {
+    transition: none;
+  }
 }
 
 .px--icon-search {

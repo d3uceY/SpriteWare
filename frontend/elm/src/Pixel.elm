@@ -106,8 +106,8 @@ nameOf which =
             "icon-stop"
 
 
-{-| The launch switch: one sheet, two frames, so the control cannot show a state
-the app is not in. -}
+{-| The launch switch: one sheet of five frames (off, three sliding poses, on),
+stepped by CSS, so the knob cannot show a state the app is not in. -}
 switch : Bool -> Html msg
 switch on =
     Html.span
