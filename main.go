@@ -47,6 +47,7 @@ func runGUI() {
 	defer links.Close()
 
 	mcpService := backend.NewMCPService(cfg, links)
+	appService := backend.NewAppService()
 
 	// Registering the event type lets the frontend import its name.
 	application.RegisterEvent[backend.MCPStatus]("mcp:status")
@@ -56,6 +57,7 @@ func runGUI() {
 		Description: "Pixel-art tooling an AI agent can actually use",
 		Services: []application.Service{
 			application.NewService(mcpService),
+			application.NewService(appService),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

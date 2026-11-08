@@ -68,8 +68,7 @@ export class Config {
         if (/** @type {any} */(false)) {
             /**
              * ProjectPath is the folder "This project" means. Empty means the launch
-             * folder, which is a guess: from a shortcut that is the install directory
-             * or System32, where a skill is never read.
+             * folder, which from a shortcut is the install directory or System32.
              * @member
              * @type {string | undefined}
              */

@@ -45,10 +45,9 @@ export class ClientInstall {
 }
 
 /**
- * ClientSkill is where this assistant looks for Agent Skills, at both scopes.
- * An assistant without a skills directory has Available false and keeps only the
- * MCP entry. The notes are per scope because some caveats only apply to one:
- * Claude Code's personal skills are skipped by Cowork and cloud sessions.
+ * ClientSkill is where this assistant looks for Agent Skills. Available false
+ * means no skills folder. Notes are per scope because some caveats only apply
+ * to one: Claude Code's personal skills are skipped by Cowork and cloud.
  */
 export class ClientSkill {
     /**
@@ -107,8 +106,8 @@ export class ClientSkill {
 }
 
 /**
- * ClientSpec is one assistant: what it is called, where the config goes, the
- * exact text to copy, and whether the install button can do it.
+ * ClientSpec is one assistant: label, config location, copy text and whether
+ * the install button can do it.
  */
 export class ClientSpec {
     /**
@@ -238,8 +237,8 @@ export class ClientTarget {
 }
 
 /**
- * InstallResult is the outcome of pressing Install. It is always a message,
- * never an error: a failed install is something to show, not something to throw.
+ * InstallResult is the outcome of Install. Always a message, never an error: a
+ * failed install is shown, not thrown.
  */
 export class InstallResult {
     /**
@@ -373,8 +372,7 @@ export class MCPStatus {
 /**
  * SetupState is everything the first-run screen needs in one call.
  * 
- * A detected path is a *suggestion*: nothing is written until the user agrees.
- * That separates "found Aseprite" from "will run this file".
+ * A detected path is a suggestion: nothing is written until the user agrees.
  */
 export class SetupState {
     /**
@@ -447,6 +445,74 @@ export class SetupState {
             $$parsedSource["searched"] = $$createField5_0($$parsedSource["searched"]);
         }
         return new SetupState(/** @type {Partial<SetupState>} */($$parsedSource));
+    }
+}
+
+/**
+ * UpdateInfo is the answer to one version check, in the shape the window
+ * renders. Being offline is not something the user can act on, so a failed
+ * check is reported in Error instead of as an exception.
+ */
+export class UpdateInfo {
+    /**
+     * Creates a new UpdateInfo instance.
+     * @param {Partial<UpdateInfo>} [$$source = {}] - The source object to create the UpdateInfo.
+     */
+    constructor($$source = {}) {
+        if (!("current" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["current"] = "";
+        }
+        if (!("latest" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["latest"] = "";
+        }
+        if (!("available" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["available"] = false;
+        }
+        if (!("url" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["url"] = "";
+        }
+        if (!("notes" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["notes"] = "";
+        }
+        if (/** @type {any} */(false)) {
+            /**
+             * @member
+             * @type {string | undefined}
+             */
+            this["error"] = undefined;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UpdateInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {UpdateInfo}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new UpdateInfo(/** @type {Partial<UpdateInfo>} */($$parsedSource));
     }
 }
 
