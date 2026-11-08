@@ -203,10 +203,16 @@ Nothing is rounded. Every corner is a stepped notch drawn into the sprite: two p
 Beige window frame, black outline, Window Hot highlight edge, 2px lip. A card has an optional Display title and one line beneath it. No nested cards.
 
 ### Wells
-White, black outline, recessed bevel. Used for the address (green-tinted while listening), paths, config snippets, the path field, segmented controls, menus, the tool list, and the state plate in the chrome. Error notes use a pink well with a red edge.
+White, black outline, recessed bevel. Used for the address (green-tinted while listening), paths, config snippets, the path field, port fields, segmented controls, menus, the tool list, and the state plate in the chrome. Error notes use a pink well with a red edge.
 
 ### Navigation
-Three tabs: Server, Aseprite, Tools. Closed tabs are grey chips on the beige strip; the open tab is slate with a lit icon (the two-frame nav sprite plays while open or hovered). Labels are black in both states. While Aseprite is not yet found, the other two tabs are disabled.
+Four tabs: Server, Aseprite, Tools, Settings. Closed tabs are grey chips on the beige strip; the open tab is slate with a lit icon (the two-frame nav sprite plays while open or hovered). Labels are black in both states. While Aseprite is not yet found, Server and Tools are disabled; Aseprite and Settings stay open, because a port that is taken is a reason setup cannot finish.
+
+### Fields
+A labelled control: a Display label in Link Blue above a well. The host half of a port is fixed, so it is printed inside the well (`.numfield__prefix`) and only the number is typed. Focus rings the well, the same outline a path field uses.
+
+### Toggle
+A two-frame drawn switch (grey track with the knob left, red track with the knob right) inside a grey key, with the sentence describing the current state beside it. One asset, two frames, so the control cannot show a state the app is not in. It carries `role="switch"` and `aria-checked`.
 
 ### Assistant Picker
 A grey key that opens a white list. Hover is Hover Cream; the chosen row is Lamp Red. The list flips upward when there is no room below.
