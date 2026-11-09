@@ -96,10 +96,10 @@ chrome : Model -> Html Msg
 chrome model =
     Html.header [ Attr.class "chrome" ]
         [ Html.div [ Attr.class "topbar" ]
-            [ Html.div [ Attr.class "topbar__end" ]
-                [ versionBadge model
-                , statePlate model
-                ]
+            [ Html.div [ Attr.class "topbar__start" ]
+                [ versionBadge model ]
+            , Html.div [ Attr.class "topbar__end" ]
+                [ statePlate model ]
             ]
         , Html.div [ Attr.class "tabstrip" ]
             [ Html.div [ Attr.class "tabstrip__mark" ]

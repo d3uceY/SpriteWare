@@ -111,7 +111,7 @@ components:
 
 SpriteWare is a control panel for Aseprite's own MCP server, so it dresses as Aseprite: a beige window, a slate workspace, grey keys with black outlines, and a handful of drawn sprites. It borrows the host program's light theme on purpose. A person who opens it next to Aseprite should feel it belongs to the same toolbox, and should never have to learn a second visual language to read a status or press a button.
 
-The product is Operate-mode: a person starts a server, copies a config, and leaves. The interface therefore does one thing per screen, names it in a display title, and gets out of the way. Pixel art carries the personality (the mascot, the wordmark, the frames, the icons) and every other surface is flat, matte and legible. Nothing glows, shimmers or decorates. An earlier dark, starfield version was rejected because the effects cost readability.
+The product is Operate-mode: a person starts a server, copies a config, and leaves. The interface therefore does one thing per screen, names it in a display title, and gets out of the way. Pixel art carries the personality (the mascot, the frames, the icons) and every other surface is flat, matte and legible. Nothing glows, shimmers or decorates. An earlier dark, starfield version was rejected because the effects cost readability.
 
 **Key Characteristics:**
 - Aseprite's light theme, translated: beige window, slate workspace, white wells.
@@ -154,7 +154,9 @@ The palette is Aseprite's light theme (`aseprite-theme-light.xml`) with two addi
 **Display Font:** Pixelify Sans (variable) for titles inside cards, keys, tabs and labels.
 **Body Font:** Albert Sans (variable) for sentences.
 **Data Font:** IBM Plex Mono for paths, addresses, config text and tool names.
-**Title Face:** Pixelify Sans at display scale (40-58px, 700, uppercase). The 41-cell drawn glyph sheet (`glyphs.png`, A to Z, 0 to 9, space . : / -) is now only the wordmark: at page-title size its pale shadow muddied the letters and its 4px cells could not hold an edge across window widths.
+**Title Face:** Pixelify Sans at display scale (40-58px, 700, uppercase). Type keeps its edge at every window width; the drawn glyph sheet did not.
+
+**Mark:** the mascot is the wordmark now, standing on the tab rail at 3 screen pixels per art pixel. The old 41-cell drawn glyph sheet (`glyphs.png`) is retired from the chrome.
 
 **Character:** a pixel face for anything you press or navigate, a humanist sans for anything you read, a mono for anything you copy. Three voices, each tied to one job.
 
@@ -162,20 +164,20 @@ The palette is Aseprite's light theme (`aseprite-theme-light.xml`) with two addi
 - **Title** (Pixelify 700, 40-58px, 0.92 line-height): the page name, uppercase. One per screen.
 - **Display** (Pixelify 700, 22px, 1.15): card titles and the status word.
 - **Key / Tab** (Pixelify 600, 15 to 17px): labels on keys and tabs.
-- **Body** (Albert Sans 500, 14px, 1.5): sentences. Lead line is 15px, capped at 56ch.
+- **Body** (Albert Sans 500, 14px, 1.5): sentences. Lead line is 16px, capped at 54ch.
 - **Label** (Pixelify 600, 13px, 0.1em, uppercase, Link Blue): the small heading over a field.
 - **Data** (Plex Mono 500, 12.5 to 14px, 1.65 in blocks): everything copyable.
 
 ### Named Rules
-**The Display Title Rule.** The page title is set in Pixelify Sans, never from the glyph sheet. Body copy, labels, keys and the wordmark keep their own voices so the hierarchy never depends on a single asset.
+**The Display Title Rule.** The page title is set in Pixelify Sans, never from the glyph sheet. Body copy, labels and keys keep their own voices so the hierarchy never depends on a single asset.
 
 ## Layout
 
-One window, one column. A beige chrome strip holds the mark and the connection state, a tab strip below it names the three screens, and the slate stage under that holds a single column of cards, 720px at most, centred.
+One window, one column. A beige chrome strip holds a thin status line, then the tab rail: the mascot stands at the left, the tabs sit 70px to its right, and the pair is centred over the card column. The slate stage under that holds a single column of cards, 720px at most, centred.
 
 Spacing is a short scale: 4, 8, 12, 16, 24, 32. Cards stack at 16. Inside a card, groups sit 12 apart. The page head is the display title, a line of intent, and one hairline rule under both; there are no breadcrumbs or numerals.
 
-Tabs are a real tablist. The open tab is slate, 6px taller, and covers the 2px black rail under the strip so it joins the stage; its label is Link Blue, its icon at full colour, and its four-frame sprite plays. Closed tabs keep muted labels and dim their icons to 62%. At 760px and below the page loses side padding and the title steps down to 44px at most; at 560px the wordmark gives way to the mascot alone.
+Tabs are a real tablist. The open tab is slate, 6px taller, and covers the 2px black rail under the strip so it joins the stage; its label is Link Blue, its icon at full colour, and its four-frame sprite plays. Closed tabs keep muted labels and dim their icons to 62%. At 760px and below the page loses side padding and the title steps down to 44px at most.
 
 ### Named Rules
 **The One Column Rule.** There is no sidebar, grid of cards or second column. If a screen needs more, it is a longer column.
@@ -226,7 +228,7 @@ A grey key that opens a white list. Hover is Hover Cream; the chosen row is Lamp
 A double-edged cream window (black, white, grey, black), over a 45% black scrim. It names a path the app guessed and asks for confirmation. Focus is trapped inside; Escape declines.
 
 ### Signature: The Mascot
-A cream blob with an antenna, 16x16, three frames: eyes open, blinking, looking aside. It sits in the chrome and in the dialog. It blinks on a 5.2s loop, stepped.
+A cream robot with an antenna, 32x32 on a 12-frame sheet: an eased settle, a rest hold, then a blink. It is the brand mark now, standing on the tab rail at the left, and it also appears in the dialog. It blinks on a 1.54s stepped loop, smiles while the server is live, and blushes on hover.
 
 ### Signature: Lamps
 Eight-pixel gems: green and pulsing while the server listens, grey when stopped, blinking red when Aseprite is missing.
@@ -234,7 +236,7 @@ Eight-pixel gems: green and pulsing while the server listens, grey when stopped,
 ## Do's and Don'ts
 
 ### Do:
-- **Do** keep text on the slate Ink (#101417) and text on beige or white black.
+- **Do** keep text on the slate Ink (#101417) or Slate Ink (#334149), and text on beige or white black.
 - **Do** put one Lamp Red key on each screen and let everything else be grey.
 - **Do** draw new frames and icons through SpriteWare's own MCP tools, 2 screen pixels per art pixel, with a black outline and a 1px bevel.
 - **Do** step animation (`steps()`), and keep it to sprites, the page reveal and the scan band.

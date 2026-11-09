@@ -371,7 +371,7 @@ pre {
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 16px;
   height: 40px;
   padding: 0 16px;
@@ -382,8 +382,9 @@ pre {
 .tabstrip {
   display: flex;
   align-items: flex-end;
-  gap: 16px;
-  height: 72px;
+  justify-content: center;
+  gap: 70px;
+  height: 88px;
   padding: 0 16px;
   border-bottom: 2px solid var(--black);
 }
@@ -392,14 +393,23 @@ pre {
   display: flex;
   flex: none;
   align-items: flex-end;
-  margin-bottom: -2px;
+  /* The sheet has eight art pixels of transparent padding either side of the
+     body. Trim the box to the body so the gap is measured from the mascot,
+     not from its padding. */
+  width: calc(16 * var(--mark-lg, 3px));
+  overflow: visible;
+  /* Four transparent rows under the feet, plus the rail's two pixels, come
+     back out so the mascot stands on the rail instead of floating. */
+  margin-bottom: calc(-4 * var(--mark-lg, 3px) - 2px);
 }
 
 .tabstrip__mark .px--mascot {
-  --px: var(--mark-px, 2px);
+  --px: var(--mark-lg, 3px);
+  margin-left: calc(-8 * var(--mark-lg, 3px));
 }
 
-/* The right-hand end of the strip: what this build is, then the state. */
+/* The top line: the build on the left, the connection state on the right. */
+.topbar__start,
 .topbar__end {
   display: flex;
   flex: none;
@@ -449,7 +459,6 @@ pre {
   align-items: flex-end;
   gap: 4px;
   height: 100%;
-  margin-left: auto;
 }
 
 .tab {
@@ -1438,7 +1447,7 @@ pre {
 
 @media (max-width: 560px) {
   .tabstrip {
-    gap: 8px;
+    gap: 24px;
   }
 }
 

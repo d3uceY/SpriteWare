@@ -32,6 +32,10 @@ document.documentElement.style.setProperty(
   "--mark-px",
   `${Math.max(1, Math.round(2 * dpr)) / dpr}px`,
 );
+document.documentElement.style.setProperty(
+  "--mark-lg",
+  `${Math.max(1, Math.round(3 * dpr)) / dpr}px`,
+);
 
 const elm = window.Elm.Main.init({
   node: document.getElementById("app"),
