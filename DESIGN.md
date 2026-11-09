@@ -230,6 +230,9 @@ A double-edged cream window (black, white, grey, black), over a 45% black scrim.
 ### Signature: The Mascot
 A cream robot with an antenna, 32x32 on a 12-frame sheet: an eased settle, a rest hold, then a blink. It is the brand mark now, standing on the tab rail at the left, and it also appears in the dialog. It blinks on a 1.54s stepped loop, smiles while the server is live, and blushes on hover.
 
+### Signature: The Tray Mark
+The app icon's hat in one flat colour: black for light surfaces and white for dark. It is 32x32 art exported at 2x, with the top band, stepped brim and three prongs kept, and transparent gaps between the prongs. macOS gets the black PNG as a template image and tints it; Windows gets both and follows the taskbar theme.
+
 ### Signature: Lamps
 Eight-pixel gems: green and pulsing while the server listens, grey when stopped, blinking red when Aseprite is missing.
 

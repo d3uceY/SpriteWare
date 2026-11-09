@@ -17,6 +17,10 @@ SpriteWare runs an MCP server that lets an agent open a sprite, draw pixels, rea
 the result back and export a PNG. It drives Aseprite for the agent: the window
 you have open, or a hidden Aseprite when none is.
 
+SpriteWare lives in the system tray. Closing the window hides it; the MCP server
+and the Aseprite bridge keep running. Use the tray menu to reopen the window,
+start or stop the server, or quit for real.
+
 <div align="center">
 
 <img src="docs/mascot/mascot-idle.gif" width="128" alt="The mascot's idle animation"> <img src="docs/mascot/mascot-smile.gif" width="128" alt="The mascot's smile animation"> <img src="docs/mascot/mascot-blush.gif" width="128" alt="The mascot's blush animation"> <img src="docs/mascot/mascot-loading.gif" width="128" alt="The mascot's loading animation">

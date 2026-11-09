@@ -13,6 +13,7 @@ import (
 	"log/slog"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 
 	"github.com/d3uceY/spriteware/backend"
 	"github.com/d3uceY/spriteware/internal/config"
@@ -63,12 +64,14 @@ func runGUI() {
 			Handler: application.AssetFileServerFS(assets),
 		},
 		Mac: application.MacOptions{
-			ApplicationShouldTerminateAfterLastWindowClosed: true,
+			// Closing the window parks the app in the tray; only Quit from the
+			// tray menu (or the platform's quit command) ends the process.
+			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
 	})
 
 	// 900x620 is ~884px of client width on Windows, which media queries see.
-	app.Window.NewWithOptions(application.WebviewWindowOptions{
+	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "SpriteWare",
 		Width:            900,
 		Height:           620,
@@ -83,12 +86,24 @@ func runGUI() {
 		},
 	})
 
+	// Closing is hidden-to-tray, not quit: the MCP endpoint is the whole point
+	// and must outlive the window. ServiceShutdown still runs on a real quit.
+	window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
+		window.Hide()
+		event.Cancel()
+	})
+
 	// Start at launch so the agent URL works immediately.
 	if current.StartMCPOnLaunch {
 		if _, err := mcpService.StartServer(current.Port, string(current.Transport)); err != nil {
 			slog.Warn("MCP server did not start", "err", err)
 		}
 	}
+
+	// The tray is created after the first start so its menu opens with the
+	// real state; ServiceStartup has not run yet, so no mcp:status event has
+	// reached the listener at this point.
+	installTray(app, window, mcpService, cfg)
 
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
