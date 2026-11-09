@@ -17,9 +17,13 @@ SpriteWare runs an MCP server that lets an agent open a sprite, draw pixels, rea
 the result back and export a PNG. It drives Aseprite for the agent: the window
 you have open, or a hidden Aseprite when none is.
 
-SpriteWare lives in the system tray. Closing the window hides it; the MCP server
-and the Aseprite bridge keep running. Use the tray menu to reopen the window,
-start or stop the server, or quit for real.
+
+
+<div align="center">
+
+<img src="docs/app-window.png" width="720" alt="The SpriteWare window: a server card reporting Listening on 127.0.0.1:9933, and a Connect an assistant panel">
+
+</div>
 
 <div align="center">
 
