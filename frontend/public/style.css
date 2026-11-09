@@ -32,10 +32,12 @@
   --red: #ff5555;
   --red-deep: #c23838;
   --blue: #2c4c91;
+  --blue-deep: #213a70;
   --yellow: #ffebb6;
   --green-text: #1a5a1a;
   --red-text: #a11d1d;
   --muted: #4f473b;
+  --slate-ink: #334149;
 
   --font-display: "Pixelify Sans Variable", "Pixelify Sans", ui-monospace, monospace;
   --font-sans: "Albert Sans Variable", "Albert Sans", ui-sans-serif, system-ui, sans-serif;
@@ -167,27 +169,28 @@ pre {
 .px--nav-aseprite,
 .px--nav-tools,
 .px--nav-settings {
-  --n: 2;
+  --n: 4;
+  animation-direction: alternate;
 }
 
 .px--nav-server {
   background-image: url("/sprites/nav-server.png");
-  animation-duration: 0.7s;
+  animation-duration: 0.72s;
 }
 
 .px--nav-aseprite {
   background-image: url("/sprites/nav-aseprite.png");
-  animation-duration: 1.1s;
+  animation-duration: 1.05s;
 }
 
 .px--nav-tools {
   background-image: url("/sprites/nav-tools.png");
-  animation-duration: 0.9s;
+  animation-duration: 0.95s;
 }
 
 .px--nav-settings {
   background-image: url("/sprites/nav-settings.png");
-  animation-duration: 1.3s;
+  animation-duration: 1.25s;
 }
 
 /* The launch switch is one sheet of five frames: off, three sliding poses, on.
@@ -302,20 +305,32 @@ pre {
   }
 }
 
-@keyframes frame-2 {
-  0% {
+@keyframes icon-4 {
+  0%,
+  24.999% {
     background-position: 0 0;
   }
 
-  50% {
+  25%,
+  49.999% {
     background-position: calc(var(--w) * var(--px) * -1) 0;
+  }
+
+  50%,
+  74.999% {
+    background-position: calc(var(--w) * var(--px) * -2) 0;
+  }
+
+  75%,
+  100% {
+    background-position: calc(var(--w) * var(--px) * -3) 0;
   }
 }
 
 /* A nav icon holds still until its tab is the open one, or is pointed at. */
 .tab--on .px,
 .tab:hover:not(:disabled) .px {
-  animation-name: frame-2;
+  animation-name: icon-4;
   animation-timing-function: steps(1, end);
   animation-iteration-count: infinite;
 }
@@ -356,25 +371,32 @@ pre {
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 16px;
-  height: 64px;
+  height: 40px;
   padding: 0 16px;
 }
 
-.brand {
+/* The mascot is the wordmark now. It stands on the rail at the left and the
+   tabs gather at the right, with the empty beige between them doing the work. */
+.tabstrip {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  height: 72px;
+  padding: 0 16px;
+  border-bottom: 2px solid var(--black);
+}
+
+.tabstrip__mark {
   display: flex;
   flex: none;
-  align-items: center;
-  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: -2px;
 }
 
-.brand .px--mascot {
+.tabstrip__mark .px--mascot {
   --px: var(--mark-px, 2px);
-}
-
-.brand .glyphs {
-  --px: 2px;
 }
 
 /* The right-hand end of the strip: what this build is, then the state. */
@@ -426,9 +448,8 @@ pre {
   display: flex;
   align-items: flex-end;
   gap: 4px;
-  height: 48px;
-  padding: 0 16px;
-  border-bottom: 2px solid var(--black);
+  height: 100%;
+  margin-left: auto;
 }
 
 .tab {
@@ -441,13 +462,26 @@ pre {
   border-width: 6px 6px 0;
   border-image: url("/sprites/tab.png") 3 3 0 3 fill / 6px 6px 0 6px stretch;
   background: transparent;
-  color: var(--black);
+  color: var(--muted);
   font-family: var(--font-display);
   font-size: 16px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
   image-rendering: pixelated;
+}
+
+/* The icons only carry full colour once their screen is the open one. */
+.tab:not(.tab--on) .px {
+  opacity: 0.62;
+}
+
+.tab:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.tab:hover:not(:disabled) .px {
+  opacity: 1;
 }
 
 .tab:hover:not(:disabled):not(.tab--on) {
@@ -457,11 +491,21 @@ pre {
 .tab--on {
   margin-bottom: -2px;
   border-image-source: url("/sprites/tab-on.png");
+  color: var(--blue-deep);
+  font-weight: 700;
+}
+
+.tab--on .tab__label {
+  letter-spacing: 0.01em;
 }
 
 .tab:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.tab:disabled .px {
+  opacity: 1;
 }
 
 .tab:focus-visible {
@@ -492,22 +536,42 @@ pre {
 .page__head {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-bottom: 8px;
+  gap: 10px;
+  padding-bottom: 18px;
+  border-bottom: 2px solid rgba(16, 20, 23, 0.16);
 }
 
+/* The heading is type, not a sheet: at this size the drawn glyphs went muddy,
+   and type keeps its edge at every window width. */
 .page__title {
-  --px: 4px;
   margin: 0;
-  font-size: 0;
-  line-height: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(40px, 5.6vw, 58px);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: 0.015em;
+  text-transform: uppercase;
+  white-space: pre;
+}
+
+.page__char {
+  display: inline-block;
+  margin-right: 0.045em;
+  white-space: pre;
+}
+
+.page__char:last-child {
+  margin-right: 0;
 }
 
 .page__lead {
-  max-width: 56ch;
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--ink);
+  max-width: 54ch;
+  padding-left: 12px;
+  border-left: 3px solid var(--blue);
+  color: var(--slate-ink);
+  font-size: 16px;
+  line-height: 1.45;
   text-wrap: pretty;
 }
 
@@ -531,18 +595,24 @@ pre {
 .card__head {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid rgba(16, 20, 23, 0.14);
 }
 
 .card__title {
+  color: var(--ink);
   font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.2;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
 }
 
 .card__lead {
+  color: var(--muted);
   font-size: 14px;
+  line-height: 1.45;
   text-wrap: pretty;
 }
 
@@ -1335,7 +1405,7 @@ pre {
 
 @media (max-width: 760px) {
   .topbar,
-  .tabs {
+  .tabstrip {
     padding: 0 12px;
   }
 
@@ -1349,7 +1419,7 @@ pre {
   }
 
   .page__title {
-    --px: 3px;
+    font-size: clamp(34px, 8.6vw, 44px);
   }
 
   .tool {
@@ -1367,8 +1437,8 @@ pre {
 }
 
 @media (max-width: 560px) {
-  .brand .glyphs {
-    display: none;
+  .tabstrip {
+    gap: 8px;
   }
 }
 

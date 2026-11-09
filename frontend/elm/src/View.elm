@@ -83,35 +83,37 @@ stage model =
                 settingsPage model
 
 
-{-| The strip along the top: the mark and connection state, then one tab per
-screen.
+{-| The strip along the top: the build and connection state on a quiet line,
+then the mascot and the tabs on the rail below.
 
-The tabs are drawn frames (`tab.png` for a closed chip, `tab-on.png` for the
-open one) with real text inside. The open frame has no bottom edge, which is
-what lets the selected tab flow into the stage below.
+The mascot is the wordmark now. It sits at the left of the tab strip, on the
+rail, with the tabs pushed to the right. The tabs are drawn frames (`tab.png`
+for a closed chip, `tab-on.png` for the open one) with real text inside. The
+open frame has no bottom edge, which is what lets the selected tab flow into
+the stage below.
 -}
 chrome : Model -> Html Msg
 chrome model =
     Html.header [ Attr.class "chrome" ]
         [ Html.div [ Attr.class "topbar" ]
-            [ Html.div [ Attr.class "brand" ]
-                [ Pixel.mascot model.status.running
-                , Pixel.text "" "SpriteWare"
-                ]
-            , Html.div [ Attr.class "topbar__end" ]
+            [ Html.div [ Attr.class "topbar__end" ]
                 [ versionBadge model
                 , statePlate model
                 ]
             ]
-        , Html.nav
-            [ Attr.class "tabs"
-            , Attr.attribute "role" "tablist"
-            , Attr.attribute "aria-label" "Screens"
-            ]
-            [ tabButton model ServerTab ServerIcon "Server"
-            , tabButton model AsepriteTab BrushIcon "Aseprite"
-            , tabButton model ToolsTab BlocksIcon "Tools"
-            , tabButton model SettingsTab SettingsIcon "Settings"
+        , Html.div [ Attr.class "tabstrip" ]
+            [ Html.div [ Attr.class "tabstrip__mark" ]
+                [ Pixel.mascot model.status.running ]
+            , Html.nav
+                [ Attr.class "tabs"
+                , Attr.attribute "role" "tablist"
+                , Attr.attribute "aria-label" "Screens"
+                ]
+                [ tabButton model ServerTab ServerIcon "Server"
+                , tabButton model AsepriteTab BrushIcon "Aseprite"
+                , tabButton model ToolsTab BlocksIcon "Tools"
+                , tabButton model SettingsTab SettingsIcon "Settings"
+                ]
             ]
         ]
 
@@ -200,15 +202,24 @@ statePlate model =
         ]
 
 
-{-| Page head: the title set in the drawn glyph face, and one line of intent. The
-size is `--px` in CSS, so it shrinks with the window.
+{-| Page head: the title set in the display face, one span per character so the
+view change can print it a glyph at a time, and one line of intent.
 -}
 pageHead : String -> String -> Html msg
 pageHead title lead =
     Html.header [ Attr.class "page__head" ]
-        [ Html.h1 [ Attr.class "page__title" ] [ Pixel.text "" title ]
+        [ Html.h1
+            [ Attr.class "page__title"
+            , Attr.attribute "aria-label" title
+            ]
+            (List.map titleChar (String.toList title))
         , Html.p [ Attr.class "page__lead" ] [ Html.text lead ]
         ]
+
+
+titleChar : Char -> Html msg
+titleChar ch =
+    Html.span [ Attr.class "page__char" ] [ Html.text (String.fromChar ch) ]
 
 
 {-| First run: ask about the binary.

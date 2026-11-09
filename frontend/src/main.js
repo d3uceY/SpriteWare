@@ -378,7 +378,7 @@ function describe(err) {
 const STEP = "steps(3)";
 
 function printTitle() {
-  const glyphs = document.querySelectorAll(".page__title .glyph");
+  const glyphs = document.querySelectorAll(".page__title .page__char");
   if (glyphs.length === 0) return;
 
   gsap.fromTo(
@@ -411,7 +411,7 @@ function enterPage() {
 
 // First paint: the chrome settles before the page does.
 function enterChrome() {
-  gsap.from([".topbar", ".tabs"], {
+  gsap.from([".topbar", ".tabstrip"], {
     y: -8,
     opacity: 0,
     duration: 0.3,

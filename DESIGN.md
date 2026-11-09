@@ -11,9 +11,11 @@ colors:
   well-white: "#ffffff"
   outline-black: "#000000"
   ink: "#101417"
+  slate-ink: "#334149"
   lamp-red: "#ff5555"
   lamp-red-deep: "#c23838"
   link-blue: "#2c4c91"
+  link-blue-deep: "#213a70"
   hover-cream: "#ffebb6"
   lamp-green: "#64c864"
   text-muted: "#4f473b"
@@ -26,9 +28,11 @@ typography:
     fontWeight: 600
     lineHeight: 1.2
   title:
-    fontFamily: "Drawn glyph sheet (glyphs.png, 7x8 cells)"
-    fontSize: "32px"
-    lineHeight: 1
+    fontFamily: "Pixelify Sans Variable, ui-monospace, monospace"
+    fontSize: "clamp(40px, 5.6vw, 58px)"
+    fontWeight: 700
+    lineHeight: 0.92
+    letterSpacing: "0.015em"
   body:
     fontFamily: "Albert Sans Variable, ui-sans-serif, system-ui, sans-serif"
     fontSize: "14px"
@@ -107,7 +111,7 @@ components:
 
 SpriteWare is a control panel for Aseprite's own MCP server, so it dresses as Aseprite: a beige window, a slate workspace, grey keys with black outlines, and a handful of drawn sprites. It borrows the host program's light theme on purpose. A person who opens it next to Aseprite should feel it belongs to the same toolbox, and should never have to learn a second visual language to read a status or press a button.
 
-The product is Operate-mode: a person starts a server, copies a config, and leaves. The interface therefore does one thing per screen, names it in a drawn title, and gets out of the way. Pixel art carries the personality (the mascot, the title face, the frames, the icons) and every other surface is flat, matte and legible. Nothing glows, shimmers or decorates. An earlier dark, starfield version was rejected because the effects cost readability.
+The product is Operate-mode: a person starts a server, copies a config, and leaves. The interface therefore does one thing per screen, names it in a display title, and gets out of the way. Pixel art carries the personality (the mascot, the wordmark, the frames, the icons) and every other surface is flat, matte and legible. Nothing glows, shimmers or decorates. An earlier dark, starfield version was rejected because the effects cost readability.
 
 **Key Characteristics:**
 - Aseprite's light theme, translated: beige window, slate workspace, white wells.
@@ -131,7 +135,8 @@ The palette is Aseprite's light theme (`aseprite-theme-light.xml`) with two addi
 - **Key Grey Low** (#8e8e8e): the bottom-right bevel of every grey key.
 - **Well White** (#ffffff): anything you read or type: addresses, paths, snippets, the tool list, menus.
 - **Outline Black** (#000000): every outline and every label on a key.
-- **Ink** (#101417): text set directly on the slate (page lead, drawn title).
+- **Ink** (#101417): text set directly on the slate (page title).
+- **Slate Ink** (#334149): the page lead and other secondary text on the slate, one step softer than Ink without losing contrast.
 - **Muted Brown** (#4f473b): hints on beige. 5.4:1 on Window Beige.
 
 ### Accents
@@ -142,35 +147,35 @@ The palette is Aseprite's light theme (`aseprite-theme-light.xml`) with two addi
 ### Named Rules
 **The One Red Key Rule.** Lamp Red appears on one filled key per screen, plus the selected row in an open list. If a second red key is wanted, one of them is not the primary action.
 
-**The Ink On Slate Rule.** Text set on the slate is Ink, never white and never plum. White on the slate is 3.3:1 and fails; the theme's own plum is worse.
+**The Ink On Slate Rule.** Text set on the slate is Ink or Slate Ink, never white and never plum. White on the slate is 3.3:1 and fails; the theme's own plum is worse.
 
 ## Typography
 
 **Display Font:** Pixelify Sans (variable) for titles inside cards, keys, tabs and labels.
 **Body Font:** Albert Sans (variable) for sentences.
 **Data Font:** IBM Plex Mono for paths, addresses, config text and tool names.
-**Title Face:** a 41-cell drawn glyph sheet (`glyphs.png`, A to Z, 0 to 9, space . : / -), 5x7 letters in 7x8 cells, set at 4 screen pixels per art pixel. It is the only drawn text, and it is only ever the page title and the wordmark.
+**Title Face:** Pixelify Sans at display scale (40-58px, 700, uppercase). The 41-cell drawn glyph sheet (`glyphs.png`, A to Z, 0 to 9, space . : / -) is now only the wordmark: at page-title size its pale shadow muddied the letters and its 4px cells could not hold an edge across window widths.
 
 **Character:** a pixel face for anything you press or navigate, a humanist sans for anything you read, a mono for anything you copy. Three voices, each tied to one job.
 
 ### Hierarchy
-- **Title** (drawn glyphs, 32px tall): the page name. One per screen.
-- **Display** (Pixelify 600, 20px, 1.2): card titles and the status word.
+- **Title** (Pixelify 700, 40-58px, 0.92 line-height): the page name, uppercase. One per screen.
+- **Display** (Pixelify 700, 22px, 1.15): card titles and the status word.
 - **Key / Tab** (Pixelify 600, 15 to 17px): labels on keys and tabs.
 - **Body** (Albert Sans 500, 14px, 1.5): sentences. Lead line is 15px, capped at 56ch.
 - **Label** (Pixelify 600, 13px, 0.1em, uppercase, Link Blue): the small heading over a field.
 - **Data** (Plex Mono 500, 12.5 to 14px, 1.65 in blocks): everything copyable.
 
 ### Named Rules
-**The Drawn Title Rule.** The page title is set from the glyph sheet, never from a font, and nothing else is. Body copy, labels and keys stay real text so they select, scale and translate.
+**The Display Title Rule.** The page title is set in Pixelify Sans, never from the glyph sheet. Body copy, labels, keys and the wordmark keep their own voices so the hierarchy never depends on a single asset.
 
 ## Layout
 
 One window, one column. A beige chrome strip holds the mark and the connection state, a tab strip below it names the three screens, and the slate stage under that holds a single column of cards, 720px at most, centred.
 
-Spacing is a short scale: 4, 8, 12, 16, 24, 32. Cards stack at 16. Inside a card, groups sit 12 apart. The page head is the drawn title, a line of intent, and nothing else; there are no breadcrumbs, numerals or rules.
+Spacing is a short scale: 4, 8, 12, 16, 24, 32. Cards stack at 16. Inside a card, groups sit 12 apart. The page head is the display title, a line of intent, and one hairline rule under both; there are no breadcrumbs or numerals.
 
-Tabs are a real tablist. The open tab is slate and 6px taller, and it covers the 2px black rail under the strip so it joins the stage. At 760px and below the page loses side padding and the title steps down to 3px per art pixel; at 560px the wordmark gives way to the mascot alone.
+Tabs are a real tablist. The open tab is slate, 6px taller, and covers the 2px black rail under the strip so it joins the stage; its label is Link Blue, its icon at full colour, and its four-frame sprite plays. Closed tabs keep muted labels and dim their icons to 62%. At 760px and below the page loses side padding and the title steps down to 44px at most; at 560px the wordmark gives way to the mascot alone.
 
 ### Named Rules
 **The One Column Rule.** There is no sidebar, grid of cards or second column. If a screen needs more, it is a longer column.
@@ -206,7 +211,7 @@ Beige window frame, black outline, Window Hot highlight edge, 2px lip. A card ha
 White, black outline, recessed bevel. Used for the address (green-tinted while listening), paths, config snippets, the path field, port fields, segmented controls, menus, the tool list, and the state plate in the chrome. Error notes use a pink well with a red edge.
 
 ### Navigation
-Four tabs: Server, Aseprite, Tools, Settings. Closed tabs are grey chips on the beige strip; the open tab is slate with a lit icon (the two-frame nav sprite plays while open or hovered). Labels are black in both states. While Aseprite is not yet found, Server and Tools are disabled; Aseprite and Settings stay open, because a port that is taken is a reason setup cannot finish.
+Four tabs: Server, Aseprite, Tools, Settings. Closed tabs are grey chips on the beige strip with muted labels and dimmed icons; the open tab is slate with a Link Blue label and a lit four-frame icon (the nav sprite plays while open or hovered). While Aseprite is not yet found, Server and Tools are disabled; Aseprite and Settings stay open, because a port that is taken is a reason setup cannot finish.
 
 ### Fields
 A labelled control: a Display label in Link Blue above a well. The host half of a port is fixed, so it is printed inside the well (`.numfield__prefix`) and only the number is typed. Focus rings the well, the same outline a path field uses.
@@ -239,6 +244,6 @@ Eight-pixel gems: green and pulsing while the server listens, grey when stopped,
 - **Don't** add glow, starfields, gradients, translucent panels, blur or any ornament that is not content. (Confirmed rejection: the dark "glitter" version.)
 - **Don't** use a dark theme or a second accent colour.
 - **Don't** round a corner. Notch it in the art.
-- **Don't** set body copy, labels or keys in the drawn glyph face.
+- **Don't** set body copy, labels or page titles in the drawn glyph face. It is wordmark-only now.
 - **Don't** use white text on slate, or the theme's plum on slate.
 - **Don't** introduce a native `<select>`, checkbox or scrollbar styling that breaks the frame language.
