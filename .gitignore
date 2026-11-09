@@ -16,3 +16,5 @@ internal documents/
 *.exe
 # per-machine MCP wiring, points at an absolute path
 .vscode/mcp.json
+# deepseek harness skills
+.dsh/
