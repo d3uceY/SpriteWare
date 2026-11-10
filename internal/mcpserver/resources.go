@@ -20,6 +20,7 @@ import (
 //	skill://spriteware      the entry document
 //	skill://draw            one workflow
 //	rules://craft           one reference chapter
+//	rules://34-hands-and-feet  one subject chapter, from the rules/ tree
 const (
 	skillScheme = "skill://"
 	rulesScheme = "rules://"
@@ -66,6 +67,16 @@ func resourceFor(rel string) Resource {
 
 	case strings.HasPrefix(rel, "references/"):
 		name := strings.TrimSuffix(strings.TrimPrefix(rel, "references/"), ".md")
+		return Resource{URI: rulesScheme + name, Name: name, Description: summary(body), Path: rel}
+
+	// The subject chapters were written for a rules:// namespace, so the file
+	// name is the URI and `rules://34-hands-and-feet` finds it unchanged. The
+	// index answers to `rules://index`, which is how the chapters cite it.
+	case strings.HasPrefix(rel, "rules/"):
+		name := strings.TrimSuffix(strings.TrimPrefix(rel, "rules/"), ".md")
+		if name == "README" {
+			name = "index"
+		}
 		return Resource{URI: rulesScheme + name, Name: name, Description: summary(body), Path: rel}
 
 	default:
@@ -134,11 +145,32 @@ func RegisterResources(srv *server.MCPServer) {
 
 // ResourceIndex is appended to the server instructions so an agent knows the
 // chapters exist.
+//
+// The 62 subject chapters are collapsed to one line on purpose: every line here
+// is paid for on every message, and the list they index is itself a resource.
+// `rules://index` names all of them without spending the context up front.
 func ResourceIndex() string {
 	var sb strings.Builder
-	sb.WriteString("\n\n## On-demand reading\n\nThese are MCP resources; read the one you need rather than guessing:\n")
+	var lines []string
+
+	subjects := 0
 	for _, r := range Resources() {
-		sb.WriteString("- " + r.URI + " — " + r.Description + "\n")
+		if strings.HasPrefix(r.Path, "rules/") && r.Path != "rules/README.md" {
+			subjects++
+			continue
+		}
+		lines = append(lines, r.URI+" — "+r.Description)
+	}
+	if subjects > 0 {
+		lines = append(lines, fmt.Sprintf(
+			"rules://<chapter> — %d subject chapters, one per subject: hands, faces, gaits, tiles, lighting, props, VFX. `rules://index` lists them by band.",
+			subjects))
+	}
+	sort.Strings(lines)
+
+	sb.WriteString("\n\n## On-demand reading\n\nThese are MCP resources; read the one you need rather than guessing:\n")
+	for _, line := range lines {
+		sb.WriteString("- " + line + "\n")
 	}
 	return sb.String()
 }

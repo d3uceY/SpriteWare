@@ -23,7 +23,8 @@ const Name = "spriteware"
 // reference chapter, and a dead link is a dead end discovered halfway through a
 // job.
 //
-//go:embed SKILL.md new draw shade palette rig animate tileset fix review export references
+
+//go:embed SKILL.md new draw shade palette rig animate tileset fix review export references rules
 var tree embed.FS
 
 // Text is the entry document exactly as it ships, for the copy button.
