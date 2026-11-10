@@ -52,13 +52,16 @@ type Rect struct {
 // Finding is one problem.
 type Finding struct {
 	Check    string   `json:"check"`
+	Code     string   `json:"code"`
 	Severity Severity `json:"severity"`
 	Message  string   `json:"message"`
 	Layer    string   `json:"layer,omitempty"`
 	Frame    int      `json:"frame,omitempty"`
 	At       *Point   `json:"at,omitempty"`
-	Rect     *Rect    `json:"rect,omitempty"`
-	Count    int      `json:"count,omitempty"`
+	// Points lists every offending pixel, up to maxPoints, so a fix needs no second scan.
+	Points []Point `json:"points,omitempty"`
+	Rect   *Rect   `json:"rect,omitempty"`
+	Count  int     `json:"count,omitempty"`
 }
 
 // Scope decides what the pixel checks look at.
@@ -167,8 +170,12 @@ type Report struct {
 	Passed   bool      `json:"passed"`
 	Score    int       `json:"score"`
 	Findings []Finding `json:"findings"`
-	Metrics  Metrics   `json:"metrics"`
-	Summary  string    `json:"summary"`
+	// Ran, Skipped and Unknown say which checks did and did not run; a typo in `checks` is reported, never ignored.
+	Ran     []string `json:"ran"`
+	Skipped []string `json:"skipped,omitempty"`
+	Unknown []string `json:"unknown,omitempty"`
+	Metrics Metrics  `json:"metrics"`
+	Summary string   `json:"summary"`
 }
 
 // Run checks a dump and returns a report.
@@ -252,7 +259,33 @@ func Run(d *doc.Dump, opts Options) *Report {
 		checkExpect(d, opts.Expect, acc)
 	}
 
-	return acc.report(d, scope, opts.Strict)
+	ran, skipped, unknown := opts.coverage(want)
+	return acc.report(d, scope, opts.Strict, ran, skipped, unknown)
+}
+
+// coverage splits the known checks into those that ran and those that did not,
+// and names any requested check that does not exist.
+func (o Options) coverage(want map[string]bool) (ran, skipped, unknown []string) {
+	known := append(append([]string{}, AllChecks...), CheckUI)
+	isKnown := map[string]bool{}
+	for _, c := range known {
+		isKnown[c] = true
+		if want[c] {
+			ran = append(ran, c)
+		} else {
+			skipped = append(skipped, c)
+		}
+	}
+	for c := range want {
+		if !isKnown[c] {
+			unknown = append(unknown, c)
+		}
+	}
+	sort.Strings(unknown)
+	if o.Expect != nil {
+		ran = append(ran, CheckExpect)
+	}
+	return ran, skipped, unknown
 }
 
 // ---------------------------------------------------------------------------
@@ -381,9 +414,14 @@ func newAccumulator() *accumulator {
 	return &accumulator{colors: map[craft.RGB]int{}}
 }
 
-func (a *accumulator) add(f Finding) { a.findings = append(a.findings, f) }
+func (a *accumulator) add(f Finding) {
+	if f.Code == "" {
+		f.Code = f.Check
+	}
+	a.findings = append(a.findings, f)
+}
 
-func (a *accumulator) report(d *doc.Dump, scope Scope, strict bool) *Report {
+func (a *accumulator) report(d *doc.Dump, scope Scope, strict bool, ran, skipped, unknown []string) *Report {
 	sort.SliceStable(a.findings, func(i, j int) bool {
 		if a.findings[i].Severity != a.findings[j].Severity {
 			return a.findings[i].Severity.Order() < a.findings[j].Severity.Order()
@@ -422,6 +460,24 @@ func (a *accumulator) report(d *doc.Dump, scope Scope, strict bool) *Report {
 	m.DurationSpread = spread(a.durations)
 
 	summary := summarize(errors, warnings, len(a.findings), passed)
+	if len(a.findings) > 0 {
+		byCheck := map[string]int{}
+		var order []string
+		for _, f := range a.findings {
+			if byCheck[f.Check] == 0 {
+				order = append(order, f.Check)
+			}
+			byCheck[f.Check]++
+		}
+		parts := make([]string, 0, len(order))
+		for _, c := range order {
+			parts = append(parts, fmt.Sprintf("%s %d", c, byCheck[c]))
+		}
+		summary += " By check: " + strings.Join(parts, ", ") + "."
+	}
+	if len(unknown) > 0 {
+		summary += " Unknown check(s) ignored: " + strings.Join(unknown, ", ") + "."
+	}
 
 	return &Report{
 		Sprite:   d.Sprite.ID,
@@ -429,6 +485,9 @@ func (a *accumulator) report(d *doc.Dump, scope Scope, strict bool) *Report {
 		Passed:   passed,
 		Score:    score,
 		Findings: a.findings,
+		Ran:      ran,
+		Skipped:  skipped,
+		Unknown:  unknown,
 		Metrics:  m,
 		Summary:  summary,
 	}
@@ -620,10 +679,14 @@ func checkVolume(frames []*image.NRGBA, acc *accumulator) {
 // Per-image checks
 // ---------------------------------------------------------------------------
 
+// maxPoints caps the coordinates listed per finding.
+const maxPoints = 64
+
 func checkStrays(img *image.NRGBA, layer string, frame int, acc *accumulator) {
 	b := img.Bounds()
 	count := 0
 	var first *Point
+	var points []Point
 	for y := b.Min.Y; y < b.Max.Y; y++ {
 		for x := b.Min.X; x < b.Max.X; x++ {
 			if img.NRGBAAt(x, y).A == 0 {
@@ -639,6 +702,9 @@ func checkStrays(img *image.NRGBA, layer string, frame int, acc *accumulator) {
 				count++
 				if first == nil {
 					first = &Point{X: x, Y: y}
+				}
+				if len(points) < maxPoints {
+					points = append(points, Point{X: x, Y: y})
 				}
 			}
 		}
@@ -658,6 +724,7 @@ func checkStrays(img *image.NRGBA, layer string, frame int, acc *accumulator) {
 		Layer:    layer,
 		Frame:    frame,
 		At:       first,
+		Points:   points,
 		Count:    count,
 	})
 }
@@ -666,6 +733,7 @@ func checkOrphans(img *image.NRGBA, layer string, frame int, acc *accumulator) {
 	b := img.Bounds()
 	count := 0
 	var first *Point
+	var points []Point
 	for y := b.Min.Y; y < b.Max.Y; y++ {
 		for x := b.Min.X; x < b.Max.X; x++ {
 			c := img.NRGBAAt(x, y)
@@ -699,6 +767,9 @@ func checkOrphans(img *image.NRGBA, layer string, frame int, acc *accumulator) {
 				if first == nil {
 					first = &Point{X: x, Y: y}
 				}
+				if len(points) < maxPoints {
+					points = append(points, Point{X: x, Y: y})
+				}
 			}
 		}
 	}
@@ -713,6 +784,7 @@ func checkOrphans(img *image.NRGBA, layer string, frame int, acc *accumulator) {
 		Layer:    layer,
 		Frame:    frame,
 		At:       first,
+		Points:   points,
 		Count:    count,
 	})
 }

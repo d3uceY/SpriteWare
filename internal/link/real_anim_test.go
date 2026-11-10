@@ -149,7 +149,9 @@ func TestIntegrationTweenMovesThroughTheMiddle(t *testing.T) {
 			t.Fatalf("frame.add: %v", err)
 		}
 	}
-	draw(t, h, solid(0, 2, 2, 2, "#ffffff"))
+	first := solid(0, 2, 2, 2, "#ffffff")
+	first["target"] = map[string]any{"frame": 1}
+	draw(t, h, first)
 
 	if err := h.Call(context.Background(), "cel.tween", map[string]any{
 		"layer":     "Layer 1",
@@ -189,7 +191,9 @@ func TestIntegrationTweenEasingChangesSpacing(t *testing.T) {
 				t.Fatalf("frame.add: %v", err)
 			}
 		}
-		draw(t, h, solid(0, 2, 2, 2, "#ffffff"))
+		first := solid(0, 2, 2, 2, "#ffffff")
+		first["target"] = map[string]any{"frame": 1}
+		draw(t, h, first)
 		if err := h.Call(context.Background(), "cel.tween", map[string]any{
 			"layer": "Layer 1", "fromFrame": 1, "toFrame": 5,
 			"fromX": 0, "toX": 16, "easing": easing,
@@ -216,7 +220,9 @@ func TestIntegrationOscillateBobs(t *testing.T) {
 			t.Fatalf("frame.add: %v", err)
 		}
 	}
-	draw(t, h, solid(2, 2, 2, 2, "#00ffff"))
+	first := solid(2, 2, 2, 2, "#00ffff")
+	first["target"] = map[string]any{"frame": 1}
+	draw(t, h, first)
 
 	if err := h.Call(context.Background(), "cel.oscillate", map[string]any{
 		"layer":      "Layer 1",

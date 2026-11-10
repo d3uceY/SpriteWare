@@ -474,6 +474,15 @@ func (s *Service) registerValidate(srv *server.MCPServer) {
 	})
 }
 
+// framesTarget reads `path` as a directory when it is an existing folder or has
+// no extension, and as a file-name prefix otherwise.
+func framesTarget(path string) (dir, base string) {
+	if info, err := os.Stat(path); (err == nil && info.IsDir()) || filepath.Ext(path) == "" {
+		return path, "frame"
+	}
+	return filepath.Dir(path), strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+}
+
 func isEmptyExpect(e analyze.Expect) bool {
 	return len(e.LayerFrames) == 0 && len(e.MustNotOverlap) == 0 &&
 		e.PaletteSize == nil && e.Bounds == nil && !e.SingleComponent
@@ -517,7 +526,7 @@ func (s *Service) registerExport(srv *server.MCPServer) {
 				"command exports one animation. An unknown tag or layer name is refused rather than quietly "+
 				"exporting everything."),
 		mcp.WithString("op", mcp.Required(), mcp.Enum("png", "frames", "svg", "gif", "spritesheet", "tileset")),
-		mcp.WithString("path", mcp.Description("Destination file, or destination directory for op=frames.")),
+		mcp.WithString("path", mcp.Description("Destination file, or for op=frames a directory (an existing folder or a path with no extension; files are named frame0.png…). A path with an extension is a file-name prefix.")),
 		mcp.WithNumber("frame", mcp.Description("For png: 1-based frame.")),
 		mcp.WithNumber("scale", mcp.Description("Whole-number upscale, default 1.")),
 		mcp.WithNumber("padding", mcp.Description("For spritesheet: transparent pixels between frames, default 1.")),
@@ -590,8 +599,8 @@ func (s *Service) registerExport(srv *server.MCPServer) {
 			if err != nil {
 				return fail(err), nil
 			}
-			base := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-			written, err := export.Frames(frames, filepath.Dir(path), base, scale)
+			dir, base := framesTarget(path)
+			written, err := export.Frames(frames, dir, base, scale)
 			if err != nil {
 				return fail(protocol.New(protocol.CodeOpenFailed, "%v", err)), nil
 			}

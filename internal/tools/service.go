@@ -121,9 +121,18 @@ const maxTools = 24
 // Result helpers
 // ---------------------------------------------------------------------------
 
-// ok returns a structured result with a human-readable fallback.
+// ok returns a structured result. The text carries the summary and the same data
+// as JSON, because a client that reads only text would otherwise see counts with
+// no findings, layers or frames.
 func ok(structured any, summary string) *mcp.CallToolResult {
-	return mcp.NewToolResultStructured(structured, summary)
+	text := summary
+	if structured != nil {
+		if body, err := json.Marshal(structured); err == nil && string(body) != "null" {
+			text = summary + "\n" + string(body)
+		}
+	}
+	res := mcp.NewToolResultStructured(structured, text)
+	return res
 }
 
 // fail turns any error into a tool result the model can read and act on. The

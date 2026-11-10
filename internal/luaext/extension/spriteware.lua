@@ -767,6 +767,9 @@ H["doc.resize"] = function(args)
   local w = tonumber(args.width) or spr.width
   local h = tonumber(args.height) or spr.height
   spr:resize(w, h)
+  if spr.width ~= w or spr.height ~= h then
+    fail("internal", string.format("resize left the canvas at %dx%d, not %dx%d.", spr.width, spr.height, w, h))
+  end
   return { width = spr.width, height = spr.height }
 end
 

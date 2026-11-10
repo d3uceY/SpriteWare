@@ -3,6 +3,7 @@ package analyze
 import (
 	"image"
 	"image/color"
+	"strings"
 	"testing"
 
 	"github.com/d3uceY/spriteware/internal/craft"
@@ -271,9 +272,49 @@ func TestStrayPixelIsFound(t *testing.T) {
 	}
 }
 
+// The report must locate every stray, not just count them.
+func TestStrayFindingListsEveryPixel(t *testing.T) {
+	d := newDump(16, 16, "art")
+	art := cel(t, d, 0, 1)
+	fillRect(art, 4, 4, 6, 6, craft.MustHex("#888888"))
+	for _, p := range [][2]int{{0, 0}, {14, 14}, {0, 14}, {14, 0}, {1, 8}} {
+		art.SetNRGBA(p[0], p[1], rgba(craft.MustHex("#888888")))
+	}
+
+	report := Run(d, Options{Checks: []string{CheckStrays}})
+	if len(report.Findings) != 1 || len(report.Findings[0].Points) != 5 {
+		t.Fatalf("want one finding listing 5 points, got %+v", report.Findings)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // The plan the caller already knows
 // ---------------------------------------------------------------------------
+
+// The report must say what it checked, what it did not, and refuse a typo.
+func TestReportNamesCodeRanSkippedAndUnknown(t *testing.T) {
+	d := newDump(16, 16, "art")
+	art := cel(t, d, 0, 1)
+	fillRect(art, 4, 4, 6, 6, craft.MustHex("#888888"))
+	art.SetNRGBA(14, 14, rgba(craft.MustHex("#888888")))
+
+	report := Run(d, Options{Checks: []string{CheckStrays, "stray"}})
+	if len(report.Findings) == 0 || report.Findings[0].Code == "" {
+		t.Fatalf("finding has no code: %+v", report.Findings)
+	}
+	if len(report.Ran) != 1 || report.Ran[0] != CheckStrays {
+		t.Errorf("ran = %v, want [strays]", report.Ran)
+	}
+	if len(report.Skipped) == 0 {
+		t.Error("skipped checks were not listed")
+	}
+	if len(report.Unknown) != 1 || report.Unknown[0] != "stray" {
+		t.Errorf("unknown = %v, want [stray]", report.Unknown)
+	}
+	if !strings.Contains(report.Summary, "strays 1") || !strings.Contains(report.Summary, "stray") {
+		t.Errorf("summary lacks the per-check breakdown or the typo: %q", report.Summary)
+	}
+}
 
 func TestExpectLayerFramesFlagsInkOutsideItsBeat(t *testing.T) {
 	d := newDump(16, 16, "base", "fx")
