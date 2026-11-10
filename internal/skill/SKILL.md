@@ -68,6 +68,20 @@ in front of you rather than all of them.
 | [structure](./references/structure.md) | layer order, rig naming, frame and cel conventions |
 | [checks](./references/checks.md) | every `validate` check, what a finding means, what to do |
 
+Those six cover what more than one workflow needs inline. For anything with its
+own subject — hands, faces, a horse, a waterfall, a tileset, a sword, a fire
+effect — read the matching chapter from `rules://index`. There are 62, one
+subject each, with size budgets and grid templates:
+
+```
+rules://index                 the list, grouped by band
+rules://34-hands-and-feet     one subject
+```
+
+Read the chapter when its subject first appears in the work, not up front. A
+chapter's `grid` templates are accepted by `draw` op `grid` as written; map the
+legend roles onto the sprite's own palette and adapt the pose.
+
 ## The tools, in one line each
 
 `doctor` · `sprite` · `draw` · `look` · `layer` · `cel` · `frame` · `tag` ·
