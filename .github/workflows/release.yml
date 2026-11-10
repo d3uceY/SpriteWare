@@ -326,6 +326,91 @@ jobs:
           sha256sum SpriteWare-* > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
+      # Lists every commit since the previous release tag, grouped by
+      # Conventional Commit type, each credited to its GitHub @login.
+      - name: Write the changelog
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          PREV=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' "${TAG}^" 2>/dev/null || true)
+          if [ -n "$PREV" ]; then
+            BASE="$PREV"
+          else
+            BASE=$(git rev-list --max-parents=0 "$TAG" | tail -1)
+          fi
+
+          gh api --paginate "repos/${REPO}/compare/${BASE}...${TAG}" \
+            --jq '.commits[] | [.sha[0:7], (.author.login // ""), .commit.author.name, (.commit.message | split("\n")[0])] | @tsv' \
+            > commits.tsv
+
+          mkdir -p sections
+          rm -f sections/*
+          while IFS=$'\t' read -r sha login name subject; do
+            case "$subject" in Merge\ *) continue ;; esac
+            if [ -n "$login" ]; then who="@${login}"; else who="$name"; fi
+            if [[ "$subject" =~ ^([a-z]+)(\([^\)]+\))?!?:\ (.*)$ ]]; then
+              type="${BASH_REMATCH[1]}"
+              scope="${BASH_REMATCH[2]}"
+              text="${BASH_REMATCH[3]}"
+              [ -n "$scope" ] && text="**${scope//[()]/}:** ${text}"
+            else
+              type="other"
+              text="$subject"
+            fi
+            case "$type" in
+              feat) sec="1-features" ;;
+              fix) sec="2-fixes" ;;
+              perf) sec="3-performance" ;;
+              refactor) sec="4-refactoring" ;;
+              docs) sec="5-docs" ;;
+              test) sec="6-tests" ;;
+              build|ci|chore|style) sec="7-maintenance" ;;
+              *) sec="8-other" ;;
+            esac
+            echo "- ${text} ([\`${sha}\`](https://github.com/${REPO}/commit/${sha})) by ${who}" >> "sections/${sec}"
+          done < commits.tsv
+
+          title() {
+            case "$1" in
+              1-features) echo "Features" ;;
+              2-fixes) echo "Bug fixes" ;;
+              3-performance) echo "Performance" ;;
+              4-refactoring) echo "Refactoring" ;;
+              5-docs) echo "Documentation" ;;
+              6-tests) echo "Tests" ;;
+              7-maintenance) echo "Maintenance" ;;
+              *) echo "Other changes" ;;
+            esac
+          }
+
+          {
+            echo "## What's changed"
+            echo ""
+            if ls sections/* >/dev/null 2>&1; then
+              for f in sections/*; do
+                echo "### $(title "$(basename "$f")")"
+                echo ""
+                cat "$f"
+                echo ""
+              done
+            else
+              echo "No changes since ${BASE}."
+              echo ""
+            fi
+            echo "### Contributors"
+            echo ""
+            cut -f2 commits.tsv | grep -v '^$' | sort -fu | sed 's/^/- @/'
+            echo ""
+            if [ -n "$PREV" ]; then
+              echo "**Full changelog:** https://github.com/${REPO}/compare/${PREV}...${TAG}"
+            else
+              echo "**Full changelog:** https://github.com/${REPO}/commits/${TAG}"
+            fi
+            echo ""
+          } > "${RUNNER_TEMP}/changelog.md"
+
       - name: Write the release body
         env:
           REPO: ${{ github.repository }}
@@ -352,12 +437,12 @@ jobs:
             echo "- **Windows:** SmartScreen -> **More info** -> **Run anyway**."
             echo "- **macOS:** right-click the app -> **Open** -> **Open** again, or System Settings -> Privacy & Security -> **Open Anyway**."
             echo "- **Linux:** the .deb needs GTK4 and WebKitGTK 6.0 (\`libgtk-4-1\`, \`libwebkitgtk-6.0-4\`)."
+            echo ""
+            cat "${RUNNER_TEMP}/changelog.md"
           } > "${RUNNER_TEMP}/release-body.md"
 
       - uses: softprops/action-gh-release@v2
         with:
-          name: SpriteWare ${{ github.ref_name }}
-          body_path: ${{ runner.temp }}/release-body.md
           generate_release_notes: true
           append_body: true
           files: dist/*
