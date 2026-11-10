@@ -1,0 +1,92 @@
+{
+  "image": "banner_sheet.png",
+  "width": 391,
+  "height": 48,
+  "frameWidth": 48,
+  "frameHeight": 48,
+  "columns": 8,
+  "padding": 1,
+  "frames": [
+    {
+      "index": 1,
+      "x": 0,
+      "y": 0,
+      "w": 48,
+      "h": 48,
+      "durationMs": 100,
+      "backgroundPosition": "-0px -0px"
+    },
+    {
+      "index": 2,
+      "x": 49,
+      "y": 0,
+      "w": 48,
+      "h": 48,
+      "durationMs": 90,
+      "backgroundPosition": "-49px -0px"
+    },
+    {
+      "index": 3,
+      "x": 98,
+      "y": 0,
+      "w": 48,
+      "h": 48,
+      "durationMs": 110,
+      "backgroundPosition": "-98px -0px"
+    },
+    {
+      "index": 4,
+      "x": 147,
+      "y": 0,
+      "w": 48,
+      "h": 48,
+      "durationMs": 100,
+      "backgroundPosition": "-147px -0px"
+    },
+    {
+      "index": 5,
+      "x": 196,
+      "y": 0,
+      "w": 48,
+      "h": 48,
+      "durationMs": 120,
+      "backgroundPosition": "-196px -0px"
+    },
+    {
+      "index": 6,
+      "x": 245,
+      "y": 0,
+      "w": 48,
+      "h": 48,
+      "durationMs": 90,
+      "backgroundPosition": "-245px -0px"
+    },
+    {
+      "index": 7,
+      "x": 294,
+      "y": 0,
+      "w": 48,
+      "h": 48,
+      "durationMs": 110,
+      "backgroundPosition": "-294px -0px"
+    },
+    {
+      "index": 8,
+      "x": 343,
+      "y": 0,
+      "w": 48,
+      "h": 48,
+      "durationMs": 130,
+      "backgroundPosition": "-343px -0px"
+    }
+  ],
+  "tags": [
+    {
+      "name": "wave",
+      "from": 1,
+      "to": 8,
+      "direction": "forward"
+    }
+  ],
+  "scale": 1
+}
