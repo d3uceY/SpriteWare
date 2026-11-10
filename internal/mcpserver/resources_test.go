@@ -1,6 +1,7 @@
 package mcpserver
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -45,6 +46,11 @@ func TestResourceURIsUseTheTwoSchemes(t *testing.T) {
 		"skill://animate",
 		"rules://craft",
 		"rules://checks",
+		// The subject chapters keep the URIs they were written with, so a
+		// cross-reference inside one resolves as published text.
+		"rules://index",
+		"rules://34-hands-and-feet",
+		"rules://92-generated-art-tells",
 	}
 	got := map[string]bool{}
 	for _, r := range Resources() {
@@ -98,6 +104,47 @@ func TestInstructionsIndexTheResources(t *testing.T) {
 	for _, uri := range []string{"skill://spriteware", "rules://craft"} {
 		if !strings.Contains(index, uri) {
 			t.Errorf("the instruction index does not mention %s", uri)
+		}
+	}
+}
+
+// The subject chapters are read on demand, so the instruction block names the
+// family once. Listing all 62 would spend the context the split is there to
+// save, on every single message.
+func TestInstructionsCollapseTheSubjectChapters(t *testing.T) {
+	index := ResourceIndex()
+	if !strings.Contains(index, "rules://<chapter>") {
+		t.Error("the instruction index does not point at the subject chapters")
+	}
+	if strings.Contains(index, "rules://34-hands-and-feet") {
+		t.Error("the instruction index lists a subject chapter individually")
+	}
+	if n := strings.Count(index, "\n"); n > 30 {
+		t.Errorf("the instruction index is %d lines, which is too much to send on every message", n)
+	}
+}
+
+// A chapter cites its neighbours by rules:// URI, so those have to land on a
+// published resource or the reader hits a dead end mid-thought.
+func TestEveryCitedRuleResolves(t *testing.T) {
+	cited := regexp.MustCompile(`rules://([a-z0-9-]+)`)
+	published := map[string]bool{}
+	for _, r := range Resources() {
+		published[strings.TrimPrefix(r.URI, "rules://")] = true
+	}
+
+	for _, rel := range skill.Files() {
+		if !strings.HasSuffix(rel, ".md") {
+			continue
+		}
+		body, err := skill.Read(rel)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range cited.FindAllStringSubmatch(body, -1) {
+			if !published[m[1]] {
+				t.Errorf("%s cites rules://%s, which is not published", rel, m[1])
+			}
 		}
 	}
 }
