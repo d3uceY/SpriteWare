@@ -19,6 +19,7 @@ Read these in order:
 | [evals.md](./evals.md) | benchmarks, runs, and how an attempt is scored |
 | [mcp-improvements.md](./mcp-improvements.md) | what drawing the app's own art broke, and its status |
 | [removed-command-line.md](./removed-command-line.md) | what the CLI was, why it is gone, and why the eval harness stayed |
+| [webview2-startup.md](./webview2-startup.md) | why the window can fail to open before `main` gets anywhere, and how to read the WebView2 error |
 
 ## The short version
 
