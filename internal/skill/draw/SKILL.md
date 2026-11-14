@@ -1,6 +1,8 @@
 ---
 name: draw
 description: Draw a sprite from silhouette to finished pixels in the order that catches mistakes while they are still cheap — block in, check the silhouette, separate materials, shade, outline, verify. Use for the main body of any drawing task.
+rules: [00-core-principles, 03-silhouette-and-form, 04-outlines-and-edges, 10-lines-and-curves, 92-generated-art-tells]
+triggers: [pixel, silhouette, block, shape, subject, sketch]
 ---
 
 # Draw a sprite

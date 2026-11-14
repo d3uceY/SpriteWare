@@ -31,6 +31,8 @@ Five rules that catch most of what looks generated:
 - a silhouette that reads as one shape;
 - frame timing that varies — hold contact poses longer than passing ones.
 
+Before specialized work — a subject, a workflow, a colour decision — call "guide" with the task in the user's words. It returns the workflow (skill://...) and the four to eight chapters (rules://...) to read; the first draw or new document also carries the route. Matching is lexical, so a route is where to start, not what to read for the whole job: open rules://index or another chapter by URI as soon as the work moves to a subject the route did not name. Set inline only when the client cannot read MCP resources.
+
 Coordinates are 0-based and sprite-absolute. Frames are 1-based. Layer indexes are 0-based from the bottom.`
 
 // New builds the server with every tool registered and the skill as resources.

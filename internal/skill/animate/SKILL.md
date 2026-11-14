@@ -1,6 +1,8 @@
 ---
 name: animate
 description: Build an idle, walk, run or attack cycle from key poses, move limbs as cels instead of redrawing them, set timing that reads as motion, tag the range, and review it as a filmstrip. Use when a rigged sprite needs to move.
+rules: [05-animation, 40-timing-and-spacing, 41-idle-and-breathing, 42-walk-and-run, 43-jump-fall-land]
+triggers: [animation, walk, run, idle, cycle, frame, attack, bounce, loop]
 ---
 
 # Animate a cycle

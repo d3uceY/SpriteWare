@@ -1,6 +1,8 @@
 ---
 name: fix
 description: Change a sprite that already exists — the user's own work or your earlier output — without destroying what is already right. Use for edits, touch-ups, style corrections and "make it more X" requests.
+rules: [92-generated-art-tells, 03-silhouette-and-form, 14-readability-and-scale, 07-review-checklist]
+triggers: [edit, correct, cleanup, refine, adjust, touchup]
 ---
 
 # Fix or iterate on existing art

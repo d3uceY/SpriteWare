@@ -1,6 +1,8 @@
 ---
 name: rig
 description: Split a character onto named layers — head, torso, arms, legs — so it can be animated by moving cels instead of redrawing pixels. Use before animating anything, or when limbs are baked into one layer.
+rules: [06-layers-and-rigging, 30-proportions-by-size, 31-anatomy-and-pose, 45-secondary-motion]
+triggers: [rigging, layers, limbs, skeleton, joints, parts]
 ---
 
 # Rig a character for animation

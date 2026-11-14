@@ -1,6 +1,8 @@
 ---
 name: new
 description: Create an Aseprite document with the right canvas size, palette and layer structure, so later work does not have to fight the setup. Use when starting a sprite from nothing rather than editing an existing one.
+rules: [30-proportions-by-size, 90-platform-styles, 21-limited-and-platform-palettes, 06-layers-and-rigging]
+triggers: [startup, blank, canvas, resolution, scratch, fresh]
 ---
 
 # New document

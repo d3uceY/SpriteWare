@@ -166,6 +166,7 @@ func ResourceIndex() string {
 			"rules://<chapter> — %d subject chapters, one per subject: hands, faces, gaits, tiles, lighting, props, VFX. `rules://index` lists them by band.",
 			subjects))
 	}
+	lines = append(lines, "guide (tool) — pass the task in the user's words; returns the routed skill:// workflow and rules:// chapters with a confidence level and the tokens that matched. A route is a starting point, not a limit: read any chapter by URI as the work moves on.")
 	sort.Strings(lines)
 
 	sb.WriteString("\n\n## On-demand reading\n\nThese are MCP resources; read the one you need rather than guessing:\n")

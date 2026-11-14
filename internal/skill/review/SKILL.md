@@ -1,6 +1,8 @@
 ---
 name: review
 description: Run the mechanical checks and the by-eye checks, then report what you found with evidence instead of claiming success. Use before finishing any pixel-art task, and when the user asks "is this good" or "why does this look off".
+rules: [07-review-checklist, 92-generated-art-tells, 12-anti-aliasing, 14-readability-and-scale]
+triggers: [check, critique, feedback, ship, approve, quality]
 ---
 
 # Review a sprite before calling it done

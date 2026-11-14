@@ -231,6 +231,7 @@ func (s *Service) registerSprite(srv *server.MCPServer) {
 			if err := s.call(ctx, "doc.new", args, &out); err != nil {
 				return fail(err), nil
 			}
+			s.attachGuide(req.GetString("name", ""), out)
 			return ok(out, "created a new document"), nil
 
 		case "open", "activate":

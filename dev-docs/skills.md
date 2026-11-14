@@ -50,6 +50,42 @@ knowledge://palettes    generated: the bundled palettes
 A client that never installs anything still gets the text by reading a
 resource. Both paths read one embedded tree, so they cannot disagree.
 
+## Routing a task (the `guide` tool)
+
+The tree is also searchable. `internal/skill/library.go` parses it once into a
+`Library` — ten workflows, 62 chapters, six references — and the `guide` tool
+routes a task to one workflow plus the chapters worth reading.
+
+Each workflow's frontmatter carries the two lists the router needs:
+
+```yaml
+rules: [05-animation, 40-timing-and-spacing, 41-idle-and-breathing, 42-walk-and-run]
+triggers: [animation, walk, run, idle, cycle, frame, attack]
+```
+
+`rules` is the chapter set the workflow owns, and those chapters come back
+first with `source: "workflow"`. `triggers` is vocabulary the description never
+uses — "godot", "wangset", "gameboy" — which is how a task that names a
+toolchain rather than an art action still routes. Both are indexed with the name
+and description in `Route`; a trigger hit is marked `(trigger)` and, like a name
+hit, is strong enough to make the route confident.
+
+Matching is lexical: words, not meaning. A miss is reported as a miss, with
+`skill://spriteware` and `rules://index` to start from instead of a guess, and
+the tool description says plainly that a route is a starting point rather than a
+reading limit — the session can move to a subject it did not name, and every
+`skill://` / `rules://` URI stays readable.
+
+The route also rides on `draw` and `sprite op=new` results: when the label or
+the document name routes with confidence, the result carries a compact `guide`.
+That is announced once per workflow per session, so a draw-heavy session is not
+repeated on every call.
+
+`inline` returns the text itself, for clients that cannot read resources. It is
+capped (48 KB) and stops on a chapter boundary, so the result is always whole
+documents; `omitted` lists the chapters that did not fit, with their URIs, so
+the caller reads them as resources next instead of asking again.
+
 ## Why it is split into folders
 
 An agent that reads everything spends its context on the nine workflows it is
@@ -72,6 +108,12 @@ Tests in `internal/skill`:
 - each workflow's frontmatter `name` equals its folder name
 - every description is 1–1024 characters (Cline's limit)
 - an install writes every file, twice, without nesting
+- `Load` finds all 10 workflows, 62 chapters and 6 references, and `Validate`
+  holds the routing contract (named chapters exist, triggers are usable words)
+- `TestRoutePicksExpectedWorkflow` and
+  `TestTriggersRouteWordsTheDescriptionsDoNot` pin the routing table
+- `TestInlineHonoursTheBudget` proves the cap stops on a chapter boundary and
+  that the omitted chapters are still addressable
 
 Tests in `internal/tools`:
 
@@ -84,13 +126,18 @@ Tests in `internal/mcpserver`:
 - `skill://spriteware` is byte-identical to the installed `SKILL.md`
 - every `rules://` URI cited by a chapter resolves (`TestEveryCitedRuleResolves`)
 - the instruction block collapses the subject chapters to one line
+- every URI `guide` returns is a published resource
+  (`TestGuideReturnsOnlyPublishedResources`)
 
 ## Editing the skill
 
 Change the markdown, then run the tests. If you add a workflow, add the folder,
-give it frontmatter whose `name` matches the folder, and link it from a table in
-`SKILL.md`. `TestEverySkillLinkResolves` will catch a broken link, and
-`TestEverySkillDocumentIsPublished` will catch a file nobody can reach.
+give it frontmatter whose `name` matches the folder plus `rules:` and
+`triggers:` lists, and link it from a table in `SKILL.md`.
+`TestEverySkillLinkResolves` will catch a broken link,
+`TestEverySkillDocumentIsPublished` will catch a file nobody can reach, and
+`TestTheRoutingContractHolds` will catch a chapter that does not exist or a
+trigger that is not a usable word.
 
 The card in the window says "Ten workflows and the rules they share." Update
 that line in `frontend/elm/src/View.elm` if the count changes.

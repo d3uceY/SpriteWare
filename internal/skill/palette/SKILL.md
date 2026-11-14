@@ -1,6 +1,8 @@
 ---
 name: palette
 description: Choose or build a palette, generate hue-shifted ramps, and clean up a sprite whose colours have sprawled. Use when the user names a palette or console, asks about colour, or when validate reports off-palette colours.
+rules: [01-palette-and-color, 20-color-for-pixel-art, 21-limited-and-platform-palettes, 90-platform-styles]
+triggers: [colour, color, ramp, hue, pico8, gameboy, cga, indexed]
 ---
 
 # Palette

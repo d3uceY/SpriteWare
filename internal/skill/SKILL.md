@@ -41,6 +41,12 @@ Each one is a procedure in its own folder, with the steps in the order that
 catches mistakes while they are still cheap. Open the file when its situation
 applies; you do not need the rest.
 
+If the client exposes the `guide` tool, call it first instead of guessing from
+this table: `guide task="animate a walk cycle for a knight"` returns the
+workflow and the four to eight chapters worth reading, with the words that
+matched. The route is a starting point — when the work moves on to a subject it
+did not name, read `rules://index` or any chapter URI directly.
+
 | Workflow | Open it when | File |
 |---|---|---|
 | New document | starting fresh rather than editing | [new](./new/SKILL.md) |
@@ -84,9 +90,10 @@ legend roles onto the sprite's own palette and adapt the pose.
 
 ## The tools, in one line each
 
-`doctor` · `sprite` · `draw` · `look` · `layer` · `cel` · `frame` · `tag` ·
-`slice` · `select` · `transform` · `palette` · `validate` · `export`. Anything
-with an `op` argument takes `ops` as an array to batch several in one undo step.
+`guide` · `doctor` · `sprite` · `draw` · `look` · `layer` · `cel` · `frame` ·
+`tag` · `slice` · `select` · `transform` · `palette` · `validate` · `export`.
+Anything with an `op` argument takes `ops` as an array to batch several in one
+undo step.
 
 A `slice` names a rectangle: the 9-patch region of a panel, or a character's
 box. Slices travel into the spritesheet atlas with their `center`, so an

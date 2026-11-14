@@ -1,6 +1,8 @@
 ---
 name: shade
 description: Add light and shadow with hue-shifted ramps, one step at a time, so the sprite gains volume without the flat-luminance look that marks generated pixel art. Use when flat art needs form, or when art looks muddy or flat.
+rules: [02-shading-and-light, 20-color-for-pixel-art, 24-lighting-scenarios, 13-dithering-and-texture]
+triggers: [shading, light, shadow, volume, highlight, gradient]
 ---
 
 # Shade a sprite

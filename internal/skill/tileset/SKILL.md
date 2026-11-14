@@ -1,6 +1,8 @@
 ---
 name: tileset
 description: Draw level art and anything that repeats — a single tile, a tileset grid, or a repeating texture — so the pieces line up and tile without seams. Use for terrain, platforms, walls, floors and background patterns.
+rules: [66-tiles-and-autotiling, 65-ground-rocks-grass, 67-architecture-and-interiors, 91-composition-and-scenes]
+triggers: [tile, autotile, wangset, seam, terrain, platform, floor, wall]
 ---
 
 # Tilesets and repeating art

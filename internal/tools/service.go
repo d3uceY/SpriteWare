@@ -37,6 +37,9 @@ type Service struct {
 	// bridge reports the app's bridge state; it lives in the app, so doctor asks
 	// rather than carrying a field that was always zero.
 	bridge func() (link.BridgeState, bool)
+	// guideAnnounced is the set of workflows already attached to a result, so a
+	// draw-heavy session is not told the same route on every call.
+	guideAnnounced map[string]bool
 }
 
 // SetBridgeReporter wires doctor up to the component that owns the bridge.
@@ -59,7 +62,7 @@ func (s *Service) bridgeState() (link.BridgeState, bool) {
 
 // New builds a Service.
 func New(cfg *config.Store, links *link.Selector) *Service {
-	return &Service{cfg: cfg, links: links}
+	return &Service{cfg: cfg, links: links, guideAnnounced: make(map[string]bool)}
 }
 
 // Register adds every tool to the MCP server.
@@ -78,6 +81,7 @@ func Register(srv *server.MCPServer, svc *Service) {
 	svc.registerValidate(srv)
 	svc.registerPalette(srv)
 	svc.registerExport(srv)
+	svc.registerGuide(srv)
 }
 
 // ToolInfo is one entry of the published surface: the name the model calls and a
@@ -103,6 +107,7 @@ var Catalog = []ToolInfo{
 	{"validate", "Lint for palette drift, stray pixels and broken rigs."},
 	{"palette", "Ramps, analysis, snapping to the palette, adopting the art's colours."},
 	{"export", "PNG, frame sequences, SVG, GIF, packed sheets and tilesets."},
+	{"guide", "Routes a task to the workflow and chapters to read."},
 }
 
 // ToolNames is the same list, name only.

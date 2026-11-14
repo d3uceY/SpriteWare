@@ -1,6 +1,8 @@
 ---
 name: export
 description: Write the files an engine or a person can actually use — a single PNG, a numbered frame sequence, or vector rects — with the naming the target expects. Use when the art is finished and needs to leave Aseprite.
+rules: [90-platform-styles, 21-limited-and-platform-palettes, 66-tiles-and-autotiling]
+triggers: [png, spritesheet, gif, atlas, godot, unity, engine, sheet]
 ---
 
 # Export

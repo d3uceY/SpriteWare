@@ -11,7 +11,7 @@ backend/                    the Go side the UI talks to
   project.go                the project folder and its picker
   setup.go                  finding Aseprite, remembering the answer
 internal/
-  tools/                    the fourteen tools and their JSON schemas
+  tools/                    the fifteen tools and their JSON schemas
   link/                     talking to Aseprite, live or headless
   luaext/                   the Lua that runs inside Aseprite
   protocol/                 the line format both sides speak
@@ -21,7 +21,7 @@ internal/
   doc/                      the in-memory copy of a sprite
   craft/                    colour maths and palette presets
   font/                     the 5x7 font that draw kind=text uses
-  skill/                    the SKILL.md tree, embedded
+  skill/                    the SKILL.md tree, embedded, plus the router
   mcpserver/                server setup, resources, instructions, the HTTP host
   eval/                     benchmarks, runs and the criteria scorer
   config/                   settings file
@@ -48,6 +48,8 @@ cmd/                        small dev tools, not part of the app
 | add an export format | `internal/export/`, then the `export` tool |
 | change the generated palette resource | `internal/mcpserver/knowledge.go` |
 | teach an agent a new trick | the matching file under `internal/skill/` |
+| change how a task is routed | `internal/skill/library.go`, `Route` and `Search` |
+| change what the guide returns or caps | `internal/skill/guide.go` and `internal/tools/guide.go` |
 | change the agent's instructions | `internal/skill/SKILL.md` |
 | fix an agent config path | `backend/install.go`, function `entryFor` |
 | change a skill install path | `internal/skill/skill.go`, function `DirFor` |

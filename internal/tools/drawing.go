@@ -177,6 +177,9 @@ func (s *Service) registerDraw(srv *server.MCPServer) {
 				written, undoLabelSuffix(args))
 		}
 		out["summary"] = summary
+		// The label is the only prose a draw call carries, so it is the only
+		// thing the route can be computed from.
+		s.attachGuide(req.GetString("label", ""), out)
 		return ok(out, summary), nil
 	})
 }
