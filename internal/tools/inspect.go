@@ -444,7 +444,10 @@ func (s *Service) registerValidate(srv *server.MCPServer) {
 				"broken, so that is opt-in.\n"+
 				"`expect` runs on top of whatever checks you pick and checks your own plan: per-layer frame "+
 				"ranges, layer pairs that must never overlap, a palette cap, a bounding box.\n"+
-				"Run this before telling anyone a sprite is finished. It answers \"is this done\" with evidence."),
+				"Run this before telling anyone a sprite is finished. It answers \"is this done\" with evidence.\n"+
+				"When this session has fetched a guide, the result also carries \"guideReceipt\": which routed "+
+				"chapters these checks measured, which are prose you still have to apply, and which chapter to "+
+				"read when a failing check was outside the route."),
 		mcp.WithRawInputSchema([]byte(validateSchema)),
 	)
 
@@ -470,7 +473,9 @@ func (s *Service) registerValidate(srv *server.MCPServer) {
 		}
 
 		report := analyze.Run(d, options)
-		return ok(report, report.Summary), nil
+		payload := reportPayload(report)
+		s.attachGuideReceipt(payload, report)
+		return ok(payload, report.Summary), nil
 	})
 }
 

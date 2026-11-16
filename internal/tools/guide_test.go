@@ -222,7 +222,7 @@ func TestGuideDescriptionExplainsLexicalMatching(t *testing.T) {
 		t.Fatal("no guide tool")
 	}
 	description := tool.Tool.Description
-	for _, want := range []string{"lexical", "rules://index", "starting point"} {
+	for _, want := range []string{"lexical", "rules://index", "starting point", "Review lines", "always-on gates"} {
 		if !strings.Contains(description, want) {
 			t.Errorf("the guide description does not mention %q", want)
 		}

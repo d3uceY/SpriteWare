@@ -1,6 +1,7 @@
 package skill
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -332,5 +333,30 @@ func TestInlineRewritesLinksToResourceURIs(t *testing.T) {
 	}
 	if strings.Contains(markdown, "../references/") {
 		t.Error("a relative reference link survived the rewrite")
+	}
+}
+
+// The rewrite has to hold for every workflow and chapter, not only the one a
+// test happened to route to. A relative link in an inlined document is a dead
+// end in a client that never saw the file tree.
+func TestInlineRewritesEveryDocumentLink(t *testing.T) {
+	lib, err := Default()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	relative := regexp.MustCompile(`\]\((?:\\.{1,2}/)[^)]+\)`)
+
+	check := func(what, markdown string) {
+		if left := relative.FindAllString(resourceLinks(markdown), -1); len(left) > 0 {
+			t.Errorf("%s still has relative link(s) after rewrite: %v", what, left)
+		}
+	}
+	for _, name := range lib.WorkflowNames() {
+		w, _ := lib.Workflow(name)
+		check("skill://"+name, w.Body)
+	}
+	for _, id := range lib.ChapterIDs() {
+		chapter, _ := lib.Chapter(id)
+		check("rules://"+id, chapter.Body)
 	}
 }

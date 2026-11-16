@@ -23,6 +23,7 @@ import (
 	"github.com/d3uceY/spriteware/internal/config"
 	"github.com/d3uceY/spriteware/internal/link"
 	"github.com/d3uceY/spriteware/internal/protocol"
+	"github.com/d3uceY/spriteware/internal/skill"
 )
 
 // Service holds everything a handler needs.
@@ -40,6 +41,12 @@ type Service struct {
 	// guideAnnounced is the set of workflows already attached to a result, so a
 	// draw-heavy session is not told the same route on every call.
 	guideAnnounced map[string]bool
+	// guideRoute is the last confident route handed out, explicit or attached.
+	// Validate reads it back to report which chapters its checks covered.
+	guideRoute *skill.Guide
+	// guideRouted is true once any confident route has been handed out. It is
+	// what stops the guideMissing nag.
+	guideRouted bool
 }
 
 // SetBridgeReporter wires doctor up to the component that owns the bridge.

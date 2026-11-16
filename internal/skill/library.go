@@ -62,6 +62,18 @@ type Reference struct {
 	Body  string
 }
 
+// Gate is one of the entry document's always-on checks: a sentence to run and
+// the subject chapters that own it. The route a task gets is a sample of the
+// library; these checks apply whatever the sample says, so a guide ships them
+// with every route.
+type Gate struct {
+	// Check is the gate as one plain line, with markdown links removed; the
+	// linked chapter IDs travel in Rules.
+	Check string
+	// Rules are the chapter IDs the gate links, in reading order.
+	Rules []string
+}
+
 // Route is one ranked workflow match for a task.
 type Route struct {
 	Workflow *Workflow
@@ -94,6 +106,10 @@ type Library struct {
 
 	// index is rules/README.md, served as rules://index. It is not a chapter.
 	index string
+
+	// gates are the entry document's "Always-on gates": the checks that apply
+	// to every deliverable whatever the routed workflow says.
+	gates []Gate
 
 	// docFreq counts how many workflows carry a token, for IDF weighting.
 	docFreq map[string]int
@@ -138,6 +154,7 @@ func Load() (*Library, error) {
 				return nil, err
 			}
 			lib.Entry = entry
+			lib.gates = parseGates(entry.Body)
 
 		case strings.HasPrefix(rel, "rules/"):
 			if rel == "rules/README.md" {
@@ -230,6 +247,20 @@ func (l *Library) Chapter(id string) (*Chapter, bool) {
 	return nil, false
 }
 
+// Checks returns the chapter's Review section as short imperative lines, one
+// per bullet or numbered item.
+//
+// The Review section is the chapter's own acceptance test: "no elbow pixels",
+// "one line weight", "planted foot travel is consistent". It is the part an
+// agent can act on without reading the essay, so a routed guide ships it by
+// default instead of only a URI.
+func (c *Chapter) Checks() []string {
+	if c == nil {
+		return nil
+	}
+	return checkLines(sectionText(c.Body, "Review"))
+}
+
 // ReferenceNames lists the lookup notes in alphabetical order.
 func (l *Library) ReferenceNames() []string {
 	return append([]string(nil), l.refOrder...)
@@ -240,6 +271,14 @@ func (l *Library) Reference(name string) (*Reference, bool) {
 	r, ok := l.refs[strings.ToLower(strings.TrimSpace(strings.TrimPrefix(name, "rules://")))]
 	return r, ok
 }
+
+// Gates returns the entry document's always-on checks, in document order.
+//
+// They are data rather than a resource an agent might open: the route to a
+// workflow is a sample of the library, and these checks are the part that
+// applies even when the sample is right, so a guide carries them with every
+// route.
+func (l *Library) Gates() []Gate { return append([]Gate(nil), l.gates...) }
 
 // RuleIndexBody returns rules/README.md, served as rules://index.
 func (l *Library) RuleIndexBody() (string, error) {
@@ -406,6 +445,24 @@ func (l *Library) Validate() error {
 	if len(l.workflows) == 0 {
 		return fmt.Errorf("skill: no workflows found")
 	}
+	// The gates are the part of the entry document that must arrive on every
+	// route. An empty or unlinked gate would silently shrink every guide.
+	if len(l.gates) == 0 {
+		return fmt.Errorf("skill: SKILL.md needs an 'Always-on gates' section")
+	}
+	for _, gate := range l.gates {
+		if strings.TrimSpace(gate.Check) == "" {
+			return fmt.Errorf("skill: SKILL.md has an empty always-on gate")
+		}
+		if len(gate.Rules) == 0 {
+			return fmt.Errorf("skill: gate %q links no chapter", gate.Check)
+		}
+		for _, id := range gate.Rules {
+			if _, ok := l.Chapter(id); !ok {
+				return fmt.Errorf("skill: gate %q links missing chapter %q", gate.Check, id)
+			}
+		}
+	}
 
 	for _, name := range l.workflowOrder {
 		w := l.workflows[name]
@@ -470,7 +527,177 @@ func (l *Library) Validate() error {
 var (
 	linkRe   = regexp.MustCompile(`\[[^\]]*\]\(([^)]+)\)`)
 	digitsRe = regexp.MustCompile(`^\d+`)
+
+	// A Review item or a gate is a numbered line or a bullet. Both forms ship
+	// in the library, so the parser accepts either.
+	itemRe = regexp.MustCompile(`^(?:\d+\.|[-*])\s+`)
+	// linkTextRe matches a whole inline link, label and target, so flattening a
+	// sentence can drop the target without leaving bracket debris.
+	linkTextRe         = regexp.MustCompile(`\[[^\]]*\]\([^)]*\)`)
+	spaceBeforePunctRe = regexp.MustCompile(`\s+([.,;:!?])`)
 )
+
+// sectionText returns one H2 section of a document, trimmed, without the
+// heading. Text before the first H2 is not addressed by any heading and is
+// ignored.
+func sectionText(body, heading string) string {
+	body = strings.ReplaceAll(body, "\r\n", "\n")
+	var buf []string
+	current := ""
+	for _, line := range strings.Split(body, "\n") {
+		if strings.HasPrefix(line, "## ") {
+			if current == heading {
+				return strings.TrimSpace(strings.Join(buf, "\n"))
+			}
+			current = strings.TrimSpace(strings.TrimPrefix(line, "## "))
+			buf = nil
+			continue
+		}
+		if current == heading {
+			buf = append(buf, line)
+		}
+	}
+	if current == heading {
+		return strings.TrimSpace(strings.Join(buf, "\n"))
+	}
+	return ""
+}
+
+// checkLines reads a Review section as one line per item. A wrapped item is
+// joined back into one check, because a check split over three lines is not
+// something a caller can act on.
+func checkLines(section string) []string {
+	var items []string
+	for _, raw := range strings.Split(section, "\n") {
+		line := strings.TrimSpace(raw)
+		if line == "" {
+			continue
+		}
+		if itemRe.MatchString(line) {
+			items = append(items, strings.TrimSpace(itemRe.ReplaceAllString(line, "")))
+			continue
+		}
+		if len(items) > 0 {
+			items[len(items)-1] = strings.TrimSpace(items[len(items)-1] + " " + line)
+		}
+	}
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		if check := plainInline(item); check != "" {
+			out = append(out, check)
+		}
+	}
+	return out
+}
+
+// plainInline flattens a sentence for a tool payload: link targets go, link
+// labels and inline code stay, bold markers go, wrapped whitespace collapses.
+func plainInline(s string) string {
+	s = strings.ReplaceAll(s, "**", "")
+	s = linkTextRe.ReplaceAllStringFunc(s, func(link string) string {
+		start := strings.Index(link, "[")
+		end := strings.Index(link, "](")
+		if start < 0 || end < 0 {
+			return link
+		}
+		return link[start+1 : end]
+	})
+	s = strings.Join(strings.Fields(s), " ")
+	s = spaceBeforePunctRe.ReplaceAllString(s, "$1")
+	return strings.TrimSpace(s)
+}
+
+// parseGates reads the entry document's "Always-on gates" section into
+// numbered checks and the chapters each one links. A wrapped gate is joined
+// before links are read, because the links usually land on the continuation
+// line.
+func parseGates(body string) []Gate {
+	section := sectionText(body, "Always-on gates")
+	if section == "" {
+		return nil
+	}
+
+	var items []string
+	for _, raw := range strings.Split(section, "\n") {
+		line := strings.TrimSpace(raw)
+		if line == "" {
+			continue
+		}
+		if itemRe.MatchString(line) {
+			items = append(items, strings.TrimSpace(itemRe.ReplaceAllString(line, "")))
+			continue
+		}
+		if len(items) > 0 {
+			items[len(items)-1] = strings.TrimSpace(items[len(items)-1] + " " + line)
+		}
+	}
+
+	out := make([]Gate, 0, len(items))
+	for _, item := range items {
+		check := plainGate(item)
+		if check == "" {
+			continue
+		}
+		out = append(out, Gate{Check: check, Rules: linkedRules(item)})
+	}
+	return out
+}
+
+// plainGate flattens a gate for a tool payload. The rule links are dropped
+// entirely: the IDs travel in their own field, and leaving them mid-sentence
+// only makes the check harder to read.
+func plainGate(s string) string {
+	s = strings.ReplaceAll(s, "**", "")
+	s = linkTextRe.ReplaceAllString(s, "")
+	s = strings.Join(strings.Fields(s), " ")
+	s = spaceBeforePunctRe.ReplaceAllString(s, "$1")
+	s = strings.TrimRight(s, " .,;:!?—–-")
+	if s == "" {
+		return ""
+	}
+	return s + "."
+}
+
+// linkedRules reduces the rule links in a fragment to bare chapter IDs.
+func linkedRules(fragment string) []string {
+	var out []string
+	for _, match := range linkRe.FindAllStringSubmatch(fragment, -1) {
+		target := strings.TrimSpace(match[1])
+		if target == "" || strings.HasPrefix(target, "http") || strings.HasPrefix(target, "#") {
+			continue
+		}
+		if i := strings.IndexAny(target, "#?"); i >= 0 {
+			target = target[:i]
+		}
+		target = strings.TrimSuffix(target, ".md")
+		target = strings.TrimPrefix(target, "./")
+		switch {
+		case strings.HasPrefix(target, "rules://"):
+			target = strings.TrimPrefix(target, "rules://")
+		case strings.Contains(target, "rules/"):
+			target = target[strings.LastIndex(target, "rules/")+len("rules/"):]
+		default:
+			continue
+		}
+		if target != "" {
+			out = append(out, target)
+		}
+	}
+	return dedupe(out)
+}
+
+func dedupe(in []string) []string {
+	seen := make(map[string]bool, len(in))
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		if s == "" || seen[s] {
+			continue
+		}
+		seen[s] = true
+		out = append(out, s)
+	}
+	return out
+}
 
 // parseWorkflow reads one workflow's frontmatter and body.
 func parseWorkflow(folder, rel, raw string) (*Workflow, error) {

@@ -33,6 +33,20 @@ import (
 // A var rather than a const so a test can lower it instead of building 48 KB.
 var inlineBudget = 48 << 10
 
+// guideDigestRules is how many routed chapters get their Review lines printed
+// in the payload itself. The rest stay a URI: three checks are read, eight are
+// skipped, so the default ships the three most likely to be run before the next
+// draw.
+const guideDigestRules = 3
+
+// guideCheckChars caps one printed check. The full chapter is always one
+// rules:// read away; the digest exists to be acted on, not to be complete.
+const guideCheckChars = 180
+
+// guideGateChars keeps a gate to one readable line. A gate has no shorter form:
+// it is already the whole check.
+const guideGateChars = 220
+
 func (s *Service) registerGuide(srv *server.MCPServer) {
 	tool := mcp.NewTool("guide",
 		mcp.WithDescription(
@@ -41,9 +55,10 @@ func (s *Service) registerGuide(srv *server.MCPServer) {
 				"(rig, animate, tileset), a colour or palette decision, an export — even when the user did not ask "+
 				"for guidance. A decision you cannot cite is a guess: the chapters carry the sizes, the timing "+
 				"tables and the failure modes.\n"+
-				"Pass the task in the user's own words. It returns skill:// and rules:// resource URIs, the tokens "+
-				"that matched and a confidence level; when nothing matches it returns skill://spriteware and "+
-				"rules://index instead of a guess.\n"+
+				"Pass the task in the user's own words. It returns skill:// and rules:// resource URIs, the "+
+				"Review lines of the top three chapters, the always-on gates, the tokens that matched and a "+
+				"confidence level; when nothing matches it returns skill://spriteware and rules://index "+
+				"instead of a guess.\n"+
 				"Matching is lexical — words are compared, not meaning. A low or empty match means the task's "+
 				"words did not overlap the library, not that the library has nothing on the subject.\n"+
 				"Treat the route as a starting point, not a reading limit. A session moves: a sprite that starts "+
@@ -105,6 +120,9 @@ func (s *Service) handleGuide(req mcp.CallToolRequest) *mcp.CallToolResult {
 		return ok(payload, "no workflow matched; start at skill://spriteware or rules://index")
 	}
 
+	if g.Confident() {
+		s.recordRoute(g)
+	}
 	payload := guidePayload(g)
 	if !g.Confident() {
 		payload["note"] = "Low confidence: only one word overlapped the library. Check matchedTokens against " +
@@ -178,6 +196,14 @@ func guidePayload(g *skill.Guide) map[string]any {
 		confidence = "high"
 	}
 
+	checks := guideChecks(g)
+	gates := guideGates(g)
+	digested := 0
+	for _, entry := range checks {
+		if lines, ok := entry["checks"].([]string); ok {
+			digested += len(lines)
+		}
+	}
 	return map[string]any{
 		"matched":    true,
 		"task":       g.Task,
@@ -189,11 +215,114 @@ func guidePayload(g *skill.Guide) map[string]any {
 		},
 		"rules":         rules,
 		"references":    references,
+		"checks":        checks,
+		"moreChecks":    guideCheckTotal(g) - digested,
+		"gates":         gates,
 		"matchedTokens": g.Matched,
-		"note": "Read the workflow, then these chapters, before the next decision. When you report the " +
-			"result, name the chapter you followed. This route is a starting point: the work can move to " +
-			"a subject it did not name, and every skill:// and rules:// URI stays readable.",
+		"note": "Run these checks before the next draw or export, not after delivery. Each line is a " +
+			"chapter's own Review item; open the rules:// URI when a check needs the reasoning. When you " +
+			"report the result, name the chapter you followed. The route is a sample chosen by word " +
+			"overlap: gates apply whatever it says, and rules://index lists the chapters it did not name.",
 	}
+}
+
+// guideChecks prints the Review lines of the first few routed chapters, so the
+// default answer is something to do rather than a list of things to read. A
+// chapter with no Review section is skipped rather than spending a slot on an
+// empty entry; moreChecks reports how many Review lines were left unprinted.
+func guideChecks(g *skill.Guide) []map[string]any {
+	if g == nil || g.Workflow == nil {
+		return []map[string]any{}
+	}
+	out := make([]map[string]any, 0, guideDigestRules)
+	for _, chapter := range g.Rules {
+		if len(out) >= guideDigestRules {
+			break
+		}
+		lines := chapter.Checks()
+		if len(lines) == 0 {
+			continue
+		}
+		if len(lines) > 2 {
+			lines = lines[:2]
+		}
+		short := make([]string, 0, len(lines))
+		for _, line := range lines {
+			short = append(short, truncateText(line, guideCheckChars))
+		}
+		out = append(out, map[string]any{
+			"rule":   chapter.ID,
+			"title":  chapter.Title,
+			"checks": short,
+		})
+	}
+	return out
+}
+
+// guideCheckTotal counts every Review line in the route, so moreChecks can say
+// how much of the reading the digest left out rather than only how many
+// chapters it skipped.
+func guideCheckTotal(g *skill.Guide) int {
+	total := 0
+	for _, chapter := range g.Rules {
+		total += len(chapter.Checks())
+	}
+	return total
+}
+
+// guideGates ships the entry document's always-on checks with every route.
+//
+// The route is a sample of the library chosen by word overlap; these checks are
+// the part that applies whatever the sample says. Only gates whose chapters the
+// route does not already carry are printed, so an animation task does not
+// repeat the animation gate.
+func guideGates(g *skill.Guide) []map[string]any {
+	if g == nil || g.Workflow == nil {
+		return []map[string]any{}
+	}
+	lib, err := skill.Default()
+	if err != nil {
+		return []map[string]any{}
+	}
+	routed := make(map[string]bool, len(g.Rules))
+	for _, chapter := range g.Rules {
+		routed[chapter.ID] = true
+	}
+	out := make([]map[string]any, 0, 6)
+	for _, gate := range lib.Gates() {
+		covered := len(gate.Rules) > 0
+		for _, id := range gate.Rules {
+			if !routed[id] {
+				covered = false
+				break
+			}
+		}
+		if covered {
+			continue
+		}
+		out = append(out, map[string]any{
+			"check": truncateText(gate.Check, guideGateChars),
+			"rules": gate.Rules,
+		})
+	}
+	return out
+}
+
+// truncateText shortens on a word boundary so a digest line never ends
+// mid-word; the ellipsis signals that the chapter has the full sentence.
+func truncateText(s string, max int) string {
+	runes := []rune(strings.TrimSpace(s))
+	if len(runes) <= max {
+		return string(runes)
+	}
+	cut := runes[:max]
+	for i := len(cut) - 1; i > max/2; i-- {
+		if cut[i] == ' ' {
+			cut = cut[:i]
+			break
+		}
+	}
+	return strings.TrimRight(string(cut), " ,;:") + "…"
 }
 
 // firstTask reads the task from any of the aliases the schema accepts.
@@ -228,6 +357,7 @@ func (s *Service) attachGuide(task string, out map[string]any) {
 	}
 	task = strings.TrimSpace(task)
 	if task == "" {
+		s.noteMissingRoute(out)
 		return
 	}
 
@@ -237,6 +367,7 @@ func (s *Service) attachGuide(task string, out map[string]any) {
 	}
 	g, ok := lib.Guide(task, 4)
 	if !ok || !g.Confident() {
+		s.noteMissingRoute(out)
 		return
 	}
 
@@ -246,10 +377,53 @@ func (s *Service) attachGuide(task string, out map[string]any) {
 	}
 	announced := s.guideAnnounced[g.Workflow.Name]
 	s.guideAnnounced[g.Workflow.Name] = true
+	s.guideRoute = g
+	s.guideRouted = true
 	s.mu.Unlock()
 	if announced {
 		return
 	}
 
 	out["guide"] = guidePayload(g)
+}
+
+// recordRoute keeps the last confident route the session was handed. Validate
+// reads it back to say which of those chapters its measured checks cover.
+func (s *Service) recordRoute(g *skill.Guide) {
+	if g == nil || g.Workflow == nil {
+		return
+	}
+	s.mu.Lock()
+	s.guideRoute = g
+	s.guideRouted = true
+	s.mu.Unlock()
+}
+
+// currentRoute returns the route validate should report against, if any.
+func (s *Service) currentRoute() *skill.Guide {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.guideRoute
+}
+
+// noteMissingRoute makes the omission visible in the tool output, which is the
+// one channel an agent cannot skim past. It fires only while no confident route
+// has been handed out in this session, so it stops as soon as guide is called
+// or a draw routes on its label; a hard error would refuse legitimate work.
+func (s *Service) noteMissingRoute(out map[string]any) {
+	if out == nil {
+		return
+	}
+	if _, exists := out["guide"]; exists {
+		return
+	}
+	s.mu.Lock()
+	routed := s.guideRouted
+	s.mu.Unlock()
+	if routed {
+		return
+	}
+	out["guideMissing"] = "No skill route has been fetched in this session. Call guide(task=<the brief>) " +
+		"before the next composition: it returns the workflow, the chapters and the always-on gates that " +
+		"this response did not carry."
 }

@@ -60,6 +60,31 @@ did not name, read `rules://index` or any chapter URI directly.
 | Review | before saying anything is finished | [review](./review/SKILL.md) |
 | Export | handing files to a game engine | [export](./export/SKILL.md) |
 
+## Always-on gates
+
+These six checks apply to every sprite, whatever the routed workflow says. Run
+them before the next draw or export, not after the hand-over.
+
+1. **The silhouette reads as one shape.** Fill the frame flat and look at it at
+   1× before adding detail — [`03-silhouette-and-form`](rules/03-silhouette-and-form.md),
+   [`14-readability-and-scale`](rules/14-readability-and-scale.md).
+2. **Every pixel is opaque.** Semi-transparent pixels read as blur at 1×; repaint
+   or delete them — [`12-anti-aliasing`](rules/12-anti-aliasing.md).
+3. **One light direction.** State where the light comes from before shading, and
+   make every ramp and cast shadow agree —
+   [`02-shading-and-light`](rules/02-shading-and-light.md),
+   [`24-lighting-scenarios`](rules/24-lighting-scenarios.md).
+4. **Every colour belongs to the palette.** Count it, cap it, and keep ramps
+   hue-shifted rather than just darker —
+   [`01-palette-and-color`](rules/01-palette-and-color.md),
+   [`21-limited-and-platform-palettes`](rules/21-limited-and-platform-palettes.md).
+5. **Look at the render before reporting.** `look op=preview`, and
+   `op=filmstrip` for motion, is the check; a report without it is a guess —
+   [`07-review-checklist`](rules/07-review-checklist.md).
+6. **Animation is tagged and timed.** Multi-frame work needs a tag, non-uniform
+   durations, and a loop that closes — [`05-animation`](rules/05-animation.md),
+   [`40-timing-and-spacing`](rules/40-timing-and-spacing.md).
+
 ## Reference
 
 Craft that more than one workflow needs. Read the one that matches the decision

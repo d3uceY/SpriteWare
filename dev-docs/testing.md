@@ -13,7 +13,14 @@ No Aseprite, no network, no window. Fast, and safe to run on every save.
 
 What this covers: tool schemas, grid and text compilation, export formats, the
 validate rules, the protocol parser, the skill tree, the config file, the
-install paths.
+install paths, the guide and its validate receipt, and the resource-compliance
+eval (15 real prompts through the guide, 3 negative controls, every named URI
+read back through the server).
+
+`.github/workflows/ci.yml` runs exactly this on every push and pull request:
+it builds `frontend/dist` (the root package embeds it), then `go vet ./...`
+and `go test -count=1 ./...`. The release workflow runs the same suite again
+before it builds a tag, but CI is the gate that fails first.
 
 ## 2. Integration tests, against your Aseprite
 

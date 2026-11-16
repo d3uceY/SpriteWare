@@ -14,7 +14,9 @@ git push origin v1.2.3
 
 1. refuses anything that is not `vMAJOR.MINOR.PATCH`;
 2. runs `go vet ./...` and `go test ./...` on a machine with the GTK4 deps, so
-   the window (which embeds `frontend/dist`) actually compiles;
+   the window (which embeds `frontend/dist`) actually compiles — the same
+   suite `.github/workflows/ci.yml` runs on every push and pull request, so a
+   tag is the second gate, not the first;
 3. builds Windows, macOS and Linux in parallel;
 4. publishes a GitHub Release with all artifacts and `SHA256SUMS.txt`.
 

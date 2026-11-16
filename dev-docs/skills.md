@@ -79,7 +79,24 @@ reading limit — the session can move to a subject it did not name, and every
 The route also rides on `draw` and `sprite op=new` results: when the label or
 the document name routes with confidence, the result carries a compact `guide`.
 That is announced once per workflow per session, so a draw-heavy session is not
-repeated on every call.
+repeated on every call. While the session has no confident route, those results
+carry `guideMissing` instead, so skipping the route is visible in the tool
+output rather than silent.
+
+The guide is more than a reading list. It prints the `## Review` lines of the
+top three routed chapters in `checks`, so the default answer is something to
+run before the next draw, and `moreChecks` says how many Review lines were
+withheld. Every route also carries `gates`: the entry document's `## Always-on
+gates` section, parsed once at load, minus any gate whose chapters the route
+already contains. `Chapter.Checks` and `Library.Gates` are in
+`internal/skill/library.go`; the payload is in `internal/tools/guide.go`.
+
+`validate` closes the loop with `guideReceipt`. It maps each measured analyze
+check to the chapters that own it (`checkOwners` in
+`internal/tools/guide_receipt.go`) and reports `checked` chapters, `pending`
+chapters whose rules are prose only, the failing checks, and `readNext` when a
+failure belongs to a chapter the route did not carry. That is the answer to
+"read the rules" and "read nothing" looking identical in a tool result.
 
 `inline` returns the text itself, for clients that cannot read resources. It is
 capped (48 KB) and stops on a chapter boundary, so the result is always whole
@@ -128,6 +145,13 @@ Tests in `internal/mcpserver`:
 - the instruction block collapses the subject chapters to one line
 - every URI `guide` returns is a published resource
   (`TestGuideReturnsOnlyPublishedResources`)
+- the resource-compliance eval: 15 real pixel-art prompts route to the expected
+  workflow with high confidence, carry a non-empty checks and gates digest,
+  stay under 6 KB, and every URI they name reads back through the server;
+  three non-pixel prompts never route with high confidence
+  (`TestGuideComplianceEval`, `TestGuideComplianceIgnoresNonPixelWork`,
+  `TestGuideComplianceResolvesEveryNamedURI`). `.github/workflows/ci.yml`
+  runs it on every push and pull request.
 
 ## Editing the skill
 
