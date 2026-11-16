@@ -36,9 +36,14 @@ version can be pushed again after the fix.
 | `build/linux/nfpm/nfpm.yaml` | the `.deb` |
 | `build/darwin/Info.plist` | `CFBundleShortVersionString` / `CFBundleVersion` |
 
-The binary itself gets `-ldflags "-X github.com/d3uceY/spriteware/backend.Version=1.2.3"`,
-which the platform Taskfiles add whenever `VERSION` is set. A local build without
-`VERSION` keeps the fallback in `backend/mcp.go`.
+The binary itself gets `-ldflags "-X github.com/d3uceY/spriteware/backend.Version=1.2.3"`.
+`cmd/stamp` cannot write that one, because it is compiled into the binary rather
+than stored in a file, so every build step in `release.yml` passes
+`VERSION=<version>` to `wails3 task` and the platform Taskfiles add the flag
+whenever `VERSION` is set. A local build without `VERSION` keeps the fallback in
+`backend/mcp.go`, which is why a build that forgets the argument still succeeds
+and only reads wrong in the window. `cmd/stamp/release_workflow_test.go` fails
+the suite if a build step drops it.
 
 The stamp tool fails when a marker is missing, so a renamed key breaks the
 release instead of shipping a stale number.

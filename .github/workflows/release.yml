@@ -131,13 +131,15 @@ jobs:
         run: go run ./cmd/stamp "${GITHUB_REF_NAME}"
 
       # One task builds the frontend, regenerates the bindings and the .syso,
-      # compiles the exe and runs makensis.
+      # compiles the exe and runs makensis. VERSION is what puts the tag into
+      # -ldflags; without it the binary keeps backend.Version's fallback and the
+      # window reports 0.1.0 on a tagged build.
       - name: Build the portable exe and the NSIS installer
         env:
           CGO_ENABLED: "0"
           GOOS: windows
           GOARCH: amd64
-        run: wails3 task windows:create:nsis:installer ARCH=amd64
+        run: wails3 task windows:create:nsis:installer ARCH=amd64 VERSION=${{ needs.validate-tag.outputs.version }}
 
       - name: Collect artifacts
         run: |
@@ -181,7 +183,7 @@ jobs:
       # universal builds arm64 and amd64 separately and lipos them, so one DMG
       # runs on every Mac.
       - name: Build the universal .app bundle
-        run: wails3 task darwin:package:universal
+        run: wails3 task darwin:package:universal VERSION=${{ needs.validate-tag.outputs.version }}
 
       - name: Build the DMG
         run: |
@@ -240,7 +242,7 @@ jobs:
           # nfpm.yaml fills its maintainer field from these.
           GIT_COMMITTER_NAME: d3uceY
           GIT_COMMITTER_EMAIL: d3ucey@users.noreply.github.com
-        run: wails3 task linux:create:deb ARCH=amd64
+        run: wails3 task linux:create:deb ARCH=amd64 VERSION=${{ needs.validate-tag.outputs.version }}
 
       - name: Collect artifacts
         run: |
