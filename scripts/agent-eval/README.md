@@ -29,9 +29,14 @@ node ./scripts/agent-eval/analyze-session.mjs <session-id>
 ```
 
 `mcp-patch.yml` inserts `@deepseek-ai/dsh-mcp-client` for
-`http://127.0.0.1:9933/mcp`. A headless agent is the point: it is a fresh
-process, so the server's per-session route state is fresh too, and the transcript
-is a file you can re-read.
+`http://127.0.0.1:9933/mcp`, the default port. The host binds `port` from
+`%APPDATA%\SpriteWare\config.json`, so edit the patch if that differs. A headless
+agent is the point: it is a fresh process, so the server's per-session route state
+is fresh too, and the transcript is a file you can re-read.
+
+`transcript.json` in the eval folders is this analyzer's summary: every call and
+step, without arguments or reasoning. Keep the raw
+`session.v4.jsonl.zstd` beside it if you need to see what a call actually sent.
 
 ## Rules the harness learned the hard way
 

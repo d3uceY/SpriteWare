@@ -232,6 +232,23 @@ func TestGuideLetsTheSubjectOutrankTheFormat(t *testing.T) {
 	}
 }
 
+// Format words say how the art leaves, not what it is. A brief made of nothing
+// else can still name the export workflow, but it is not strong enough to
+// volunteer a route: only one content token matched.
+func TestFormatWordsAloneDoNotRouteConfidently(t *testing.T) {
+	lib, err := Default()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	g, ok := lib.Guide("save this as a png", 4)
+	if !ok {
+		t.Fatal("no route at all; the words should still name a workflow")
+	}
+	if g.Confident() {
+		t.Errorf("confident on %v; a format word must not volunteer a route", g.Matched)
+	}
+}
+
 // A single rare word routes, but it is not enough to volunteer the route: the
 // caller sees matchedTokens and decides.
 func TestGuideFlagsAWeakRoute(t *testing.T) {

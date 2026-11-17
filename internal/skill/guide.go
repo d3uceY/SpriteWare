@@ -20,7 +20,9 @@ type Guide struct {
 	Matched []string
 	// Routes is the ranked shortlist, best first.
 	Routes []Route
-	// Rules are the workflow's own chapters first, then the best search fills.
+	// Rules are the routed chapters, most title-matching first. A search chapter
+	// whose title carries the task's words leads the workflow's own chapters;
+	// ties keep the workflow chapters ahead of the search fills.
 	Rules []*Chapter
 	// RuleSources records why each chapter is present: "workflow" or "search".
 	RuleSources []string

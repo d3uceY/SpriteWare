@@ -5,10 +5,12 @@ asks a different question: when a real agent is handed a pixel-art brief, does i
 fetch the route and read the chapters *before* it draws, and does the tool output
 say what actually happened?
 
-The eval is a blind agent plus its transcript. The transcript is the ground truth:
-it records every MCP call, every resource read and the step they landed on. A
-delivery note is not evidence, and neither is a guide payload that was attached to
-a draw rather than asked for.
+The eval is a blind agent plus its transcript. The raw transcript is the ground
+truth: it records every MCP call, every resource read and the step they landed
+on. A delivery note is not evidence, and neither is a guide payload that was
+attached to a draw rather than asked for. The committed `transcript.json` is the
+analyzer's summary of that transcript, not the raw session; the raw `.zstd`
+carries the arguments and reasoning and stays under `~/.dsh/sessions`.
 
 ## What it measures
 
@@ -59,7 +61,8 @@ prints the URL.
    Do not tell it rules exist, that it is being tested, or which chapters to read.
 5. **Capture the result** with `scripts/agent-eval/cli`: `sprite op=info`,
    `frame op=list`, `tag op=list`, `validate`, `look op=ascii`, and copy the saved
-   files out of the scratch folder into `eval/agent-eval/<date>-<slug>/`.
+   files out of the scratch folder into `eval/agent-eval/<date>-<slug>/`. Keep the
+   session id with the run; the raw `.zstd` stays under `~/.dsh/sessions`.
 6. **Analyze the transcript** and grade against the rubric.
 
 ## Read the transcript
@@ -80,6 +83,9 @@ frames and prints JSON with:
 - `validate` — the first validate payload, receipt included;
 - `errors` — tool calls that came back as errors.
 
+Each run folder also holds `state-validate.json`, the last validate of the run;
+`transcript.json`'s `validate` is the first.
+
 A read with a step below the first compose is the basic pass. Then compare the
 reads against the route and the rubric. **A chapter that was not routed but read is
 not a failure**: the export workflow links palette chapters, and an agent that
@@ -88,8 +94,8 @@ follows a link is doing the right thing.
 ## The first two runs
 
 Run 2026-11-17, deepseek-flash, one server per run, Windows. Rubrics are in
-`eval/agent-eval/rubrics/`; each run folder holds the brief, `transcript.json`, the
-validate payload and the output.
+`eval/agent-eval/rubrics/`; each run folder holds the brief, `transcript.json`
+(the analyzer summary), `state-validate.json` (the last validate) and the output.
 
 | | knight walk cycle | shop HUD icons |
 |---|---|---|
@@ -135,15 +141,18 @@ Both produced the deliverable. Timing is not the failure mode here.
    the export-readiness warning instead, and shipped with four outline warnings.
    The receipt was right and nothing acted on it.
 
-5. **`validate` calls four warnings "style notes you may keep".** The summary line
-   said "Clean, with 8 style note(s)" while four of those findings carried
-   `severity: warning`. The delivery note echoed that framing exactly: "no palette,
-   stray or antialias errors" — true, and silent about the outline.
+5. **`validate` calls four warnings "style notes you may keep".** The final
+   validate (step 56) said "Clean, with 8 style note(s)" while four of those
+   findings carried `severity: warning`; the first (step 50) said the same about
+   12 findings, eight of them warnings. The delivery note echoed that framing
+   exactly: "no palette, stray or antialias errors" — true, and silent about the
+   outline.
 
 6. **The guide cannot say where it came from.** `sprite op=new` on `knight-walk`
    carried an attached `guide` as well as the explicit one from step 1. Nothing in
    the payload distinguishes the two, so a transcript (or a UI) cannot tell a route
-   the agent asked for from one the server volunteered.
+   the agent asked for from one the server volunteered. `origin` now labels the
+   payload, but the receipt still reports whichever route came last.
 
 7. **Cost is real.** 100 and 83 MCP calls for a 32 px sprite and four 16 px icons;
    `look` was 50 and 29 of them. That is the price of looking before claiming, but
@@ -161,10 +170,13 @@ Both produced the deliverable. Timing is not the failure mode here.
 3. **Digest the chapters that matched.** Fixed in `Guide` (`internal/skill/guide.go`):
    a search chapter whose title carries the task's words now sorts ahead of
    workflow chapters that do not, so `83-ui-and-icons` leads both the reading list
-   and the checks digest for an icon brief.
+   and the checks digest for an icon brief — at the guide default of six rules.
+   `attachGuide` asks for four; the draw workflow's own five fill them before any
+   search fill is added, so an attached guide still omits 83 (item 10).
 4. **Say where the route came from.** Fixed: `origin` (`explicit` / `attached`) on
    the guide payload, set in `attachGuide` and `handleGuide`; asserted by
    `TestGuideCarriesExecutableChecksAndGates` and `TestAttachGuideIsQuietUnlessConfident`.
+   The receipt does not carry it and does not prefer the explicit route (item 9).
 5. **Give `readNext` a consequence.** Print it in the summary line, or have
    `export`/`save_as` report when a warning stands on a chapter that was named and
    not read.
@@ -177,6 +189,19 @@ Both produced the deliverable. Timing is not the failure mode here.
 8. **Add the icons brief to the compliance corpus.** Done: two icon prompts in
    `pixelPrompts`, 17/17 routing and the largest payload 3.7 KB of the 6 KB budget.
    The walk brief was already covered.
+9. **Let the receipt prefer the route the agent asked for.** Open. `attachGuide`
+   records its route before the repeat check, so a later `draw` label replaces an
+   explicit route even when the attachment itself is suppressed. The walk run shows
+   both edges: the step-20 label "refine sword and near arm" routed `fix`, and the
+   step-50 receipt said `animate` only because a later, suppressed animate attach
+   overwrote it. The HUD run's first validate receipt followed the `shade` label
+   attached at step 24, not the explicit `export` route. Keep an explicit slot and
+   an attached slot, carry `origin` on the receipt, and prefer the explicit route
+   when there is one.
+10. **Carry the icon chapter into attached guides.** Open. `attachGuide` asks
+    `Guide` for four rules; the draw workflow owns five, so 83 never enters the
+    list and cannot be sorted forward. Raise the cap or order title-hit chapters
+    before truncation.
 
 ## Pitfalls
 
@@ -190,6 +215,9 @@ Both produced the deliverable. Timing is not the failure mode here.
 - **Results are not always keyed by call id.** On Windows the transcript stores
   `tool/result` with the step and no `toolCallId`; the analyzer pairs the n-th
   result in a step with the n-th call.
+- **The committed transcript is a summary.** `transcript.json` is
+  `analyze-session.mjs` output: every call and step, no arguments or reasoning.
+  Keep the raw `session.v4.jsonl.zstd` if you need to inspect what a call sent.
 - **A warning can be a false positive.** The outline check fires on art whose
   outline is intentionally two colours. Read the chapter before deciding it is
   wrong; record the waiver.

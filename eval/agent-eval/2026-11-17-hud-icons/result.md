@@ -10,11 +10,15 @@ Agent: deepseek-flash, `dsh headless`, one server for this run only. Transcript:
 | U1 | `rules://83-ui-and-icons` before the last icon | pass | read at step 4, first draw at 11 |
 | U2 | Four 16x16 icons | pass | 64x16 document, four named layers, one 16x16 PNG each |
 | U3 | One light direction, one outline weight | pass, with one note | top-left highlight and ink outline on heart, potion, coin; the pause button is flat by convention |
-| U4 | 1 px margin at 16 px | pass | `state-ascii.txt`: heart x1–14, potion x19–24, coin x32–45, pause x49–62 |
+| U4 | 1 px margin at 16 px | pass | `state-ascii.txt`: heart x1–14, potion x19–28, coin x33–46, pause x49–62 |
 | U5 | Palette inside the four brief colours | pass | `validate`: 4 colours, 0 off-palette |
 | V1 | validate before the delivery note | pass | steps 35, 39, 66 |
 | V2 | Looked before claiming | pass | `look/preview` first at step 14, 29 look calls |
 | O1 | Deliverables exist | pass | four 16x16 PNGs, 256x64 sheet, `hud-icons.aseprite` |
+
+The sheet is a plain `export op=png`; it has no atlas JSON because
+`export op=spritesheet` is what writes one. The walk run used that op, hence the
+asymmetry between the two run folders.
 
 ## What the run does not get right
 

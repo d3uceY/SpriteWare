@@ -6,7 +6,7 @@
 // scanning for the frame magic and decompressing each slice is the only way to
 // get the whole transcript with Node's zstd bindings.
 //
-// Usage: node analyze-session.mjs <session-id-or-fragment> [--json]
+// Usage: node analyze-session.mjs <session-id-or-fragment>
 //
 // The transcript is the ground truth. A delivery note is not evidence: every
 // mcp__spriteware__* call, every read_mcp_resource URI and the step it happened
@@ -24,7 +24,8 @@ if (!query) {
   process.exit(2);
 }
 
-async function findSessionFile() {
+async function findSessionFiles() {
+  const matches = [];
   for (const project of await readdir(sessionsRoot)) {
     const projectDir = join(sessionsRoot, project);
     let entries;
@@ -39,13 +40,13 @@ async function findSessionFile() {
       const file = join(projectDir, entry.name, "session.v4.jsonl.zstd");
       try {
         await readFile(file);
-        return file;
+        matches.push({ name: entry.name, file });
       } catch {
         // not every directory has a transcript
       }
     }
   }
-  return null;
+  return matches;
 }
 
 const MAGIC = [0x28, 0xb5, 0x2f, 0xfd];
@@ -101,11 +102,22 @@ function uriKind(uri) {
   return "other";
 }
 
-const file = await findSessionFile();
-if (!file) {
+const matches = await findSessionFiles();
+if (matches.length === 0) {
   console.error("no session transcript found for", query);
   process.exit(2);
 }
+if (matches.length > 1) {
+  // A short fragment can match several projects. Analysing the first one in
+  // directory order would quietly grade the wrong run.
+  console.error(`"${query}" matches ${matches.length} sessions:`);
+  const shown = matches.slice(0, 10);
+  for (const match of shown) console.error("  " + match.name);
+  if (matches.length > shown.length) console.error(`  ... and ${matches.length - shown.length} more`);
+  console.error("pass more of the session id");
+  process.exit(2);
+}
+const file = matches[0].file;
 const { text, frames, failed } = decodeFrames(await readFile(file));
 const events = text
   .split("\n")
@@ -137,7 +149,7 @@ for (const event of events) {
   const step = event.data?.step;
   const bucket = resultsByStep.get(step) ?? [];
   const next = bucket.find((candidate) => !usedResults.has(candidate));
-  if (next) {
+  if (next && event.seq != null) {
     usedResults.add(next);
     resultsBySeq.set(event.seq, next);
   }

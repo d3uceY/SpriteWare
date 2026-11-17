@@ -1,7 +1,8 @@
 // Command evalhost starts the SpriteWare MCP server headlessly, outside the
 // window, so an agent eval can drive the same tool surface the app serves.
 //
-// This is a measuring instrument, not a shipped command: it lives under tmp/.
+// This is a measuring instrument, not a shipped command: it lives under
+// scripts/agent-eval/host.
 package main
 
 import (

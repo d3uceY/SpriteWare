@@ -31,7 +31,8 @@ type Workflow struct {
 	// Body is the markdown after the frontmatter block.
 	Body string
 	// Rules are the chapter IDs the workflow claims as its own, from the
-	// `rules:` frontmatter line. They come first in a guide.
+	// `rules:` frontmatter line. A guide starts from them, though a search
+	// chapter whose title matches the task can lead.
 	Rules []string
 	// Triggers are extra routing words from the `triggers:` frontmatter line.
 	// They are how a task that never uses the workflow's own words still

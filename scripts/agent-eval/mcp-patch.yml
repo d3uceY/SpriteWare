@@ -6,4 +6,6 @@
       config:
         serverName: spriteware
         transport: streamable-http
+        # Must match `port` in %APPDATA%\SpriteWare\config.json (default 9933):
+        # the host binds the configured port, not this literal.
         url: http://127.0.0.1:9933/mcp

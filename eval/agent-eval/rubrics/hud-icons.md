@@ -18,9 +18,13 @@ that, not whether the router guessed.
 | V2 | The agent looked at the icons at actual size | `look` ascii or preview before the final message |
 | O1 | The .aseprite and the PNGs exist | files in the run folder |
 
-## Known at write time
+## What the router did
 
-The live router answers this brief with `skill://animate`, confidence `low`,
-matched token `set` — it is in the animate description. `83-ui-and-icons` is
-only reachable as a sixth `search` chapter. Both facts are recorded here so the
-grade cannot be written after the fact.
+The run recorded `skill://export`, confidence `high`, matched `export`,
+`sheet (trigger)`, `export (named)` — the delivery sentence owned the route.
+`rules://83-ui-and-icons` was reachable only as a search fill.
+
+A pre-run probe (its exact prompt was not kept) recorded `skill://animate`, low,
+matched `set` — the word is in the animate description. That prediction did not
+survive the full brief. Both measurements are from the pre-fix router:
+`formatWords` and the `icon`/`hud` triggers landed after the run.

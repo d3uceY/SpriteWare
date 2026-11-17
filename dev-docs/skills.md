@@ -66,11 +66,13 @@ triggers: [animation, walk, run, idle, cycle, frame, attack]
 `rules` is the chapter set the workflow owns, and those chapters come back with
 `source: "workflow"`; a search-found chapter whose title carries the task's own
 words sorts ahead of them and keeps `source: "search"`, because the chapter the
-brief names is the one the digest should print. `triggers` is vocabulary the description never
-uses — "godot", "wangset", "gameboy" — which is how a task that names a
-toolchain rather than an art action still routes. Both are indexed with the name
-and description in `Route`; a trigger hit is marked `(trigger)` and, like a name
-hit, is strong enough to make the route confident.
+brief names is the one the digest should print. The sort runs after the reading
+budget, so a matching search chapter still has to make the cut. `triggers` is
+vocabulary the description never uses — "godot", "wangset", "gameboy" — which
+is how a task that names a toolchain rather than an art action still routes.
+Both are indexed with the name and description in `Route`; a trigger hit is
+marked `(trigger)` and, like a name hit, is strong enough to make the route
+confident.
 
 Matching is lexical: words, not meaning. A miss is reported as a miss, with
 `skill://spriteware` and `rules://index` to start from instead of a guess, and
@@ -85,6 +87,9 @@ repeated on every call. While the session has no confident route, those results
 carry `guideMissing` instead, so skipping the route is visible in the tool
 output rather than silent.
 
+`origin` says which it was: `explicit` when `guide` was called, `attached` when
+the server volunteered the route on a draw or a new sprite.
+
 The guide is more than a reading list. It prints the `## Review` lines of the
 top three routed chapters in `checks`, so the default answer is something to
 run before the next draw, and `moreChecks` says how many Review lines were
@@ -97,8 +102,9 @@ already contains. `Chapter.Checks` and `Library.Gates` are in
 check to the chapters that own it (`checkOwners` in
 `internal/tools/guide_receipt.go`) and reports `checked` chapters, `pending`
 chapters whose rules are prose only, the failing checks, and `readNext` when a
-failure belongs to a chapter the route did not carry. That is the answer to
-"read the rules" and "read nothing" looking identical in a tool result.
+failure belongs to a chapter the route did not carry. It reports against the
+last confident route, explicit or attached. That is the answer to "read the
+rules" and "read nothing" looking identical in a tool result.
 
 `inline` returns the text itself, for clients that cannot read resources. It is
 capped (48 KB) and stops on a chapter boundary, so the result is always whole

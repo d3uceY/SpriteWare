@@ -76,6 +76,23 @@ func TestGuideCarriesExecutableChecksAndGates(t *testing.T) {
 	}
 }
 
+// The digest follows the reordered reading list. For an icon brief the first
+// printed check has to be the icon chapter, not the palette or tile chapter
+// that led the pre-fix route.
+func TestGuideDigestLeadsWithTheMatchingChapter(t *testing.T) {
+	srv := server.NewMCPServer("test", "0")
+	Register(srv, newTestService(t))
+
+	payload := guideFor(t, srv, "four 16x16 hud icons for a dark shop screen, export a png sheet")
+	checks := mapsIn(payload["checks"])
+	if len(checks) == 0 {
+		t.Fatal("the route carries no checks")
+	}
+	if rule, _ := checks[0]["rule"].(string); rule != "83-ui-and-icons" {
+		t.Errorf("first digested chapter = %q, want 83-ui-and-icons", rule)
+	}
+}
+
 // The digest skips a routed chapter with no Review section rather than spending
 // one of its three slots on an empty entry. The core chapters are the ones
 // without one.
