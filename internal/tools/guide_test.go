@@ -185,6 +185,9 @@ func TestAttachGuideIsQuietUnlessConfident(t *testing.T) {
 	if _, exists := loud["guide"]; !exists {
 		t.Error("a confident route was not attached")
 	}
+	if attached, _ := loud["guide"].(map[string]any); attached["origin"] != "attached" {
+		t.Errorf("origin = %v, want attached: the server volunteered this route", attached["origin"])
+	}
 }
 
 // A session draws many times; the same route ten times is noise.

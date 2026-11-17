@@ -1,0 +1,5 @@
+Client brief — knight walk cycle
+
+We need a walk cycle for a mobile platformer. 32x32, side view, a knight in plate armour with a sword strapped across his back. Four frames, looping on the spot. It has to read at 1x on a phone, and the studio palette is fixed: deep teal #0E5C6B, amber #FFD166, ink #22313F, paper #FFFDFA — nothing else.
+
+Save it as knight-walk.aseprite in this folder and export a PNG sheet at 4x next to it. Work only in the app; do not read or write anything else on this machine. When you finish, reply with a short delivery note: what you made, any assumption you had to make, and anything the client still needs to do.

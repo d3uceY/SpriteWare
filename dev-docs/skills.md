@@ -63,8 +63,10 @@ rules: [05-animation, 40-timing-and-spacing, 41-idle-and-breathing, 42-walk-and-
 triggers: [animation, walk, run, idle, cycle, frame, attack]
 ```
 
-`rules` is the chapter set the workflow owns, and those chapters come back
-first with `source: "workflow"`. `triggers` is vocabulary the description never
+`rules` is the chapter set the workflow owns, and those chapters come back with
+`source: "workflow"`; a search-found chapter whose title carries the task's own
+words sorts ahead of them and keeps `source: "search"`, because the chapter the
+brief names is the one the digest should print. `triggers` is vocabulary the description never
 uses — "godot", "wangset", "gameboy" — which is how a task that names a
 toolchain rather than an art action still routes. Both are indexed with the name
 and description in `Route`; a trigger hit is marked `(trigger)` and, like a name

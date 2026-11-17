@@ -14,6 +14,21 @@ import (
 // Fixtures: a sprite is built in memory, so a defect is one line to inject.
 // ---------------------------------------------------------------------------
 
+// A report with warnings must not call them style notes the reader may keep:
+// the walk run's delivery note echoed "clean" while four outline warnings stood.
+func TestSummaryKeepsWarningsVisible(t *testing.T) {
+	got := summarize(0, 4, 8, true)
+	if strings.Contains(got, "may keep") {
+		t.Fatalf("warnings dismissed as notes: %q", got)
+	}
+	if !strings.Contains(got, "4 warning") {
+		t.Fatalf("summary does not name the warnings: %q", got)
+	}
+	if clean := summarize(0, 0, 3, true); !strings.Contains(clean, "may keep") {
+		t.Fatalf("a report with notes only was reworded: %q", clean)
+	}
+}
+
 func newDump(w, h int, layers ...string) *doc.Dump {
 	d := &doc.Dump{
 		Sprite: doc.Sprite{

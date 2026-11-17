@@ -17,6 +17,9 @@ func TestGuideCarriesExecutableChecksAndGates(t *testing.T) {
 	Register(srv, newTestService(t))
 
 	payload := guideFor(t, srv, "animate a walk cycle for a knight")
+	if origin, _ := payload["origin"].(string); origin != "explicit" {
+		t.Errorf("origin = %q, want explicit: the agent asked for this route", payload["origin"])
+	}
 	checks := mapsIn(payload["checks"])
 	if len(checks) == 0 {
 		t.Fatal("the route carries no checks")

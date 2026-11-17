@@ -123,7 +123,7 @@ func (s *Service) handleGuide(req mcp.CallToolRequest) *mcp.CallToolResult {
 	if g.Confident() {
 		s.recordRoute(g)
 	}
-	payload := guidePayload(g)
+	payload := guidePayload(g, "explicit")
 	if !g.Confident() {
 		payload["note"] = "Low confidence: only one word overlapped the library. Check matchedTokens against " +
 			"the brief and add the deliverable or the format for a sharper route, read skill://spriteware, " +
@@ -161,8 +161,9 @@ func (s *Service) handleGuide(req mcp.CallToolRequest) *mcp.CallToolResult {
 }
 
 // guidePayload is the compact, stable shape both the tool and the automatic
-// attachments use.
-func guidePayload(g *skill.Guide) map[string]any {
+// attachments use. origin says which one produced it: an attached route is not a
+// route the agent asked for, and a transcript cannot tell them apart without it.
+func guidePayload(g *skill.Guide, origin string) map[string]any {
 	if g == nil || g.Workflow == nil {
 		return nil
 	}
@@ -207,6 +208,7 @@ func guidePayload(g *skill.Guide) map[string]any {
 	return map[string]any{
 		"matched":    true,
 		"task":       g.Task,
+		"origin":     origin,
 		"confidence": confidence,
 		"skill": map[string]any{
 			"uri":         g.WorkflowURI(),
@@ -384,7 +386,7 @@ func (s *Service) attachGuide(task string, out map[string]any) {
 		return
 	}
 
-	out["guide"] = guidePayload(g)
+	out["guide"] = guidePayload(g, "attached")
 }
 
 // recordRoute keeps the last confident route the session was handed. Validate

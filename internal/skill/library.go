@@ -330,10 +330,10 @@ func (l *Library) Route(task string, limit int) []Route {
 				weight = 0.01
 			}
 			switch {
-			case nameTokens[token]:
+			case nameTokens[token] && !formatWords[token]:
 				weight *= 2
 				matched = append(matched, token)
-			case triggerTokens[token]:
+			case triggerTokens[token] && !formatWords[token]:
 				weight *= 2
 				matched = append(matched, token+" (trigger)")
 			default:
@@ -344,8 +344,10 @@ func (l *Library) Route(task string, limit int) []Route {
 
 		// A task that names the deliverable outright ("export this", "an
 		// animation") should beat a workflow that merely mentions the words.
+		// Except a format word: every brief says how the art leaves, so naming
+		// one is not naming the job.
 		for _, token := range tokens {
-			if nameTokens[token] {
+			if nameTokens[token] && !formatWords[token] {
 				score += 5
 				matched = append(matched, token+" (named)")
 				break
@@ -893,6 +895,14 @@ func uniqueTokens(s string) []string {
 		out = append(out, token)
 	}
 	return out
+}
+
+// formatWords say how the art leaves the app, not what it is. Every brief has
+// one, so a name or trigger hit on one of them earns no multiplier: "four HUD
+// icons ... export a PNG sheet" routed to export before this existed.
+var formatWords = map[string]bool{
+	"export": true, "save": true, "png": true, "gif": true, "svg": true,
+	"sheet": true, "spritesheet": true, "atlas": true,
 }
 
 var stopWords = map[string]bool{

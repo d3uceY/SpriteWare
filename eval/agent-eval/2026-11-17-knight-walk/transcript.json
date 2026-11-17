@@ -1,0 +1,1095 @@
+﻿{
+  "session": {
+    "id": "session-0d7d5407-b775-4e41-82f6-ffb91fed6fd5",
+    "cwd": "C:\\Users\\deuce\\AppData\\Local\\Temp\\spriteware-eval\\knight-walk",
+    "createdAt": 1794911374913,
+    "delegationDepth": 0
+  },
+  "transcript": {
+    "file": "C:\\Users\\deuce\\.dsh\\sessions\\--C-Users-deuce-AppData-Local-Temp-spriteware-eval-knight-walk--\\session-0d7d5407-b775-4e41-82f6-ffb91fed6fd5\\session.v4.jsonl.zstd",
+    "frames": 286,
+    "failed": 0,
+    "events": 461
+  },
+  "toolCalls": [
+    {
+      "step": 1,
+      "name": "guide",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 1,
+      "name": "doctor",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 2,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 2,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 2,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 3,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 3,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 3,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 3,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 4,
+      "name": "sprite",
+      "op": "new",
+      "isError": false
+    },
+    {
+      "step": 5,
+      "name": "sprite",
+      "op": "info",
+      "isError": false
+    },
+    {
+      "step": 5,
+      "name": "palette",
+      "op": "set",
+      "isError": false
+    },
+    {
+      "step": 6,
+      "name": "layer",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 7,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 8,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 8,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 9,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 9,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 9,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 10,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 10,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 11,
+      "name": "cel",
+      "op": "clear",
+      "isError": false
+    },
+    {
+      "step": 12,
+      "name": "layer",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 13,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 14,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 14,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 15,
+      "name": "layer",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 16,
+      "name": "cel",
+      "op": "clear",
+      "isError": false
+    },
+    {
+      "step": 17,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 18,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 18,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 19,
+      "name": "cel",
+      "op": "clear",
+      "isError": false
+    },
+    {
+      "step": 19,
+      "name": "cel",
+      "op": "clear",
+      "isError": false
+    },
+    {
+      "step": 20,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 21,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 21,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 22,
+      "name": "cel",
+      "op": "clear",
+      "isError": false
+    },
+    {
+      "step": 23,
+      "name": "draw",
+      "op": null,
+      "isError": true
+    },
+    {
+      "step": 24,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 25,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 25,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 26,
+      "name": "cel",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 27,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 28,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 28,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 28,
+      "name": "look",
+      "op": "filmstrip",
+      "isError": false
+    },
+    {
+      "step": 29,
+      "name": "cel",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 30,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 31,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 31,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 31,
+      "name": "look",
+      "op": "filmstrip",
+      "isError": false
+    },
+    {
+      "step": 32,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 33,
+      "name": "layer",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 34,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 34,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 34,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 35,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 36,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 36,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 37,
+      "name": "cel",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 38,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 39,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 39,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 39,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 39,
+      "name": "look",
+      "op": "filmstrip",
+      "isError": false
+    },
+    {
+      "step": 40,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 41,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 41,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 41,
+      "name": "look",
+      "op": "filmstrip",
+      "isError": false
+    },
+    {
+      "step": 42,
+      "name": "cel",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 43,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 44,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 44,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 44,
+      "name": "look",
+      "op": "filmstrip",
+      "isError": false
+    },
+    {
+      "step": 45,
+      "name": "cel",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 46,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 47,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 47,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 47,
+      "name": "look",
+      "op": "filmstrip",
+      "isError": false
+    },
+    {
+      "step": 48,
+      "name": "look",
+      "op": "filmstrip",
+      "isError": false
+    },
+    {
+      "step": 48,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 48,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 49,
+      "name": "frame",
+      "op": "set_duration",
+      "isError": false
+    },
+    {
+      "step": 49,
+      "name": "frame",
+      "op": "set_duration",
+      "isError": false
+    },
+    {
+      "step": 49,
+      "name": "tag",
+      "op": "create",
+      "isError": false
+    },
+    {
+      "step": 50,
+      "name": "validate",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 51,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 52,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 52,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 52,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 53,
+      "name": "validate",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 54,
+      "name": "sprite",
+      "op": "save_as",
+      "isError": false
+    },
+    {
+      "step": 54,
+      "name": "sprite",
+      "op": "info",
+      "isError": false
+    },
+    {
+      "step": 55,
+      "name": "export",
+      "op": "spritesheet",
+      "isError": false
+    },
+    {
+      "step": 56,
+      "name": "validate",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 56,
+      "name": "palette",
+      "op": "analyze",
+      "isError": false
+    },
+    {
+      "step": 56,
+      "name": "look",
+      "op": "filmstrip",
+      "isError": false
+    },
+    {
+      "step": 58,
+      "name": "look",
+      "op": "onion",
+      "isError": false
+    },
+    {
+      "step": 58,
+      "name": "look",
+      "op": "diff",
+      "isError": false
+    },
+    {
+      "step": 58,
+      "name": "look",
+      "op": "diff",
+      "isError": false
+    }
+  ],
+  "reads": [
+    {
+      "step": 2,
+      "kind": "skill",
+      "uri": "skill://animate"
+    },
+    {
+      "step": 2,
+      "kind": "rule",
+      "uri": "rules://42-walk-and-run"
+    },
+    {
+      "step": 2,
+      "kind": "rule",
+      "uri": "rules://40-timing-and-spacing"
+    },
+    {
+      "step": 3,
+      "kind": "skill",
+      "uri": "skill://draw"
+    },
+    {
+      "step": 3,
+      "kind": "skill",
+      "uri": "skill://rig"
+    },
+    {
+      "step": 3,
+      "kind": "rule",
+      "uri": "rules://03-silhouette-and-form"
+    },
+    {
+      "step": 3,
+      "kind": "rule",
+      "uri": "rules://14-readability-and-scale"
+    }
+  ],
+  "guide": {
+    "confidence": "high",
+    "skill": "skill://animate",
+    "matched": [
+      "walk (trigger)",
+      "cycle (trigger)",
+      "sprite",
+      "animation (trigger)",
+      "frame (trigger)"
+    ],
+    "rules": [
+      "42-walk-and-run",
+      "05-animation",
+      "40-timing-and-spacing",
+      "41-idle-and-breathing",
+      "43-jump-fall-land",
+      "44-attacks-and-impacts"
+    ],
+    "checks": [
+      {
+        "rule": "42-walk-and-run",
+        "checks": [
+          "Fill one frame flat: is it a walker, with clear space between the two legs?",
+          "Is there a pass frame with a straight support leg and a tucked swing foot?"
+        ]
+      },
+      {
+        "rule": "40-timing-and-spacing",
+        "checks": [
+          "Every duration is on the ladder; any loop of 4+ frames has ≥ 2 distinct durations.",
+          "Offsets sum to the travel; gaps match an ease pattern, not a ruler."
+        ]
+      },
+      {
+        "rule": "41-idle-and-breathing",
+        "checks": [
+          "Feet on the same rows in every frame; the figure never grows (±2 % pixels).",
+          "Core moves ≤ 1 px at 16–32 px; hands/hair move more, later."
+        ]
+      }
+    ],
+    "gates": 5,
+    "moreChecks": 25
+  },
+  "timing": {
+    "firstReadStep": 2,
+    "firstSpriteNewStep": 4,
+    "firstStructureStep": 6,
+    "firstComposeStep": 7,
+    "firstDrawStep": 7,
+    "firstLookStep": 8,
+    "firstImageStep": 8,
+    "firstValidateStep": 50,
+    "readBeforeCompose": true,
+    "readsBeforeCompose": 7,
+    "readsAfterCompose": 0,
+    "composedBeforeGuide": false,
+    "validated": true,
+    "lookedBeforeValidate": true
+  },
+  "coverage": {
+    "routed": [
+      "42-walk-and-run",
+      "05-animation",
+      "40-timing-and-spacing",
+      "41-idle-and-breathing",
+      "43-jump-fall-land",
+      "44-attacks-and-impacts"
+    ],
+    "read": [
+      "42-walk-and-run",
+      "40-timing-and-spacing",
+      "03-silhouette-and-form",
+      "14-readability-and-scale"
+    ],
+    "routedNotRead": [
+      "05-animation",
+      "41-idle-and-breathing",
+      "43-jump-fall-land",
+      "44-attacks-and-impacts"
+    ],
+    "readNotRouted": [
+      "03-silhouette-and-form",
+      "14-readability-and-scale"
+    ]
+  },
+  "validate": {
+    "findings": [
+      {
+        "check": "export_readiness",
+        "code": "export_readiness",
+        "message": "This sprite has never been saved, so there is nothing on disk to hand to a game project.",
+        "severity": "warning"
+      },
+      {
+        "check": "outline",
+        "code": "outline",
+        "count": 31,
+        "frame": 1,
+        "message": "The outline is 71% #22313f but 31 edge pixel(s) use a different colour. A broken outline reads as a hole in the silhouette.",
+        "severity": "warning"
+      },
+      {
+        "check": "outline",
+        "code": "outline",
+        "count": 33,
+        "frame": 2,
+        "message": "The outline is 68% #22313f but 33 edge pixel(s) use a different colour. A broken outline reads as a hole in the silhouette.",
+        "severity": "warning"
+      },
+      {
+        "at": {
+          "x": 12,
+          "y": 19
+        },
+        "check": "strays",
+        "code": "strays",
+        "count": 1,
+        "frame": 2,
+        "message": "1 isolated pixel(s) with no neighbour. These read as noise at 1x.",
+        "points": [
+          {
+            "x": 12,
+            "y": 19
+          }
+        ],
+        "severity": "warning"
+      },
+      {
+        "check": "outline",
+        "code": "outline",
+        "count": 34,
+        "frame": 3,
+        "message": "The outline is 70% #22313f but 34 edge pixel(s) use a different colour. A broken outline reads as a hole in the silhouette.",
+        "severity": "warning"
+      },
+      {
+        "at": {
+          "x": 12,
+          "y": 21
+        },
+        "check": "strays",
+        "code": "strays",
+        "count": 1,
+        "frame": 3,
+        "message": "1 isolated pixel(s) with no neighbour. These read as noise at 1x.",
+        "points": [
+          {
+            "x": 12,
+            "y": 21
+          }
+        ],
+        "severity": "warning"
+      },
+      {
+        "check": "outline",
+        "code": "outline",
+        "count": 34,
+        "frame": 4,
+        "message": "The outline is 69% #22313f but 34 edge pixel(s) use a different colour. A broken outline reads as a hole in the silhouette.",
+        "severity": "warning"
+      },
+      {
+        "at": {
+          "x": 12,
+          "y": 19
+        },
+        "check": "strays",
+        "code": "strays",
+        "count": 1,
+        "frame": 4,
+        "message": "1 isolated pixel(s) with no neighbour. These read as noise at 1x.",
+        "points": [
+          {
+            "x": 12,
+            "y": 19
+          }
+        ],
+        "severity": "warning"
+      },
+      {
+        "at": {
+          "x": 18,
+          "y": 8
+        },
+        "check": "orphans",
+        "code": "orphans",
+        "count": 7,
+        "frame": 1,
+        "message": "7 pixel(s) whose colour matches none of their neighbours — the classic stray inside a fill or a shading band. A deliberate 1 px detail (an eye glint) looks the same: check before fixing.",
+        "points": [
+          {
+            "x": 18,
+            "y": 8
+          },
+          {
+            "x": 19,
+            "y": 8
+          },
+          {
+            "x": 13,
+            "y": 18
+          },
+          {
+            "x": 13,
+            "y": 19
+          },
+          {
+            "x": 19,
+            "y": 23
+          },
+          {
+            "x": 23,
+            "y": 28
+          },
+          {
+            "x": 23,
+            "y": 30
+          }
+        ],
+        "severity": "note"
+      },
+      {
+        "at": {
+          "x": 18,
+          "y": 6
+        },
+        "check": "orphans",
+        "code": "orphans",
+        "count": 8,
+        "frame": 2,
+        "message": "8 pixel(s) whose colour matches none of their neighbours — the classic stray inside a fill or a shading band. A deliberate 1 px detail (an eye glint) looks the same: check before fixing.",
+        "points": [
+          {
+            "x": 18,
+            "y": 6
+          },
+          {
+            "x": 19,
+            "y": 6
+          },
+          {
+            "x": 19,
+            "y": 11
+          },
+          {
+            "x": 22,
+            "y": 12
+          },
+          {
+            "x": 21,
+            "y": 14
+          },
+          {
+            "x": 13,
+            "y": 17
+          },
+          {
+            "x": 15,
+            "y": 23
+          },
+          {
+            "x": 17,
+            "y": 28
+          }
+        ],
+        "severity": "note"
+      },
+      {
+        "at": {
+          "x": 18,
+          "y": 8
+        },
+        "check": "orphans",
+        "code": "orphans",
+        "count": 7,
+        "frame": 3,
+        "message": "7 pixel(s) whose colour matches none of their neighbours — the classic stray inside a fill or a shading band. A deliberate 1 px detail (an eye glint) looks the same: check before fixing.",
+        "points": [
+          {
+            "x": 18,
+            "y": 8
+          },
+          {
+            "x": 19,
+            "y": 8
+          },
+          {
+            "x": 10,
+            "y": 16
+          },
+          {
+            "x": 13,
+            "y": 19
+          },
+          {
+            "x": 14,
+            "y": 23
+          },
+          {
+            "x": 10,
+            "y": 28
+          },
+          {
+            "x": 21,
+            "y": 30
+          }
+        ],
+        "severity": "note"
+      },
+      {
+        "at": {
+          "x": 18,
+          "y": 6
+        },
+        "check": "orphans",
+        "code": "orphans",
+        "count": 5,
+        "frame": 4,
+        "message": "5 pixel(s) whose colour matches none of their neighbours — the classic stray inside a fill or a shading band. A deliberate 1 px detail (an eye glint) looks the same: check before fixing.",
+        "points": [
+          {
+            "x": 18,
+            "y": 6
+          },
+          {
+            "x": 19,
+            "y": 6
+          },
+          {
+            "x": 13,
+            "y": 17
+          },
+          {
+            "x": 21,
+            "y": 21
+          },
+          {
+            "x": 22,
+            "y": 25
+          }
+        ],
+        "severity": "note"
+      }
+    ],
+    "guideReceipt": {
+      "checked": [
+        "42-walk-and-run",
+        "05-animation",
+        "40-timing-and-spacing"
+      ],
+      "failed": [
+        {
+          "check": "export_readiness",
+          "findings": 1,
+          "severity": "warning"
+        },
+        {
+          "check": "outline",
+          "findings": 4,
+          "severity": "warning"
+        },
+        {
+          "check": "strays",
+          "findings": 3,
+          "severity": "warning"
+        }
+      ],
+      "note": "checked chapters had a validate check that measures them; a failure still needs a fix. pending chapters are prose, or their check was not requested in this run, so apply them yourself before the next draw. readNext names a chapter that owns a failing check when the route did not carry it.",
+      "pending": [
+        "41-idle-and-breathing"
+      ],
+      "readNext": [
+        {
+          "because": "this check failed and the chapter that owns it was not in the route",
+          "check": "export_readiness",
+          "rule": "rules://07-review-checklist",
+          "title": "Review checklist"
+        },
+        {
+          "because": "this check failed and the chapter that owns it was not in the route",
+          "check": "outline",
+          "rule": "rules://04-outlines-and-edges",
+          "title": "Outlines and edges"
+        },
+        {
+          "because": "this check failed and the chapter that owns it was not in the route",
+          "check": "strays",
+          "read": "Each material has ≤ 3 tones and each tone forms a few connected clusters.",
+          "rule": "rules://11-clusters-and-noise",
+          "title": "Clusters and noise"
+        }
+      ],
+      "workflow": "skill://animate"
+    },
+    "metrics": {
+      "bandingRun": 8,
+      "colorsUsed": 4,
+      "coverage": 0.2705078125,
+      "durationSpread": 20,
+      "edgePixels": 0,
+      "halfAlphaPixels": 0,
+      "heightDrift": 2,
+      "inkPixels": 1108,
+      "maxComponents": 1,
+      "offPaletteColors": 0,
+      "offPalettePixels": 0,
+      "orphanPixels": 27,
+      "paletteSize": 4,
+      "strayPixels": 3,
+      "tonalClusters": 4
+    },
+    "passed": true,
+    "ran": [
+      "palette",
+      "strays",
+      "orphans",
+      "gaps",
+      "bounds",
+      "outline",
+      "banding",
+      "antialiasing",
+      "layers",
+      "animation",
+      "export_readiness",
+      "volume"
+    ],
+    "scope": "composite",
+    "score": 60,
+    "skipped": [
+      "ui"
+    ],
+    "sprite": "knight-walk",
+    "summary": "Clean, with 12 style note(s) you may keep. By check: export_readiness 1, outline 4, strays 3, orphans 4."
+  },
+  "errors": [
+    {
+      "step": 23,
+      "name": "draw",
+      "text": "Error: invalid_args: ops[0].rows[13] is 17 characters but row 0 is 18; every row must be the same width"
+    }
+  ]
+}

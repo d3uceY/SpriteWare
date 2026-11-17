@@ -48,6 +48,8 @@ var pixelPrompts = []complianceCase{
 	{"my wangset has seams", []string{"tileset"}},
 	{"pack this for godot", []string{"export"}},
 	{"pixel art of a treasure chest", []string{"draw", "shade"}},
+	{"four 16x16 hud icons for a dark shop screen", []string{"draw"}},
+	{"four hud icons and a png sheet for the shop", []string{"draw"}},
 }
 
 // nonPixelPrompts are the negative control. A lexical router will sometimes

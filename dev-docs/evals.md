@@ -1,5 +1,9 @@
 # The eval harness
 
+This page is the craft harness: is the art any good. For the other question —
+whether an agent routes and reads the skill before it draws — see
+[agent-rule-timing.md](./agent-rule-timing.md).
+
 Practice tasks with a written pass bar, and one record per attempt. The point is
 not a leaderboard: it is that a claim like "this technique animates better" can
 be checked instead of argued.

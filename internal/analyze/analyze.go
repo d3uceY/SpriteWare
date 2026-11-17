@@ -498,6 +498,10 @@ func summarize(errors, warnings, total int, passed bool) string {
 		return "Clean: nothing to report."
 	}
 	if passed {
+		if warnings > 0 {
+			// A warning the same sentence invites you to keep is not a warning.
+			return fmt.Sprintf("%d warning(s) and %d note(s) to judge; no errors.", warnings, total-warnings)
+		}
 		return fmt.Sprintf("Clean, with %d style note(s) you may keep.", total)
 	}
 	return fmt.Sprintf("%d error(s), %d warning(s). Fix the errors before calling this done.", errors, warnings)

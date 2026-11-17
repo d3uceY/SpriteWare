@@ -17,6 +17,7 @@ Read these in order:
 | [testing.md](./testing.md) | how to run the tests, including against a real Aseprite |
 | [release.md](./release.md) | how a tag becomes a GitHub Release, and where the version is stamped |
 | [evals.md](./evals.md) | benchmarks, runs, and how an attempt is scored |
+| [agent-rule-timing.md](./agent-rule-timing.md) | did the agent read the skill before it drew, and what the transcript proves |
 | [mcp-improvements.md](./mcp-improvements.md) | what drawing the app's own art broke, and its status |
 | [removed-command-line.md](./removed-command-line.md) | what the CLI was, why it is gone, and why the eval harness stayed |
 | [webview2-startup.md](./webview2-startup.md) | why the window can fail to open before `main` gets anywhere, and how to read the WebView2 error |

@@ -1,0 +1,9 @@
+# Local eval overlay: give the headless agent the same MCP client the app
+# profile mounts, pointed at the headless eval host.
+- insert:
+    - id: mcp-spriteware
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: spriteware
+        transport: streamable-http
+        url: http://127.0.0.1:9933/mcp

@@ -1,0 +1,7 @@
+Client brief — shop HUD icons
+
+Our shop screen needs a small icon set. Four 16x16 icons in a row: a health heart, a mana potion, a gold coin and a pause button. They sit on a near-black panel (#1B1B1B), so each has to read at actual size against that, and they share one light direction as a set.
+
+Studio palette only: deep teal #0E5C6B, amber #FFD166, ink #22313F, paper #FFFDFA.
+
+Save the source as hud-icons.aseprite in this folder and export one 16x16 PNG per icon plus a single sheet with all four in a row at 4x. Work only in the app; do not read or write anything else on this machine. When you finish, reply with a short delivery note: what you made, any assumption you had to make, and anything the client still needs to do.

@@ -122,6 +122,37 @@ func (l *Library) Guide(task string, maxRules int) (*Guide, bool) {
 		}
 		add(hit.Chapter, "search")
 	}
+
+	// A chapter whose title carries the task's words is what the task is about,
+	// whether the workflow owns it or a search found it. Without this a matched
+	// search chapter trails every workflow chapter and the checks digest prints
+	// the wrong subject: "HUD icons" got palette and tile checks while
+	// rules://83-ui-and-icons sat sixth.
+	titleHitCount := func(c *Chapter) int {
+		title := strings.ToLower(c.Title + " " + c.ID)
+		n := 0
+		for _, token := range taskTokens {
+			if strings.Contains(title, token) {
+				n++
+			}
+		}
+		return n
+	}
+	order := make([]int, len(g.Rules))
+	for i := range order {
+		order[i] = i
+	}
+	sort.SliceStable(order, func(i, j int) bool {
+		return titleHitCount(g.Rules[order[i]]) > titleHitCount(g.Rules[order[j]])
+	})
+	rules := make([]*Chapter, 0, len(order))
+	sources := make([]string, 0, len(order))
+	for _, i := range order {
+		rules = append(rules, g.Rules[i])
+		sources = append(sources, g.RuleSources[i])
+	}
+	g.Rules, g.RuleSources = rules, sources
+
 	for _, name := range best.Workflow.References {
 		if ref, ok := l.Reference(name); ok {
 			g.References = append(g.References, ref)

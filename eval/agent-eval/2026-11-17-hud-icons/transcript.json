@@ -1,0 +1,771 @@
+﻿{
+  "session": {
+    "id": "session-769fd85c-ef3e-450d-860f-564d89d64d2f",
+    "cwd": "C:\\Users\\deuce\\AppData\\Local\\Temp\\spriteware-eval\\hud-icons",
+    "createdAt": 1794912324178,
+    "delegationDepth": 0
+  },
+  "transcript": {
+    "file": "C:\\Users\\deuce\\.dsh\\sessions\\--C-Users-deuce-AppData-Local-Temp-spriteware-eval-hud-icons--\\session-769fd85c-ef3e-450d-860f-564d89d64d2f\\session.v4.jsonl.zstd",
+    "frames": 294,
+    "failed": 0,
+    "events": 469
+  },
+  "toolCalls": [
+    {
+      "step": 3,
+      "name": "guide",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 4,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 4,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 4,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 4,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 5,
+      "name": "sprite",
+      "op": "list",
+      "isError": false
+    },
+    {
+      "step": 5,
+      "name": "doctor",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 6,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 6,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 6,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 6,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 6,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 6,
+      "name": "read_mcp_resource",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 7,
+      "name": "sprite",
+      "op": "new",
+      "isError": false
+    },
+    {
+      "step": 8,
+      "name": "palette",
+      "op": "set",
+      "isError": false
+    },
+    {
+      "step": 8,
+      "name": "layer",
+      "op": "list",
+      "isError": false
+    },
+    {
+      "step": 9,
+      "name": "layer",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 10,
+      "name": "palette",
+      "op": "set",
+      "isError": false
+    },
+    {
+      "step": 11,
+      "name": "draw",
+      "op": null,
+      "isError": true
+    },
+    {
+      "step": 12,
+      "name": "draw",
+      "op": null,
+      "isError": true
+    },
+    {
+      "step": 13,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 14,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 14,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 15,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 16,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 16,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 17,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 18,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 19,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 19,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 20,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 21,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 22,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 23,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 24,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 25,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 25,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 26,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 27,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 28,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 28,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 29,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 30,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 30,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 31,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 32,
+      "name": "layer",
+      "op": "delete",
+      "isError": false
+    },
+    {
+      "step": 33,
+      "name": "palette",
+      "op": "set",
+      "isError": false
+    },
+    {
+      "step": 34,
+      "name": "sprite",
+      "op": "save_as",
+      "isError": false
+    },
+    {
+      "step": 35,
+      "name": "validate",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 36,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 37,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 38,
+      "name": "look",
+      "op": "preview",
+      "isError": false
+    },
+    {
+      "step": 39,
+      "name": "validate",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 40,
+      "name": "sprite",
+      "op": "save",
+      "isError": false
+    },
+    {
+      "step": 41,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 41,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 42,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 42,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 43,
+      "name": "export",
+      "op": "png",
+      "isError": false
+    },
+    {
+      "step": 44,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 45,
+      "name": "sprite",
+      "op": "new",
+      "isError": false
+    },
+    {
+      "step": 46,
+      "name": "palette",
+      "op": "set",
+      "isError": false
+    },
+    {
+      "step": 47,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 48,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 49,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 50,
+      "name": "export",
+      "op": "png",
+      "isError": false
+    },
+    {
+      "step": 51,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 52,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 53,
+      "name": "export",
+      "op": "png",
+      "isError": false
+    },
+    {
+      "step": 54,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 55,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 56,
+      "name": "export",
+      "op": "png",
+      "isError": false
+    },
+    {
+      "step": 57,
+      "name": "draw",
+      "op": null,
+      "isError": true
+    },
+    {
+      "step": 58,
+      "name": "draw",
+      "op": null,
+      "isError": false
+    },
+    {
+      "step": 59,
+      "name": "look",
+      "op": "ascii",
+      "isError": false
+    },
+    {
+      "step": 60,
+      "name": "export",
+      "op": "png",
+      "isError": false
+    },
+    {
+      "step": 62,
+      "name": "sprite",
+      "op": "info",
+      "isError": false
+    },
+    {
+      "step": 62,
+      "name": "palette",
+      "op": "get",
+      "isError": false
+    },
+    {
+      "step": 62,
+      "name": "sprite",
+      "op": "list",
+      "isError": false
+    },
+    {
+      "step": 63,
+      "name": "sprite",
+      "op": "close",
+      "isError": true
+    },
+    {
+      "step": 64,
+      "name": "sprite",
+      "op": "close_all",
+      "isError": false
+    },
+    {
+      "step": 65,
+      "name": "sprite",
+      "op": "open",
+      "isError": false
+    },
+    {
+      "step": 66,
+      "name": "validate",
+      "op": null,
+      "isError": false
+    }
+  ],
+  "reads": [
+    {
+      "step": 4,
+      "kind": "skill",
+      "uri": "skill://export"
+    },
+    {
+      "step": 4,
+      "kind": "rule",
+      "uri": "rules://83-ui-and-icons"
+    },
+    {
+      "step": 4,
+      "kind": "rule",
+      "uri": "rules://73-props-and-items"
+    },
+    {
+      "step": 4,
+      "kind": "rule",
+      "uri": "rules://22-materials-hard"
+    },
+    {
+      "step": 6,
+      "kind": "skill",
+      "uri": "skill://draw"
+    },
+    {
+      "step": 6,
+      "kind": "rule",
+      "uri": "rules://01-palette-and-color"
+    },
+    {
+      "step": 6,
+      "kind": "rule",
+      "uri": "rules://02-shading-and-light"
+    },
+    {
+      "step": 6,
+      "kind": "rule",
+      "uri": "rules://04-outlines-and-edges"
+    },
+    {
+      "step": 6,
+      "kind": "rule",
+      "uri": "rules://14-readability-and-scale"
+    },
+    {
+      "step": 6,
+      "kind": "rule",
+      "uri": "rules://07-review-checklist"
+    }
+  ],
+  "guide": {
+    "confidence": "high",
+    "skill": "skill://export",
+    "matched": [
+      "export",
+      "sheet (trigger)",
+      "export (named)"
+    ],
+    "rules": [
+      "21-limited-and-platform-palettes",
+      "90-platform-styles",
+      "66-tiles-and-autotiling",
+      "83-ui-and-icons",
+      "73-props-and-items",
+      "22-materials-hard"
+    ],
+    "checks": [
+      {
+        "rule": "21-limited-and-platform-palettes",
+        "checks": [
+          "Distinct colours per sprite ≤ the stated budget (transparency not counted); per 8×8 block ≤ per-tile limit.",
+          "Every colour belongs to the declared palette (`validate`: no off-palette pixels)."
+        ]
+      },
+      {
+        "rule": "90-platform-styles",
+        "checks": [
+          "The contract (STRICT / INSPIRED) and the numbers are stated in the reply.",
+          "Visible colours per sprite are within the platform budget (`palette` op `get`, count used entries)."
+        ]
+      },
+      {
+        "rule": "66-tiles-and-autotiling",
+        "checks": [
+          "Every tile repeated 3×3 shows no seam, no grid, no aligned pixel lines.",
+          "Variants differ in the centre only; borders are identical."
+        ]
+      }
+    ],
+    "gates": 6,
+    "moreChecks": 32
+  },
+  "timing": {
+    "firstReadStep": 4,
+    "firstSpriteNewStep": 7,
+    "firstStructureStep": 8,
+    "firstComposeStep": 11,
+    "firstDrawStep": 11,
+    "firstLookStep": 14,
+    "firstImageStep": 14,
+    "firstValidateStep": 35,
+    "readBeforeCompose": true,
+    "readsBeforeCompose": 10,
+    "readsAfterCompose": 0,
+    "composedBeforeGuide": false,
+    "validated": true,
+    "lookedBeforeValidate": true
+  },
+  "coverage": {
+    "routed": [
+      "21-limited-and-platform-palettes",
+      "90-platform-styles",
+      "66-tiles-and-autotiling",
+      "83-ui-and-icons",
+      "73-props-and-items",
+      "22-materials-hard"
+    ],
+    "read": [
+      "83-ui-and-icons",
+      "73-props-and-items",
+      "22-materials-hard",
+      "01-palette-and-color",
+      "02-shading-and-light",
+      "04-outlines-and-edges",
+      "14-readability-and-scale",
+      "07-review-checklist"
+    ],
+    "routedNotRead": [
+      "21-limited-and-platform-palettes",
+      "90-platform-styles",
+      "66-tiles-and-autotiling"
+    ],
+    "readNotRouted": [
+      "01-palette-and-color",
+      "02-shading-and-light",
+      "04-outlines-and-edges",
+      "14-readability-and-scale",
+      "07-review-checklist"
+    ]
+  },
+  "validate": {
+    "findings": [
+      {
+        "at": {
+          "x": 19,
+          "y": 1
+        },
+        "check": "gaps",
+        "code": "gaps",
+        "count": 4,
+        "frame": 1,
+        "message": "This frame is made of 4 separate pieces.",
+        "rect": {
+          "height": 14,
+          "width": 10,
+          "x": 19,
+          "y": 1
+        },
+        "severity": "note"
+      },
+      {
+        "at": {
+          "x": 23,
+          "y": 2
+        },
+        "check": "orphans",
+        "code": "orphans",
+        "count": 1,
+        "frame": 1,
+        "message": "1 pixel(s) whose colour matches none of their neighbours — the classic stray inside a fill or a shading band. A deliberate 1 px detail (an eye glint) looks the same: check before fixing.",
+        "points": [
+          {
+            "x": 23,
+            "y": 2
+          }
+        ],
+        "severity": "note"
+      }
+    ],
+    "guideReceipt": {
+      "checked": [
+        "24-lighting-scenarios",
+        "02-shading-and-light"
+      ],
+      "failed": [],
+      "note": "checked chapters had a validate check that measures them; a failure still needs a fix. pending chapters are prose, or their check was not requested in this run, so apply them yourself before the next draw. readNext names a chapter that owns a failing check when the route did not carry it.",
+      "pending": [
+        "20-color-for-pixel-art",
+        "13-dithering-and-texture"
+      ],
+      "readNext": [],
+      "workflow": "skill://shade"
+    },
+    "metrics": {
+      "bandingRun": 10,
+      "colorsUsed": 4,
+      "coverage": 0.541015625,
+      "durationSpread": 0,
+      "edgePixels": 0,
+      "halfAlphaPixels": 0,
+      "heightDrift": 0,
+      "inkPixels": 554,
+      "maxComponents": 4,
+      "offPaletteColors": 0,
+      "offPalettePixels": 0,
+      "orphanPixels": 1,
+      "paletteSize": 4,
+      "strayPixels": 0,
+      "tonalClusters": 4
+    },
+    "passed": true,
+    "ran": [
+      "palette",
+      "strays",
+      "orphans",
+      "gaps",
+      "bounds",
+      "outline",
+      "banding",
+      "antialiasing",
+      "layers",
+      "animation",
+      "export_readiness",
+      "volume"
+    ],
+    "scope": "composite",
+    "score": 100,
+    "skipped": [
+      "ui"
+    ],
+    "sprite": "C:\\Users\\deuce\\AppData\\Local\\Temp\\spriteware-eval\\hud-icons\\hud-icons.aseprite",
+    "summary": "Clean, with 2 style note(s) you may keep. By check: gaps 1, orphans 1."
+  },
+  "errors": [
+    {
+      "step": 11,
+      "name": "draw",
+      "text": "Error: invalid_args: ops[2].rows[6] uses \"W\", which is not in the legend\nremediation: add \"W\" to the legend, or use '.' for transparent"
+    },
+    {
+      "step": 12,
+      "name": "draw",
+      "text": "Error: invalid_args: ops[4].rows[5] is 17 characters but row 0 is 16; every row must be the same width"
+    },
+    {
+      "step": 57,
+      "name": "draw",
+      "text": "Error: invalid_args: ops[0].rows[5] is 17 characters but row 0 is 16; every row must be the same width"
+    },
+    {
+      "step": 63,
+      "name": "sprite",
+      "text": "Error: invalid_args: Refusing to close a document that was never saved; it would be lost."
+    }
+  ]
+}

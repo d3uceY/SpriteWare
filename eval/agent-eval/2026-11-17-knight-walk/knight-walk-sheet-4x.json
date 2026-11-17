@@ -1,0 +1,56 @@
+{
+  "image": "knight-walk-sheet-4x.png",
+  "width": 512,
+  "height": 128,
+  "frameWidth": 128,
+  "frameHeight": 128,
+  "columns": 4,
+  "padding": 0,
+  "frames": [
+    {
+      "index": 1,
+      "x": 0,
+      "y": 0,
+      "w": 128,
+      "h": 128,
+      "durationMs": 240,
+      "backgroundPosition": "-0px -0px"
+    },
+    {
+      "index": 2,
+      "x": 128,
+      "y": 0,
+      "w": 128,
+      "h": 128,
+      "durationMs": 220,
+      "backgroundPosition": "-128px -0px"
+    },
+    {
+      "index": 3,
+      "x": 256,
+      "y": 0,
+      "w": 128,
+      "h": 128,
+      "durationMs": 240,
+      "backgroundPosition": "-256px -0px"
+    },
+    {
+      "index": 4,
+      "x": 384,
+      "y": 0,
+      "w": 128,
+      "h": 128,
+      "durationMs": 220,
+      "backgroundPosition": "-384px -0px"
+    }
+  ],
+  "tags": [
+    {
+      "name": "walk",
+      "from": 1,
+      "to": 4,
+      "direction": "forward"
+    }
+  ],
+  "scale": 4
+}

@@ -65,6 +65,7 @@ func TestRoutePicksExpectedWorkflow(t *testing.T) {
 		{"review this sprite before I ship it", "review"},
 		{"export a spritesheet for Godot", "export"},
 		{"starting a new sprite from nothing", "new"},
+		{"four 16x16 hud icons for a dark shop screen, export a png sheet", "draw"},
 	}
 
 	for _, tc := range cases {
@@ -204,6 +205,30 @@ func TestGuideOrdersChaptersByTaskRelevance(t *testing.T) {
 	}
 	if g.Rules[0].ID != "42-walk-and-run" {
 		t.Errorf("first chapter = %q, want 42-walk-and-run", g.Rules[0].ID)
+	}
+}
+
+// The brief says how the art leaves as well as what it is. The format word must
+// not outrank the subject, and the chapter the subject names has to lead the
+// guide even when a search found it rather than the workflow. This is the run
+// that routed four icons to skill://export while rules://83 sat sixth.
+func TestGuideLetsTheSubjectOutrankTheFormat(t *testing.T) {
+	lib, err := Default()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	g, ok := lib.Guide("four 16x16 hud icons for a dark shop screen, export a png sheet", 6)
+	if !ok {
+		t.Fatal("no route")
+	}
+	if g.Workflow.Name != "draw" {
+		t.Fatalf("workflow = %q, want draw", g.Workflow.Name)
+	}
+	if g.Rules[0].ID != "83-ui-and-icons" {
+		t.Errorf("first chapter = %q, want 83-ui-and-icons", g.Rules[0].ID)
+	}
+	if g.RuleSources[0] != "search" {
+		t.Errorf("first chapter source = %q, want search", g.RuleSources[0])
 	}
 }
 
